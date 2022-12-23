@@ -2,7 +2,7 @@
 	"name": "balena-typescript-skeleton",
 	"version": "0.1.0",
 	"description": "Skeleton template for a balena TypeScript project",
-	"homepage": "https://github.com/balena-io/balena-typescript-skeleton#readme",
+	"homepage": "https://github.com/balena-io-experimental/planner#readme",
 	"main": "build/index.js",
 	"types": "build/index.d.ts",
 	"keywords": [
@@ -13,10 +13,10 @@
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/balena-io/balena-typescript-skeleton.git"
+		"url": "git+https://github.com/balena-io-experimental/planner.git"
 	},
 	"bugs": {
-		"url": "https://github.com/balena-io/balena-typescript-skeleton/issues"
+		"url": "https://github.com/balena-io-experimental/planner/issues"
 	},
 	"files": [
 		"build/"

@@ -67,7 +67,8 @@ function of<TState = any, TPath extends Path = '/'>(
 
 	// Create a lens for the path
 	// use any since, because of the generics, the types are impossible
-	// to get right
+	// to get right. However, since we know that the path exists, we won't have
+	// any undefined values
 	const lens = parts.reduce(
 		(l: any, p) => (isArrayIndex(p) ? l.nth(+p) : l.prop(p)),
 		Optic.optic<TState>(),

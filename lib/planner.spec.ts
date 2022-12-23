@@ -19,7 +19,7 @@ describe('Planner', () => {
 			const isBlock = (x: Location): x is Block =>
 				x !== 'table' && x !== 'hand';
 
-			const clear = (blocks: State['blocks'], location: Location) => {
+			const isClear = (blocks: State['blocks'], location: Location) => {
 				if (isBlock(location) || location === 'hand') {
 					// No block is on top of the location
 					return Object.values(blocks).every((l) => l !== location);
@@ -32,7 +32,7 @@ describe('Planner', () => {
 				id: 'take',
 				path: '/blocks/:block',
 				effect: (s: State, location) => {
-					if (clear(s.blocks, location.params.block) && s.hand === null) {
+					if (isClear(s.blocks, location.params.block) && s.hand === null) {
 						// Update the block
 						s = location.set(s, 'hand');
 						s.hand = location.params.block;
@@ -58,7 +58,7 @@ describe('Planner', () => {
 
 			const allClearBlocks = (blocks: State['blocks']) => {
 				return Object.keys(blocks).filter((block) =>
-					clear(blocks, block as Block),
+					isClear(blocks, block as Block),
 				) as Block[];
 			};
 
@@ -83,7 +83,7 @@ describe('Planner', () => {
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
-						if (clear(s.blocks, blocks.target[b])) {
+						if (isClear(s.blocks, blocks.target[b])) {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
@@ -141,7 +141,7 @@ describe('Planner', () => {
 			const isBlock = (x: Location): x is Block =>
 				x !== 'table' && x !== 'hand';
 
-			const clear = (blocks: State['blocks'], location: Location) => {
+			const isClear = (blocks: State['blocks'], location: Location) => {
 				if (isBlock(location) || location === 'hand') {
 					// No block is on top of the location
 					return Object.values(blocks).every((l) => l !== location);
@@ -155,7 +155,7 @@ describe('Planner', () => {
 				path: '/blocks/:block',
 				effect: (s: State, location) => {
 					if (
-						clear(s.blocks, location.params.block) &&
+						isClear(s.blocks, location.params.block) &&
 						location.get(s) === 'table' &&
 						s.hand === null
 					) {
@@ -174,7 +174,7 @@ describe('Planner', () => {
 				effect: (s: State, location) => {
 					if (
 						// The block has no other blocks on top
-						clear(s.blocks, location.params.block) &&
+						isClear(s.blocks, location.params.block) &&
 						// The block is on top of other block (not in the hand or the table)
 						location.get(s) !== 'table' &&
 						location.get(s) !== 'hand' &&
@@ -209,7 +209,7 @@ describe('Planner', () => {
 				effect: (s: State, location) => {
 					if (
 						// The target has no other blocks on top
-						clear(s.blocks, location.target) &&
+						isClear(s.blocks, location.target) &&
 						// The hand is holding the block
 						location.get(s) === 'hand'
 					) {
@@ -226,7 +226,7 @@ describe('Planner', () => {
 				id: 'take',
 				path: '/blocks/:block',
 				method: (s: State, location) => {
-					if (clear(s.blocks, location.get(s))) {
+					if (isClear(s.blocks, location.get(s))) {
 						const { path, op, target } = location;
 						if (location.get(s) === 'table') {
 							return [pickup(path, op, target)];
@@ -258,7 +258,7 @@ describe('Planner', () => {
 
 			const allClearBlocks = (blocks: State['blocks']) => {
 				return Object.keys(blocks).filter((block) =>
-					clear(blocks, block as Block),
+					isClear(blocks, block as Block),
 				) as Block[];
 			};
 
@@ -283,7 +283,7 @@ describe('Planner', () => {
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
-						if (clear(s.blocks, blocks.target[b])) {
+						if (isClear(s.blocks, blocks.target[b])) {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
