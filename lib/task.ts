@@ -2,7 +2,6 @@ import * as assert from 'assert';
 import { Option, none } from 'fp-ts/lib/Option';
 
 import { Context, Path, Operation } from './context';
-import { JSON_PATH } from './regex';
 
 export type Op = Operation | '*';
 
@@ -225,11 +224,7 @@ function of<
 	TOperation extends Op = '*',
 >(task: Partial<Task<TState, TPath, TOperation>>) {
 	const { path = '/', op = '*' } = task;
-	assert(path.startsWith('/'), 'Path must start with a slash');
-	assert(
-		JSON_PATH.test(path),
-		'Path may only contain alphanumeric or special characters',
-	);
+	assert(Path.is(path), `'${path} is not a valid path`);
 
 	const t = Object.assign(
 		(p: Path, o: Operation, target: Context<TState, TPath>['target']) => {

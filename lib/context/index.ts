@@ -1,10 +1,11 @@
 import * as Optic from 'optics-ts';
 import * as assert from 'assert';
 
-import { Context as C, Path, Operation } from './types';
+import { Context as C, Path as P, Operation } from './types';
 
 // Redeclare the type for exporting
 export type Context<TState = any, TPath extends Path = '/'> = C<TState, TPath>;
+export type Path = P;
 
 function isArrayIndex(x: unknown): x is number {
 	return (
@@ -89,9 +90,22 @@ function of<TState = any, TPath extends Path = '/'>(
 	} as any;
 }
 
-export { Path, Operation } from './types';
+export { Operation } from './types';
 export const Context = {
 	of,
+};
+
+function isPath(x: unknown): x is Path {
+	return (
+		x != null &&
+		typeof x === 'string' &&
+		x.startsWith('/') &&
+		/[-a-zA-Z0-9@:%._\\+~#?&\/=]*/.test(x)
+	);
+}
+
+export const Path = {
+	is: isPath,
 };
 
 export default Context;

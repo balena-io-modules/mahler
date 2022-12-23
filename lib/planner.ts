@@ -18,6 +18,11 @@ export interface Planner<TState = any> {
 	 * to the target state
 	 */
 	plan(target: Patch<TState>): Option<Array<Action<TState>>>;
+
+	/**
+	 * Calculate and follow the plan to the target state
+	 */
+	seek(target: Patch<TState>): Promise<TState>;
 }
 
 function plan<TState = any>(
@@ -41,6 +46,9 @@ function of<TState = any>(
 		},
 		plan(target: Patch<TState>) {
 			return plan(initial, patch(initial, target), tasks);
+		},
+		seek(_target: Patch<TState>) {
+			return Promise.reject('Not implemented');
 		},
 	};
 }

@@ -46,7 +46,10 @@ describe('Planner', () => {
 				id: 'put',
 				path: '/blocks/:block',
 				effect: (s: State, location) => {
-					if (location.get(s) === 'hand') {
+					if (
+						location.get(s) === 'hand' &&
+						isClear(s.blocks, location.target)
+					) {
 						// Update the block
 						s = location.set(s, location.target);
 						s.hand = null;
