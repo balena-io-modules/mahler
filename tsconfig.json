@@ -1,0 +1,20 @@
+{
+	"compilerOptions": {
+		"baseUrl": "./",
+		"module": "commonjs",
+		"outDir": "build",
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
+		"removeComments": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "es2022",
+		"declaration": true,
+		"skipLibCheck": true,
+		"paths": {
+			"~/lib": ["lib/index.ts"],
+			"~/tests": ["tests/index.ts"]
+		}
+	},
+	"include": ["lib/**/*.ts", "tests/**/*.ts"]
+}
