@@ -32,10 +32,10 @@ describe('Planner', () => {
 				id: 'take',
 				path: '/blocks/:block',
 				effect: (s: State, location) => {
-					if (isClear(s.blocks, location.params.block) && s.hand === null) {
+					if (isClear(s.blocks, location.block) && s.hand === null) {
 						// Update the block
 						s = location.set(s, 'hand');
-						s.hand = location.params.block;
+						s.hand = location.block;
 						return some(s);
 					}
 					return none;
@@ -90,8 +90,8 @@ describe('Planner', () => {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
-								take(`/blocks/${b}`, blocks.op, blocks.target[b]),
-								put(`/blocks/${b}`, blocks.op, blocks.target[b]),
+								take({ block: b, target: blocks.target[b] }),
+								put({ block: b, target: blocks.target[b] }),
 							];
 						}
 					}
@@ -101,8 +101,8 @@ describe('Planner', () => {
 					for (const b of allClearBlocks(s.blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
 						return [
-							take(`/blocks/${b}`, blocks.op, blocks.target[b]),
-							put(`/blocks/${b}`, blocks.op, 'table'),
+							take({ block: b, target: blocks.target[b] }),
+							put({ block: b, target: 'table' }),
 						];
 					}
 
@@ -158,13 +158,13 @@ describe('Planner', () => {
 				path: '/blocks/:block',
 				effect: (s: State, location) => {
 					if (
-						isClear(s.blocks, location.params.block) &&
+						isClear(s.blocks, location.block) &&
 						location.get(s) === 'table' &&
 						s.hand === null
 					) {
 						// Update the block
 						s = location.set(s, 'hand');
-						s.hand = location.params.block;
+						s.hand = location.block;
 						return some(s);
 					}
 					return none;
@@ -177,7 +177,7 @@ describe('Planner', () => {
 				effect: (s: State, location) => {
 					if (
 						// The block has no other blocks on top
-						isClear(s.blocks, location.params.block) &&
+						isClear(s.blocks, location.block) &&
 						// The block is on top of other block (not in the hand or the table)
 						location.get(s) !== 'table' &&
 						location.get(s) !== 'hand' &&
@@ -185,7 +185,7 @@ describe('Planner', () => {
 					) {
 						// Update the block
 						s = location.set(s, 'hand');
-						s.hand = location.params.block;
+						s.hand = location.block;
 						return some(s);
 					}
 					return none;
@@ -230,11 +230,13 @@ describe('Planner', () => {
 				path: '/blocks/:block',
 				method: (s: State, location) => {
 					if (isClear(s.blocks, location.get(s))) {
-						const { path, op, target } = location;
+						const { block, target } = location;
 						if (location.get(s) === 'table') {
-							return [pickup(path, op, target)];
+							// If the block is on the table we need to run the pickup task
+							return [pickup({ block, target })];
 						} else {
-							return [unstack(path, op, target)];
+							// Otherwise we unstack the block from another block
+							return [unstack({ block, target })];
 						}
 					}
 					return [];
@@ -247,12 +249,12 @@ describe('Planner', () => {
 				id: 'put',
 				path: '/blocks/:block',
 				method: (s: State, location) => {
-					const { path, op, target } = location;
+					const { block, target } = location;
 					if (location.get(s) === 'hand') {
-						if (location.target === 'table') {
-							return [putdown(path, op, target)];
+						if (target === 'table') {
+							return [putdown({ block, target })];
 						} else {
-							return [stack(path, op, target)];
+							return [stack({ block, target })];
 						}
 					}
 					return [];
@@ -290,8 +292,8 @@ describe('Planner', () => {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
-								take(`/blocks/${b}`, blocks.op, blocks.target[b]),
-								put(`/blocks/${b}`, blocks.op, blocks.target[b]),
+								take({ block: b, target: blocks.target[b] }),
+								put({ block: b, target: blocks.target[b] }),
 							];
 						}
 					}
@@ -301,8 +303,8 @@ describe('Planner', () => {
 					for (const b of allClearBlocks(s.blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
 						return [
-							take(`/blocks/${b}`, blocks.op, blocks.target[b]),
-							put(`/blocks/${b}`, blocks.op, 'table'),
+							take({ block: b, target: blocks.target[b] }),
+							take({ block: b, target: 'table' }),
 						];
 					}
 

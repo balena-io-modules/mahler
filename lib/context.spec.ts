@@ -5,18 +5,14 @@ describe('context', () => {
 	it('calculates a simple context', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 
-		const c = Context.of<State, '/a/b/:value'>(
-			'/a/b/:value',
-			'/a/b/c',
-			'update',
-			['one', 'two'],
-		);
+		const c = Context.of<State, '/a/b/:value'>('/a/b/:value', '/a/b/c', [
+			'one',
+			'two',
+		]);
 
 		expect(c).to.deep.include({
-			path: '/a/b/c',
-			op: 'update',
 			target: ['one', 'two'],
-			params: { value: 'c' },
+			value: 'c',
 		});
 
 		// The context includes a lens to get the value
@@ -39,15 +35,12 @@ describe('context', () => {
 		const c = Context.of<State, '/a/b/c/:pos'>(
 			'/a/b/c/:pos',
 			'/a/b/c/0',
-			'delete',
 			'one',
 		);
 
 		expect(c).to.deep.include({
-			path: '/a/b/c/0',
-			op: 'delete',
 			target: 'one',
-			params: { pos: 0 },
+			pos: 0,
 		});
 
 		// The context includes a lens to get the value
@@ -68,15 +61,12 @@ describe('context', () => {
 		const c = Context.of<State, '/a/b/c/:pos/e'>(
 			'/a/b/c/:pos/e',
 			'/a/b/c/0/e',
-			'delete',
 			'one',
 		);
 
 		expect(c).to.deep.include({
-			path: '/a/b/c/0/e',
-			op: 'delete',
 			target: 'one',
-			params: { pos: 0 },
+			pos: 0,
 		});
 
 		// The context includes a lens to get the value

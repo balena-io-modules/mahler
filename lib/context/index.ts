@@ -1,11 +1,15 @@
 import * as Optic from 'optics-ts';
 import * as assert from 'assert';
 
-import { Context as C, Path as P, Operation } from './types';
+import { Context as C, Path as P, Identity } from './types';
 
 // Redeclare the type for exporting
 export type Context<TState = any, TPath extends Path = '/'> = C<TState, TPath>;
 export type Path = P;
+
+export type ContextAsArgs<TState = any, TPath extends Path = '/'> = Identity<
+	Omit<C<TState, TPath>, 'get' | 'set'>
+>;
 
 function isArrayIndex(x: unknown): x is number {
 	return (
@@ -55,7 +59,6 @@ function params(template: Path, path: Path) {
 function of<TState = any, TPath extends Path = '/'>(
 	template: TPath,
 	path: Path,
-	op: Operation,
 	target: Context<TState, TPath>['target'],
 ): Context<TState, TPath> {
 	const parts = path
@@ -76,10 +79,8 @@ function of<TState = any, TPath extends Path = '/'>(
 	);
 
 	return {
-		op,
-		path,
+		...args,
 		target,
-		params: args,
 		get(s: TState) {
 			return Optic.get(lens)(s);
 		},

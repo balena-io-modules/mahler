@@ -20,6 +20,13 @@ export type Operation = 'create' | 'update' | 'delete';
  */
 export type Context<S, P extends Path> = ContextWithSlash<S, S, P, {}>;
 
+// Utility type to normalize intersections
+export type Identity<T> = T extends object
+	? {} & {
+			[P in keyof T]: T[P];
+	  }
+	: T;
+
 // A context to evaluate paths starting with a slash
 type ContextWithSlash<
 	O,
@@ -62,21 +69,19 @@ type ContextOnSinglePath<O, S, K, A extends {}> = K extends keyof S // If the ke
 type ContextOnEmptyPath<O, S, K, A extends {}> = K extends ''
 	? keyof A extends never // If A has no keys, then this will hold true. In that case, do not add params
 		? {
-				op: Operation;
-				path: Path;
 				target: S;
 				get(state: O): S;
 				set(state: O, value: S): O;
 		  }
-		: {
-				op: Operation;
-				path: Path;
-				target: S;
-				params: A;
-				get(state: O): S;
-				set(state: O, value: S): O;
-		  } // If the key is an empty string, then the type is S
-	: never; // Otherwise, the type is invalid
+		: Identity<
+				A & {
+					target: S;
+					get(state: O): S;
+					set(state: O, value: S): O;
+				}
+		  >
+	: // If the key is an empty string, then the type is S
+	  never; // Otherwise, the type is invalid
 
 // Utility type to check if the key is a parameter
 type ContextOnCompoundPathWithParameter<

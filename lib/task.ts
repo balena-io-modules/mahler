@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { Option, none } from 'fp-ts/lib/Option';
 
-import { Context, Path, Operation } from './context';
+import { Context, ContextAsArgs, Path, Operation } from './context';
 
 export type Op = Operation | '*';
 
@@ -37,11 +37,7 @@ interface TaskSpec<
 	 * ActionTask --- ground --> Action
 	 * MethodTask --- ground --> Method
 	 */
-	(
-		path: Path,
-		op: Operation,
-		target: Context<TState, TPath>['target'],
-	): Instruction<TState>;
+	(ctx: ContextAsArgs<TState, TPath>): Instruction<TState>;
 }
 
 // An action definition
@@ -85,11 +81,6 @@ interface Instance {
 	 * The path that this task applies to
 	 */
 	readonly path: Path;
-
-	/**
-	 * The operation that this task applies to
-	 */
-	readonly op: Operation;
 }
 
 /** An action task that has been applied to a specific context */
@@ -126,11 +117,25 @@ function ground<
 	TOperation extends Op = '*',
 >(
 	task: Task<TState, TPath, TOperation>,
-	path: Path,
-	op: Operation,
-	target: Context<TState, TPath>['target'],
+	ctx: ContextAsArgs<TState, TPath>,
 ): Instruction<TState> {
-	const context = Context.of(task.path, path, op, target);
+	const templateParts = task.path
+		.slice(1)
+		.split('/')
+		.filter((s) => s.length > 0);
+
+	const path = templateParts
+		.map((p) => {
+			if (p.startsWith(':')) {
+				const key = p.slice(1);
+				assert(key in ctx, `Missing parameter ${key} in path ${task.path}`);
+				return ctx[key as keyof typeof ctx];
+			}
+			return p;
+		})
+		.join('/');
+
+	const context = Context.of(task.path, `/${path}`, ctx.target);
 
 	const { id } = task;
 
@@ -138,7 +143,6 @@ function ground<
 		return {
 			id,
 			path,
-			op,
 			method: (s: TState) => task.method(s, context),
 		};
 	}
@@ -146,7 +150,6 @@ function ground<
 	return {
 		id,
 		path,
-		op,
 		effect: (s: TState) => task.effect(s, context),
 		action: (s: TState) => task.action(s, context),
 	};
@@ -227,8 +230,8 @@ function of<
 	assert(Path.is(path), `'${path} is not a valid path`);
 
 	const t = Object.assign(
-		(p: Path, o: Operation, target: Context<TState, TPath>['target']) => {
-			return ground(t as any, p, o, target);
+		(ctx: ContextAsArgs<TState, TPath>) => {
+			return ground(t as any, ctx);
 		},
 		{
 			id: 'anonymous',
@@ -236,9 +239,9 @@ function of<
 			op,
 			...(typeof (task as any).method === 'function'
 				? {
-						action: NotImplemented,
-						effect: () => none,
-				  }
+					action: NotImplemented,
+					effect: () => none,
+				}
 				: {}),
 			...task,
 		},
