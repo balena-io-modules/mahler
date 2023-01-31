@@ -29,7 +29,6 @@ describe('Planner', () => {
 			};
 
 			const take = Task.of({
-				id: 'take',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) && s.hand === null,
@@ -39,10 +38,10 @@ describe('Planner', () => {
 					s.hand = location.block;
 					return s;
 				},
+				description: (location) => `take block ${location.block}`,
 			});
 
 			const put = Task.of({
-				id: 'put',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					location.get(s) === 'hand' && isClear(s.blocks, location.target),
@@ -52,6 +51,8 @@ describe('Planner', () => {
 					s.hand = null;
 					return s;
 				},
+				description: (location) =>
+					`put ${location.block} on ${location.target}`,
 			});
 
 			const allClearBlocks = (blocks: State['blocks']) => {
@@ -76,7 +77,6 @@ describe('Planner', () => {
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
 			const move = Task.of({
-				id: 'move',
 				path: '/blocks',
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
@@ -117,7 +117,7 @@ describe('Planner', () => {
 			expect(
 				pipe(
 					planner.plan({ blocks: { a: 'b', b: 'c', c: 'table' } }),
-					map((actions) => actions.map((s) => s.id)),
+					map((actions) => actions.map((s) => s.description)),
 				),
 			).to.deep.equal(
 				some([
@@ -149,7 +149,6 @@ describe('Planner', () => {
 			};
 
 			const pickup = Task.of({
-				id: 'pickup',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) &&
@@ -161,10 +160,10 @@ describe('Planner', () => {
 					s.hand = location.block;
 					return s;
 				},
+				description: (location) => `pickup block ${location.block}`,
 			});
 
 			const unstack = Task.of({
-				id: 'unstack',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					// The block has no other blocks on top
@@ -179,10 +178,10 @@ describe('Planner', () => {
 					s.hand = location.block;
 					return s;
 				},
+				description: (location) => `unstack block ${location.block}`,
 			});
 
 			const putdown = Task.of({
-				id: 'putdown',
 				path: '/blocks/:block',
 				condition: (s: State, location) => location.get(s) === 'hand',
 				effect: (s: State, location) => {
@@ -192,10 +191,10 @@ describe('Planner', () => {
 					s.hand = null;
 					return s;
 				},
+				description: (location) => `put down block ${location.block}`,
 			});
 
 			const stack = Task.of({
-				id: 'stack',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					// The target has no other blocks on top
@@ -208,10 +207,11 @@ describe('Planner', () => {
 					s.hand = null;
 					return s;
 				},
+				description: (location) =>
+					`stack block ${location.block} on top of block ${location.target}`,
 			});
 
 			const take = Task.of({
-				id: 'take',
 				path: '/blocks/:block',
 				method: (s: State, location) => {
 					if (isClear(s.blocks, location.get(s))) {
@@ -231,7 +231,6 @@ describe('Planner', () => {
 			// There is really not that much of a difference between putdown and stack
 			// this is just to test that the planner can work with nested methods
 			const put = Task.of({
-				id: 'put',
 				path: '/blocks/:block',
 				method: (s: State, location) => {
 					const { block, target } = location;
@@ -245,7 +244,6 @@ describe('Planner', () => {
 					return [];
 				},
 			});
-			console.log(put);
 
 			const allClearBlocks = (blocks: State['blocks']) => {
 				return Object.keys(blocks).filter((block) =>
@@ -269,7 +267,6 @@ describe('Planner', () => {
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
 			const move = Task.of({
-				id: 'move',
 				path: '/blocks',
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
@@ -310,7 +307,7 @@ describe('Planner', () => {
 			expect(
 				pipe(
 					planner.plan({ blocks: { a: 'b', b: 'c', c: 'table' } }),
-					map((actions) => actions.map((s) => s.id)),
+					map((actions) => actions.map((s) => s.description)),
 				),
 			).to.deep.equal(
 				some([

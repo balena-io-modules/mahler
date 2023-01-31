@@ -11,7 +11,10 @@ interface TaskSpec<
 	TPath extends Path = '/',
 	TOperation extends Op = '*',
 > {
-	readonly id: string;
+	/**
+	 * A unique descriptor for this task
+	 */
+	readonly description: string | ((c: Context<TState, TPath>) => string);
 
 	/**
 	 * The path that this task applies to
@@ -78,7 +81,7 @@ interface MethodTask<
 }
 
 interface Instance {
-	readonly id: string;
+	readonly description: string;
 
 	/**
 	 * The path that this task applies to
@@ -145,18 +148,22 @@ function ground<
 
 	const context = Context.of(task.path, `/${path}`, ctx.target);
 
-	const { id } = task;
+	const taskDescription = task.description;
+	const description =
+		typeof taskDescription === 'function'
+			? taskDescription(context)
+			: taskDescription;
 
 	if (isMethod(task)) {
 		return {
-			id,
+			description,
 			path,
 			method: (s: TState) => task.method(s, context),
 		};
 	}
 
 	return {
-		id,
+		description,
 		path,
 		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
@@ -243,16 +250,17 @@ function of<
 			return ground(t as any, ctx);
 		},
 		{
-			id: 'anonymous',
+			description: (ctx: Context<TState, TPath>) =>
+				JSON.stringify({ path, op, ...ctx }),
 			path,
 			op,
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-						condition: () => true,
-						action: NotImplemented,
-						effect: (s: TState) => s,
-				  }),
+					condition: () => true,
+					action: NotImplemented,
+					effect: (s: TState) => s,
+				}),
 			...task,
 		},
 	);
