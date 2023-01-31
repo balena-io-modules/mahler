@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import { Option, none } from 'fp-ts/lib/Option';
 
 import { Context, ContextAsArgs, Path, Operation } from './context';
 
@@ -47,11 +46,15 @@ interface ActionTask<
 	TOperation extends Op = '*',
 > extends TaskSpec<TState, TPath, TOperation> {
 	/**
-	 * The effect on the state that the action
-	 * provides. If the effect returns none, then the task is not applicable
-	 * on the current state
+	 * A pre-condition that needs to be met before the task can be chosen
 	 */
-	effect(s: TState, c: Context<TState, TPath>): Option<TState>;
+	condition(s: TState, c: Context<TState, TPath>): boolean;
+	/**
+	 * The effect on the state that the action
+	 * provides. The effect function can only be ran if the pre condition
+	 * is met.
+	 */
+	effect(s: TState, c: Context<TState, TPath>): TState;
 
 	/**
 	 * The actual action the task performs
@@ -86,11 +89,16 @@ interface Instance {
 /** An action task that has been applied to a specific context */
 export interface Action<TState = any> extends Instance {
 	/**
+	 * A pre-condition that needs to be met before the task can be chosen
+	 */
+	condition(s: TState): boolean;
+
+	/**
 	 * The effect on the state that the action
 	 * provides. If the effect returns none, then the task is not applicable
 	 * on the current state
 	 */
-	effect(s: TState): Option<TState>;
+	effect(s: TState): TState;
 
 	/**
 	 * The actual action the task performs
@@ -150,6 +158,7 @@ function ground<
 	return {
 		id,
 		path,
+		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
 		action: (s: TState) => task.action(s, context),
 	};
@@ -238,11 +247,12 @@ function of<
 			path,
 			op,
 			...(typeof (task as any).method === 'function'
-				? {
-					action: NotImplemented,
-					effect: () => none,
-				}
-				: {}),
+				? {}
+				: {
+						condition: () => true,
+						action: NotImplemented,
+						effect: (s: TState) => s,
+				  }),
 			...task,
 		},
 	);

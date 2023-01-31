@@ -1,7 +1,7 @@
 import { expect } from '~/tests';
 import { Planner } from './planner';
 import { Task } from './task';
-import { none, some, map } from 'fp-ts/lib/Option';
+import { some, map } from 'fp-ts/lib/Option';
 import { pipe } from 'fp-ts/function';
 
 describe('Planner', () => {
@@ -31,31 +31,26 @@ describe('Planner', () => {
 			const take = Task.of({
 				id: 'take',
 				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					isClear(s.blocks, location.block) && s.hand === null,
 				effect: (s: State, location) => {
-					if (isClear(s.blocks, location.block) && s.hand === null) {
-						// Update the block
-						s = location.set(s, 'hand');
-						s.hand = location.block;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, 'hand');
+					s.hand = location.block;
+					return s;
 				},
 			});
 
 			const put = Task.of({
 				id: 'put',
 				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					location.get(s) === 'hand' && isClear(s.blocks, location.target),
 				effect: (s: State, location) => {
-					if (
-						location.get(s) === 'hand' &&
-						isClear(s.blocks, location.target)
-					) {
-						// Update the block
-						s = location.set(s, location.target);
-						s.hand = null;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, location.target);
+					s.hand = null;
+					return s;
 				},
 			});
 
@@ -156,72 +151,62 @@ describe('Planner', () => {
 			const pickup = Task.of({
 				id: 'pickup',
 				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					isClear(s.blocks, location.block) &&
+					location.get(s) === 'table' &&
+					s.hand === null,
 				effect: (s: State, location) => {
-					if (
-						isClear(s.blocks, location.block) &&
-						location.get(s) === 'table' &&
-						s.hand === null
-					) {
-						// Update the block
-						s = location.set(s, 'hand');
-						s.hand = location.block;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, 'hand');
+					s.hand = location.block;
+					return s;
 				},
 			});
 
 			const unstack = Task.of({
 				id: 'unstack',
 				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					// The block has no other blocks on top
+					isClear(s.blocks, location.block) &&
+					// The block is on top of other block (not in the hand or the table)
+					!['table', 'hand'].includes(location.get(s)) &&
+					// The hand is not holding any other block
+					s.hand === null,
 				effect: (s: State, location) => {
-					if (
-						// The block has no other blocks on top
-						isClear(s.blocks, location.block) &&
-						// The block is on top of other block (not in the hand or the table)
-						location.get(s) !== 'table' &&
-						location.get(s) !== 'hand' &&
-						s.hand === null
-					) {
-						// Update the block
-						s = location.set(s, 'hand');
-						s.hand = location.block;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, 'hand');
+					s.hand = location.block;
+					return s;
 				},
 			});
 
 			const putdown = Task.of({
 				id: 'putdown',
 				path: '/blocks/:block',
+				condition: (s: State, location) => location.get(s) === 'hand',
 				effect: (s: State, location) => {
-					if (location.get(s) === 'hand') {
-						// Update the block
-						s = location.set(s, 'table');
-						s.hand = null;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, 'table');
+					// Mark the hand as free
+					s.hand = null;
+					return s;
 				},
 			});
 
 			const stack = Task.of({
 				id: 'stack',
 				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					// The target has no other blocks on top
+					isClear(s.blocks, location.target) &&
+					// The hand is holding the block
+					location.get(s) === 'hand',
 				effect: (s: State, location) => {
-					if (
-						// The target has no other blocks on top
-						isClear(s.blocks, location.target) &&
-						// The hand is holding the block
-						location.get(s) === 'hand'
-					) {
-						// Update the block
-						s = location.set(s, location.target);
-						s.hand = null;
-						return some(s);
-					}
-					return none;
+					// Update the block
+					s = location.set(s, location.target);
+					s.hand = null;
+					return s;
 				},
 			});
 
@@ -260,6 +245,7 @@ describe('Planner', () => {
 					return [];
 				},
 			});
+			console.log(put);
 
 			const allClearBlocks = (blocks: State['blocks']) => {
 				return Object.keys(blocks).filter((block) =>
