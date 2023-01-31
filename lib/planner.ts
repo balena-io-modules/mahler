@@ -1,4 +1,3 @@
-import { Option, none } from 'fp-ts/lib/Option';
 import { Task, Action } from './task';
 import { Patch, patch } from './patch';
 
@@ -15,9 +14,10 @@ export interface Planner<TState = any> {
 
 	/**
 	 * Calculate a plan to get from the current state
-	 * to the target state
+	 * to the target state. It will throw an exception if a plan
+	 * cannot be found.
 	 */
-	plan(target: Patch<TState>): Option<Array<Action<TState>>>;
+	plan(target: Patch<TState>): Array<Action<TState>>;
 
 	/**
 	 * Calculate and follow the plan to the target state
@@ -29,8 +29,8 @@ function plan<TState = any>(
 	_initial: TState,
 	_target: TState,
 	_tasks: Array<Task<TState>>,
-) {
-	return none;
+): Array<Action<TState>> {
+	throw new Error('Planner not implemented');
 }
 
 function of<TState = any>(

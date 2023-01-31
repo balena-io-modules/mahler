@@ -257,10 +257,10 @@ function of<
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-					condition: () => true,
-					action: NotImplemented,
-					effect: (s: TState) => s,
-				}),
+						condition: () => true,
+						action: NotImplemented,
+						effect: (s: TState) => s,
+				  }),
 			...task,
 		},
 	);

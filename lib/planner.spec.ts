@@ -1,8 +1,6 @@
 import { expect } from '~/tests';
 import { Planner } from './planner';
 import { Task } from './task';
-import { some, map } from 'fp-ts/lib/Option';
-import { pipe } from 'fp-ts/function';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -115,15 +113,12 @@ describe('Planner', () => {
 			);
 
 			expect(
-				pipe(
-					planner.plan({ blocks: { a: 'b', b: 'c', c: 'table' } }),
-					map((actions) => actions.map((s) => s.description)),
-				),
-			).to.deep.equal(
-				some([
-					/* TODO */
-				]),
-			);
+				planner
+					.plan({ blocks: { a: 'b', b: 'c', c: 'table' } })
+					.map((a) => a.description),
+			).to.deep.equal([
+				/* TODO */
+			]);
 		});
 
 		it('block stacking problem: fancy version', () => {
@@ -305,15 +300,12 @@ describe('Planner', () => {
 			);
 
 			expect(
-				pipe(
-					planner.plan({ blocks: { a: 'b', b: 'c', c: 'table' } }),
-					map((actions) => actions.map((s) => s.description)),
-				),
-			).to.deep.equal(
-				some([
-					/* TODO */
-				]),
-			);
+				planner
+					.plan({ blocks: { a: 'b', b: 'c', c: 'table' } })
+					.map((action) => action.description),
+			).to.deep.equal([
+				/* TODO */
+			]);
 		});
 		it('simple travel problem', async () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
