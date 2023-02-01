@@ -23,7 +23,7 @@ An experimental HTN planner for building autonomous system agents.
 
 The library design is inspired by the work in [Exploring HTN Planners through example](https://www.gameaipro.com/GameAIPro/GameAIPro_Chapter12_Exploring_HTN_Planners_through_Example.pdf).
 
-![Planner design](./design.svg)
+![Planner design](./design.png)
 
 ## Example
 
