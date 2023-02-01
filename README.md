@@ -130,7 +130,7 @@ const authenticateAndConnect = Task.of({
 		if (network.get(state).authenticated) {
 			// Add an authentication step to the list of tasks
 			// Calling the the `authenticate` task as a function "grounds" the task
-			// with the specified arguments
+			// with the specified context
 			tasks.push(authenticate({ id, target }));
 		}
 
@@ -186,6 +186,8 @@ const networkScanner = Sensor.of<State>({
 		while (true) {
 			// TODO: read signal
 			subscriber.next(updatedNetworks);
+
+			await delay(60);
 		}
 	},
 });
@@ -196,6 +198,8 @@ const connectivityCheck = Sensor.of<State>({
 		while (true) {
 			// TODO: ping www.google.com and get connectivity
 			subscriber.next(internetAccessState);
+
+			await delay(60);
 		}
 	},
 });
@@ -205,27 +209,40 @@ Now that we have all our tasks and sensors defined, we can define our agent
 
 ```typescript
 const agent = Agent.of<State>({
-		initial: {current: null, internetAccess: false, knownNetworks: {}},
-		tasks: [addNetwork, connect, authenticate, authenticateAndConnect, switchNetworks],
-		sensors: [networkScanner, connectivityCheck]
-	});
+	initial: { current: null, internetAccess: false, knownNetworks: {} },
+	tasks: [
+		addNetwork,
+		connect,
+		authenticate,
+		authenticateAndConnect,
+		switchNetworks,
+	],
+	sensors: [networkScanner, connectivityCheck],
+});
 
 // Set an initial goal for the agent. New goals can be defined once the agent is started
 // Note that we don't need to provide a current network, we only care that the agent remains connected
-agent.goal({connected: true, knownNetworks: {home1: {ssid: 'My Home', psk: ''}, office1: {ssid: 'First floor', psk: ''}, office2: {ssid: 'Second floor', psk: ''}}})
+agent.goal({
+	connected: true,
+	knownNetworks: {
+		home1: { ssid: 'My Home', psk: '' },
+		office1: { ssid: 'First floor', psk: '' },
+		office2: { ssid: 'Second floor', psk: '' },
+	},
+});
 
 // Start the agent. Set it to keep retrying to reach the goal and waiting
 // 60 seconds goal check and retrying if nothing changes
-agent.start({maxRetries: 0, retryTimeout: 60});
-
+agent.start({ maxRetries: 0, retryTimeout: 60 });
 
 // We can modify the goal after the agent has started. In this case we are adding a new network, which
 // will cause the agent to re-calculate the plan to include the `addNetwork` task.
-agent.goal({knownNetworks: {
-		home1: {ssid: 'My Home', psk: ''},
-		office1: {ssid: 'First floor', psk: ''},
-		office2: {ssid: 'Second floor', psk: ''}
-		office3: {ssid: 'Kitchen', psk: ''}
-	}})
-
+agent.goal({
+	knownNetworks: {
+		home1: { ssid: 'My Home', psk: '' },
+		office1: { ssid: 'First floor', psk: '' },
+		office2: { ssid: 'Second floor', psk: '' },
+		office3: { ssid: 'Kitchen', psk: '' },
+	},
+});
 ```
