@@ -203,7 +203,7 @@ const connectivityCheck = Sensor.of<State>({
 
 Now that we have all our tasks and sensors defined, we can define our agent
 
-```typecript
+```typescript
 const agent = Agent.of<State>({
 		initial: {current: null, internetAccess: false, knownNetworks: {}},
 		tasks: [addNetwork, connect, authenticate, authenticateAndConnect, switchNetworks],
