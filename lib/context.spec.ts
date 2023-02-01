@@ -29,6 +29,27 @@ describe('context', () => {
 		expect(obj).to.deep.equal({ a: { b: { c: ['zero'] }, d: 123 } });
 	});
 
+	it('calculates a context on a dynamic object', () => {
+		type State = { objects: { [id: string]: { value: number } } };
+
+		const ctx = Context.of<State, '/objects/:id'>(
+			'/objects/:id',
+			'/objects/second',
+			{ value: 123 },
+		);
+
+		expect(ctx).to.deep.include({ id: 'second', target: { value: 123 } });
+
+		const state = { objects: { first: { value: 0 } } };
+		expect(ctx.get(state)).to.be.undefined;
+		expect(ctx.set(state, { value: 123 })).to.deep.equal({
+			objects: { first: { value: 0 }, second: { value: 123 } },
+		});
+
+		// The state has not changed
+		expect(state).to.deep.equal({ objects: { first: { value: 0 } } });
+	});
+
 	it('calculates a context with arrays', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 
