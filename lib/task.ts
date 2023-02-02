@@ -26,8 +26,10 @@ interface TaskSpec<
 	 */
 	readonly op: TOperation;
 
-	// TODO: add a description for the tasks that depends on the context
-	// this way, execution of the planner can also describe what is doint at each moment
+	/**
+	 * A pre-condition that needs to be met before the task can be chosen
+	 */
+	condition(s: TState, c: Context<TState, TPath>): boolean;
 
 	/**
 	 * The task function grounds the task
@@ -48,10 +50,6 @@ interface ActionTask<
 	TPath extends Path = '/',
 	TOperation extends Op = '*',
 > extends TaskSpec<TState, TPath, TOperation> {
-	/**
-	 * A pre-condition that needs to be met before the task can be chosen
-	 */
-	condition(s: TState, c: Context<TState, TPath>): boolean;
 	/**
 	 * The effect on the state that the action
 	 * provides. The effect function can only be ran if the pre condition
@@ -80,22 +78,22 @@ interface MethodTask<
 	method(s: TState, c: Context<TState, TPath>): Array<Instruction<TState>>;
 }
 
-interface Instance {
+interface Instance<TState> {
 	readonly description: string;
 
 	/**
 	 * The path that this task applies to
 	 */
 	readonly path: Path;
-}
 
-/** An action task that has been applied to a specific context */
-export interface Action<TState = any> extends Instance {
 	/**
 	 * A pre-condition that needs to be met before the task can be chosen
 	 */
 	condition(s: TState): boolean;
+}
 
+/** An action task that has been applied to a specific context */
+export interface Action<TState = any> extends Instance<TState> {
 	/**
 	 * The effect on the state that the action
 	 * provides. If the effect returns none, then the task is not applicable
@@ -110,7 +108,7 @@ export interface Action<TState = any> extends Instance {
 }
 
 /** An action task that has been applied to a specific context */
-interface Method<TState = any> extends Instance {
+interface Method<TState = any> extends Instance<TState> {
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
@@ -158,6 +156,7 @@ function ground<
 		return {
 			description,
 			path,
+			condition: (s: TState) => task.condition(s, context),
 			method: (s: TState) => task.method(s, context),
 		};
 	}
@@ -254,13 +253,13 @@ function of<
 				JSON.stringify({ path, op, ...ctx }),
 			path,
 			op,
+			condition: () => true,
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-						condition: () => true,
-						action: NotImplemented,
-						effect: (s: TState) => s,
-				  }),
+					action: NotImplemented,
+					effect: (s: TState) => s,
+				}),
 			...task,
 		},
 	);

@@ -104,17 +104,17 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>(
-				{
-					blocks: { a: 'table', b: 'a', c: 'b' },
-					hand: null,
-				},
-				[take, put, move],
-			);
+			const planner = Planner.of<State>([take, put, move]);
 
 			expect(
 				planner
-					.plan({ blocks: { a: 'b', b: 'c', c: 'table' } })
+					.plan(
+						{
+							blocks: { a: 'table', b: 'a', c: 'b' },
+							hand: null,
+						},
+						{ blocks: { a: 'b', b: 'c', c: 'table' } },
+					)
 					.map((a) => a.description),
 			).to.deep.equal([
 				/* TODO */
@@ -291,17 +291,25 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>(
-				{
-					blocks: { a: 'table', b: 'a', c: 'b' },
-					hand: null,
-				},
-				[pickup, unstack, putdown, stack, take, put, move],
-			);
+			const planner = Planner.of<State>([
+				pickup,
+				unstack,
+				putdown,
+				stack,
+				take,
+				put,
+				move,
+			]);
 
 			expect(
 				planner
-					.plan({ blocks: { a: 'b', b: 'c', c: 'table' } })
+					.plan(
+						{
+							blocks: { a: 'table', b: 'a', c: 'b' },
+							hand: null,
+						},
+						{ blocks: { a: 'b', b: 'c', c: 'table' } },
+					)
 					.map((action) => action.description),
 			).to.deep.equal([
 				/* TODO */
