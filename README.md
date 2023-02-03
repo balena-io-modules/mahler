@@ -38,18 +38,20 @@ type Network = {
 	psk: string;
 	// To indicate if we have already
 	// authenticated with the network
-	authenticated: boolean;
+	// We make it optional as we usually won't care about this
+	// value in the target state
+	authenticated?: boolean;
 	// We are connected to this network.
-	connected: boolean;
+	connected?: boolean;
 	// Indicates if the network is reachable a range 0 to 100%
 	// 0% means the network is out of reach
-	signal: number;
+	signal?: number;
 };
 
 // The state represents everything the agent
 // knows about the world
 type State = {
-	current: NetworkId | null;
+	currentNetwork?: NetworkId;
 	// We not only are connected, but we have access to the internet
 	internetAccess: boolean;
 	knownNetworks: { [id: NetworkId]: Network };
@@ -156,7 +158,7 @@ const switchNetworks = Task.of({
 		// the current network.
 		// NOTE: a better approach could be to sort the networks by signal id
 		const networkId = Object.keys(state.knownNetworks).find(
-			(id) => id != state.current && state.knownNetworks[id].signal > 20,
+			(id) => id != state.currentNetwork && state.knownNetworks[id].signal > 20,
 		);
 
 		if (!networkId) {
@@ -209,7 +211,7 @@ Now that we have all our tasks and sensors defined, we can define our agent
 
 ```typescript
 const agent = Agent.of<State>({
-	initial: { current: null, internetAccess: false, knownNetworks: {} },
+	initial: { internetAccess: false, knownNetworks: {} },
 	tasks: [
 		addNetwork,
 		connect,
@@ -238,6 +240,7 @@ agent.start({ maxRetries: 0, retryTimeout: 60 });
 // We can modify the goal after the agent has started. In this case we are adding a new network, which
 // will cause the agent to re-calculate the plan to include the `addNetwork` task.
 agent.goal({
+	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
 		office1: { ssid: 'First floor', psk: '' },

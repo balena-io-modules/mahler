@@ -11,7 +11,7 @@ describe('Planner', () => {
 			type Location = Block | Table | Hand;
 			type State = {
 				blocks: { [block in Block]: Location };
-				hand: Block | null;
+				hand?: Block | null;
 			};
 
 			const isBlock = (x: Location): x is Block =>
@@ -29,7 +29,7 @@ describe('Planner', () => {
 			const take = Task.of({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
-					isClear(s.blocks, location.block) && s.hand === null,
+					isClear(s.blocks, location.block) && s.hand == null,
 				effect: (s: State, location) => {
 					// Update the block
 					s = location.set(s, 'hand');
@@ -111,7 +111,6 @@ describe('Planner', () => {
 					.plan(
 						{
 							blocks: { a: 'table', b: 'a', c: 'b' },
-							hand: null,
 						},
 						{ blocks: { a: 'b', b: 'c', c: 'table' } },
 					)
@@ -128,7 +127,7 @@ describe('Planner', () => {
 			type Location = Block | Table | Hand;
 			type State = {
 				blocks: { [block in Block]: Location };
-				hand: Block | null;
+				hand?: Block | null;
 			};
 
 			const isBlock = (x: Location): x is Block =>
@@ -148,7 +147,7 @@ describe('Planner', () => {
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) &&
 					location.get(s) === 'table' &&
-					s.hand === null,
+					s.hand == null,
 				effect: (s: State, location) => {
 					// Update the block
 					s = location.set(s, 'hand');
@@ -166,7 +165,7 @@ describe('Planner', () => {
 					// The block is on top of other block (not in the hand or the table)
 					!['table', 'hand'].includes(location.get(s)) &&
 					// The hand is not holding any other block
-					s.hand === null,
+					s.hand == null,
 				effect: (s: State, location) => {
 					// Update the block
 					s = location.set(s, 'hand');
@@ -306,7 +305,6 @@ describe('Planner', () => {
 					.plan(
 						{
 							blocks: { a: 'table', b: 'a', c: 'b' },
-							hand: null,
 						},
 						{ blocks: { a: 'b', b: 'c', c: 'table' } },
 					)
