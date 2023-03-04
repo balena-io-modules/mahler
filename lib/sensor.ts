@@ -91,9 +91,7 @@ function of<T>(
 			if (typeof next === 'function') {
 				subscriber = {
 					next,
-					error: (e) => {
-						console.error(e);
-					},
+					error: () => void 0,
 					complete: () => void 0,
 				};
 			} else {
