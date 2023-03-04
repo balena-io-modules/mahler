@@ -1,6 +1,8 @@
+// import * as rfc6902 from 'rfc6902';
+
 import { Task, Action } from './task';
 import { Goal } from './goal';
-import { patch, equals } from './json';
+import { patch } from './json';
 
 export interface Planner<TState = any> {
 	/**
@@ -11,12 +13,18 @@ export interface Planner<TState = any> {
 	plan(current: TState, target: Goal<TState>): Array<Action<TState>>;
 }
 
+// Parameters for the plan function
+// Level
+// Target as a combination of the level patches
+// Tentative plan
+// Stack ?
 function plan<TState = any>(
 	_current: TState,
 	_target: TState,
 	_tasks: Array<Task<TState>>,
 ): Array<Action<TState>> {
 	// TODO: compare current and target state objects using json diff
+	// const _diff = rfc6902.createPatch(current, target);
 	// TODO: find a task for the current level json object that can be applied
 	// TODO: group all operatios in the diff as an update operation
 	// TODO: apply the task, if it's a method, add the output to the top of the instruction list
@@ -37,6 +45,17 @@ function plan<TState = any>(
 function of<TState = any>(
 	tasks = [] as Array<Task<TState, any, any>>,
 ): Planner<TState> {
+	// Sort the tasks putting methods first
+	tasks = tasks.sort((a, b) => {
+		if (Task.isMethod(a) && Task.isAction(b)) {
+			return -1;
+		}
+		if (Task.isAction(a) && Task.isMethod(b)) {
+			return 1;
+		}
+		return 0;
+	});
+
 	return {
 		plan(current: TState, target: Goal<TState>) {
 			return plan(current, patch(current, target), tasks);

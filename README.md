@@ -181,29 +181,29 @@ const switchNetworks = Task.of({
 Finally we need to define some sensors, one to scan for available networks, and one to test the internet connectivity of the system.
 
 ```typescript
-// TODO: define the sensor API
-const networkScanner = Sensor.of<State>({
-	path: '/knownNetworks',
-	sensor: async (lens, subscriber) => {
-		while (true) {
-			// TODO: read signal
-			subscriber.next(updatedNetworks);
+const networkScanner = Sensor.of(async (subscriber: Subscriber<State>) => {
+	while (true) {
+		// TODO: read signal
 
-			await delay(60);
-		}
-	},
+		// Modify the state passed to the subscriber with the updated list
+		subscriber.next((state) => ({ ...state, knownNetworks: updatedNetworks }));
+
+		await delay(60);
+	}
 });
 
-const connectivityCheck = Sensor.of<State>({
-	path: '/knownNetworks',
-	sensor: async (lens, subscriber) => {
-		while (true) {
-			// TODO: ping www.google.com and get connectivity
-			subscriber.next(internetAccessState);
+const connectivityCheck = Sensor.of(async (subscriber: Subscriber<State>) => {
+	while (true) {
+		// TODO: ping www.google.com and get connectivity
 
-			await delay(60);
-		}
-	},
+		// Modify the state passed to the subscriber with the updated list
+		subscriber.next((state) => ({
+			...state,
+			internetAccess: currentInternetAccess,
+		}));
+
+		await delay(60);
+	}
 });
 ```
 

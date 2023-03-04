@@ -289,9 +289,9 @@ function of<
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-					action: NotImplemented,
-					effect: (s: TState) => s,
-				}),
+						action: NotImplemented,
+						effect: (s: TState) => s,
+				  }),
 			...task,
 		},
 	);

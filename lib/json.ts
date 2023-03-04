@@ -2,8 +2,8 @@ import merge from 'ts-deepmerge';
 
 type Patch<T> = T extends object
 	? {
-		[P in keyof T]?: Patch<T[P]>;
-	}
+			[P in keyof T]?: Patch<T[P]>;
+	  }
 	: T;
 
 export function patch<T = any>(src: T, p: Patch<T>): T {
