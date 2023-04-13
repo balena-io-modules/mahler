@@ -1,17 +1,19 @@
 import * as assert from 'assert';
 import { randomUUID } from 'crypto';
 
-import { Context, ContextAsArgs, Path, Operation } from './context';
+import { Path } from './path';
+import { Context, ContextAsArgs } from './context';
+import { Op, Operation } from './operation';
 import { equals } from './json';
 
-export type Op = Operation | '*';
+export type TaskOp = Op | '*';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 
 interface TaskSpec<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
+	TOp extends TaskOp = '*',
 > {
 	/**
 	 * A unique identifier for the task
@@ -31,32 +33,20 @@ interface TaskSpec<
 	/**
 	 * The operation that this task applies to
 	 */
-	readonly op: TOperation;
+	readonly op: TOp;
 
 	/**
 	 * A pre-condition that needs to be met before the task can be chosen
 	 */
 	condition(s: TState, c: Context<TState, TPath>): boolean;
-
-	/**
-	 * The task function grounds the task
-	 *
-	 * Grounding the task converts the specification into an instruction, that is,
-	 * something that can be evaluated by the planner. It does this by
-	 * contextualizing the task for a specific target.
-	 *
-	 * ActionTask --- ground --> Action
-	 * MethodTask --- ground --> Method
-	 */
-	(ctx: ContextAsArgs<TState, TPath>): Instruction<TState>;
 }
 
 // An action definition
 interface ActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
-> extends TaskSpec<TState, TPath, TOperation> {
+	TOp extends TaskOp = '*',
+> extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The effect on the state that the action
 	 * provides. The effect function can only be ran if the pre condition
@@ -68,14 +58,26 @@ interface ActionTask<
 	 * The actual action the task performs
 	 */
 	action(s: TState, c: Context<TState, TPath>): Promise<TState>;
+
+	/**
+	 * The task function grounds the task
+	 *
+	 * Grounding the task converts the specification into an instruction, that is,
+	 * something that can be evaluated by the planner. It does this by
+	 * contextualizing the task for a specific target.
+	 *
+	 * ActionTask --- ground --> Action
+	 * MethodTask --- ground --> Method
+	 */
+	(ctx: ContextAsArgs<TState, TPath>): Action<TState>;
 }
 
 // A method definition
 interface MethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
-> extends TaskSpec<TState, TPath, TOperation> {
+	TOp extends TaskOp = '*',
+> extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the sequence is not applicable
@@ -83,6 +85,18 @@ interface MethodTask<
 	 * TODO: should the function return none if not applicable
 	 */
 	method(s: TState, c: Context<TState, TPath>): Array<Instruction<TState>>;
+
+	/**
+	 * The task function grounds the task
+	 *
+	 * Grounding the task converts the specification into an instruction, that is,
+	 * something that can be evaluated by the planner. It does this by
+	 * contextualizing the task for a specific target.
+	 *
+	 * ActionTask --- ground --> Action
+	 * MethodTask --- ground --> Method
+	 */
+	(ctx: ContextAsArgs<TState, TPath>): Method<TState>;
 }
 
 interface Instance<TState, TPath extends Path> {
@@ -132,7 +146,7 @@ export interface Action<TState = any, TPath extends Path = '/'>
 }
 
 /** An action task that has been applied to a specific context */
-interface Method<TState = any, TPath extends Path = '/'>
+export interface Method<TState = any, TPath extends Path = '/'>
 	extends Instance<TState, TPath> {
 	/**
 	 * The method to be called when the task is executed
@@ -150,26 +164,25 @@ export type Instruction<TState = any, TPath extends Path = '/'> =
 function ground<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
+	TOp extends TaskOp = '*',
 >(
-	task: Task<TState, TPath, TOperation>,
+	task: Task<TState, TPath, TOp>,
 	ctx: ContextAsArgs<TState, TPath>,
 ): Instruction<TState, TPath> {
-	const templateParts = task.path
-		.slice(1)
-		.split('/')
-		.filter((s) => s.length > 0);
+	const templateParts = Path.elems(task.path);
 
-	const path = templateParts
-		.map((p) => {
-			if (p.startsWith(':')) {
-				const key = p.slice(1);
-				assert(key in ctx, `Missing parameter ${key} in path ${task.path}`);
-				return ctx[key as keyof typeof ctx];
-			}
-			return p;
-		})
-		.join('/');
+	const path =
+		'/' +
+		templateParts
+			.map((p) => {
+				if (p.startsWith(':')) {
+					const key = p.slice(1);
+					assert(key in ctx, `Missing parameter ${key} in path ${task.path}`);
+					return ctx[key as keyof typeof ctx];
+				}
+				return p;
+			})
+			.join('/');
 
 	const context = Context.of(task.path, `/${path}`, ctx.target);
 
@@ -207,16 +220,14 @@ function ground<
 function isMethod<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(
-	t: Task<TState, TPath, TOperation>,
-): t is MethodTask<TState, TPath, TOperation>;
+	TOp extends TaskOp = '*',
+>(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp>;
 function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState>;
 function isMethod<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(t: Task<TState, TPath, TOperation> | Instruction<TState>) {
+	TOp extends TaskOp = '*',
+>(t: Task<TState, TPath, TOp> | Instruction<TState>) {
 	return (t as any).method != null && typeof (t as any).method === 'function';
 }
 
@@ -226,16 +237,14 @@ function isMethod<
 function isAction<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(
-	t: Task<TState, TPath, TOperation>,
-): t is ActionTask<TState, TPath, TOperation>;
+	TOp extends TaskOp = '*',
+>(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp>;
 function isAction<TState = any>(t: Instruction<TState>): t is Action<TState>;
 function isAction<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(t: Task<TState, TPath, TOperation> | Instruction<TState>) {
+	TOp extends TaskOp = '*',
+>(t: Task<TState, TPath, TOp> | Instruction<TState>) {
 	return (
 		(t as any).effect != null &&
 		typeof (t as any).effect === 'function' &&
@@ -247,14 +256,12 @@ function isAction<
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
-	TOperation extends Op = '*',
-> =
-	| ActionTask<TState, TPath, TOperation>
-	| MethodTask<TState, TPath, TOperation>;
+	TOp extends TaskOp = '*',
+> = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
-function of<TState = any, TOperation extends Op = '*'>({
+function of<TState = any, TOp extends TaskOp = '*'>({
 	path = '/',
-}: Partial<Task<TState, '/', TOperation>>): Task<TState, '/', TOperation>;
+}: Partial<Task<TState, '/', TOp>>): Task<TState, '/', TOp>;
 function of<TState = any, TPath extends Path = '/'>({
 	op = '*',
 }: Partial<Task<TState, TPath, '*'>>): Task<TState, TPath, '*'>;
@@ -262,18 +269,16 @@ function of<TState = any>({
 	path = '/',
 	op = '*',
 }: Partial<Task<TState, '/', '*'>>): Task<TState, '/', '*'>;
-function of<
-	TState = any,
-	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(t: Partial<Task<TState, TPath, TOperation>>): Task<TState, TPath, TOperation>;
-function of<
-	TState = any,
-	TPath extends Path = '/',
-	TOperation extends Op = '*',
->(task: Partial<Task<TState, TPath, TOperation>>) {
+function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
+	t: Partial<Task<TState, TPath, TOp>>,
+): Task<TState, TPath, TOp>;
+function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
+	task: Partial<Task<TState, TPath, TOp>>,
+) {
 	const { path = '/', op = '*' } = task;
-	assert(Path.is(path), `'${path} is not a valid path`);
+
+	// Check that the path is valid
+	Path.assert(path);
 
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath>) => {
@@ -289,9 +294,9 @@ function of<
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-						action: NotImplemented,
-						effect: (s: TState) => s,
-				  }),
+					action: NotImplemented,
+					effect: (s: TState) => s,
+				}),
 			...task,
 		},
 	);
@@ -309,18 +314,47 @@ function isEqual<TState = any>(
 	return equals(id1, id2);
 }
 
+function isApplicable<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = '*',
+>(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
+	if (t.op !== '*' && t.op !== o.op) {
+		return false;
+	}
+
+	const templateParts = Path.elems(t.path);
+	const parts = Path.elems(o.path);
+
+	if (templateParts.length > parts.length) {
+		return false;
+	}
+
+	for (const templateElem of templateParts) {
+		const pathElem = parts.shift();
+		if (!templateElem.startsWith(':') && templateElem !== pathElem) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 export const Task = {
 	of,
 	isMethod,
 	isAction,
+	isApplicable,
 };
 
 export const Method = {
 	is: isMethod,
+	equals: isEqual,
 };
 
 export const Action = {
 	is: isAction,
+	equals: isEqual,
 };
 
 export const Instruction = {

@@ -1,24 +1,4 @@
-export type Path = string;
-export type Operation = 'create' | 'update' | 'delete';
-
-/**
- * A Context type provides information about a desired change on a path
- *
- * The properties of a context object are the following
- *
- * @property op - The operation taking place
- * @property target - The target value of the referenced element (TODO: this probably should be undefined if the operation is `remove`)
- * @property params - If route parameters are given in the path, e.g. /people/:name/location, then this property includes the relevant values for the operation. e.g. if the change is in `/people/alice/location`, the params.name will have the value 'alice'
- * @property get - A function that returns the value of the referenced element on the state
- * @property set - A funciton that allows to modify the referenced element in a state object
- *
- * The functions `get` and `set` make the contet a functional lens, which by definition follows the following laws:
- *
- *  get(set(a)(s)) = a
- *  set(s, get(s)) = s
- *  set(set(s, a), a) = set(s,a)
- */
-export type Context<S, P extends Path> = ContextWithSlash<S, S, P, {}>;
+import { Path } from '../pointer';
 
 // Utility type to normalize intersections
 export type Identity<T> = T extends object
@@ -28,7 +8,7 @@ export type Identity<T> = T extends object
 	: T;
 
 // A context to evaluate paths starting with a slash
-type ContextWithSlash<
+export type ContextWithSlash<
 	O,
 	S,
 	P extends Path,

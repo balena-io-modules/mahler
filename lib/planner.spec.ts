@@ -116,7 +116,12 @@ describe('Planner', () => {
 					)
 					.map((a) => a.description),
 			).to.deep.equal([
-				/* TODO */
+				'take block c',
+				'put c on table',
+				'take block b',
+				'put b on c',
+				'take block a',
+				'put a on b',
 			]);
 		});
 
@@ -310,10 +315,16 @@ describe('Planner', () => {
 					)
 					.map((action) => action.description),
 			).to.deep.equal([
-				/* TODO */
+				'unstack block c',
+				'put down block c',
+				'unstack block b',
+				'stack block b on top of block c',
+				'pickup block a',
+				'stack block a on top of block b',
 			]);
 		});
-		it('simple travel problem', async () => {
+
+		it.skip('simple travel problem', async () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 			// the available cash, some actions may be possible
 			expect(false);

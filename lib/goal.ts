@@ -4,6 +4,6 @@
 // element of the state
 export type Goal<T> = T extends object
 	? {
-			[P in keyof T]: Goal<T[P]>;
-	  }
+		[P in keyof T]: Goal<T[P]>;
+	}
 	: T;

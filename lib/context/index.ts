@@ -1,14 +1,33 @@
 import * as Optic from 'optics-ts';
 import * as assert from 'assert';
+import { Path } from '../path';
 
-import { Context as C, Path as P, Identity } from './types';
+import { ContextWithSlash, Identity } from './types';
+
+/**
+ * A Context type provides information about a desired change on a path
+ *
+ * The properties of a context object are the following
+ *
+ * @property op - The operation taking place
+ * @property target - The target value of the referenced element (TODO: this probably should be undefined if the operation is `remove`)
+ * @property params - If route parameters are given in the path, e.g. /people/:name/location, then this property includes the relevant values for the operation. e.g. if the change is in `/people/alice/location`, the params.name will have the value 'alice'
+ * @property get - A function that returns the value of the referenced element on the state
+ * @property set - A funciton that allows to modify the referenced element in a state object
+ *
+ * The functions `get` and `set` make the contet a functional lens, which by definition follows the following laws:
+ *
+ *  get(set(a)(s)) = a
+ *  set(s, get(s)) = s
+ *  set(set(s, a), a) = set(s,a)
+ */
+export type Context<S, P extends Path> = Identity<
+	ContextWithSlash<S, S, P, {}>
+>;
 
 // Redeclare the type for exporting
-export type Context<TState = any, TPath extends Path = '/'> = C<TState, TPath>;
-export type Path = P;
-
 export type ContextAsArgs<TState = any, TPath extends Path = '/'> = Identity<
-	Omit<C<TState, TPath>, 'get' | 'set'>
+	Omit<Context<TState, TPath>, 'get' | 'set'>
 >;
 
 function isArrayIndex(x: unknown): x is number {
@@ -22,15 +41,8 @@ function isArrayIndex(x: unknown): x is number {
 }
 
 function params(template: Path, path: Path) {
-	const templateParts = template
-		.slice(1)
-		.split('/')
-		.filter((s) => s.length > 0);
-
-	const parts = path
-		.slice(1)
-		.split('/')
-		.filter((s) => s.length > 0);
+	const templateParts = Path.elems(template);
+	const parts = Path.elems(path);
 
 	assert(
 		parts.length === templateParts.length,
@@ -61,10 +73,7 @@ function of<TState = any, TPath extends Path = '/'>(
 	path: Path,
 	target: Context<TState, TPath>['target'],
 ): Context<TState, TPath> {
-	const parts = path
-		.slice(1)
-		.split('/')
-		.filter((s) => s.length > 0);
+	const parts = Path.elems(path);
 
 	// Get route parameters
 	const args = params(template, path);
@@ -91,22 +100,8 @@ function of<TState = any, TPath extends Path = '/'>(
 	} as any;
 }
 
-export { Operation } from './types';
 export const Context = {
 	of,
-};
-
-function isPath(x: unknown): x is Path {
-	return (
-		x != null &&
-		typeof x === 'string' &&
-		x.startsWith('/') &&
-		/[-a-zA-Z0-9@:%._\\+~#?&\/=]*/.test(x)
-	);
-}
-
-export const Path = {
-	is: isPath,
 };
 
 export default Context;

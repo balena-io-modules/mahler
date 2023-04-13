@@ -1,7 +1,7 @@
 import { expect } from '~/tests';
 import { Context } from './context';
 
-describe('context', () => {
+describe('Context', () => {
 	it('calculates a simple context', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 

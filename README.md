@@ -196,7 +196,7 @@ const connectivityCheck = Sensor.of(async (subscriber: Subscriber<State>) => {
 	while (true) {
 		// TODO: ping www.google.com and get connectivity
 
-		// Modify the state passed to the subscriber with the updated list
+		// Modify the state passed to the subscriber with the connectivity status
 		subscriber.next((state) => ({
 			...state,
 			internetAccess: currentInternetAccess,
