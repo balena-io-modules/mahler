@@ -1,10 +1,10 @@
-import * as assert from 'assert';
 import { randomUUID } from 'crypto';
 
 import { Path } from './path';
 import { Context, ContextAsArgs } from './context';
 import { Op, Operation } from './operation';
 import { equals } from './json';
+import assert from './assert';
 
 export type TaskOp = Op | '*';
 
@@ -81,8 +81,6 @@ interface MethodTask<
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the sequence is not applicable
-	 *
-	 * TODO: should the function return none if not applicable
 	 */
 	method(s: TState, c: Context<TState, TPath>): Array<Instruction<TState>>;
 
@@ -145,14 +143,12 @@ export interface Action<TState = any, TPath extends Path = '/'>
 	action(s: TState): Promise<TState>;
 }
 
-/** An action task that has been applied to a specific context */
+/** A method task that has been applied to a specific context */
 export interface Method<TState = any, TPath extends Path = '/'>
 	extends Instance<TState, TPath> {
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
-	 *
-	 * TODO: should the method return none if not applicable
 	 */
 	method(s: TState): Array<Instruction<TState>>;
 }
@@ -177,7 +173,10 @@ function ground<
 			.map((p) => {
 				if (p.startsWith(':')) {
 					const key = p.slice(1);
-					assert(key in ctx, `Missing parameter ${key} in path ${task.path}`);
+					assert(
+						key in ctx,
+						`Missing parameter '${key}' in context given to task '${task.id}', required by path '${task.path}'`,
+					);
 					return ctx[key as keyof typeof ctx];
 				}
 				return p;
@@ -294,9 +293,9 @@ function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 			...(typeof (task as any).method === 'function'
 				? {}
 				: {
-					action: NotImplemented,
-					effect: (s: TState) => s,
-				}),
+						action: NotImplemented,
+						effect: (s: TState) => s,
+				  }),
 			...task,
 		},
 	);

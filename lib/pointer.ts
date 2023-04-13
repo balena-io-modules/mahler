@@ -1,4 +1,3 @@
-import * as assert from 'assert';
 import { Path } from './path';
 
 export type Pointer<O, P extends Path> = PointerWithSlash<O, P>;
@@ -36,11 +35,8 @@ function of<O = any, P extends Path = '/'>(
 	obj: O,
 	path: P,
 ): Pointer<O, P> | undefined {
-	assert(Path.is(path), `${path} is not a valid path`);
-	const parts = path
-		.slice(1)
-		.split('/')
-		.filter((s) => s.length > 0);
+	Path.assert(path);
+	const parts = Path.elems(path);
 
 	let o = obj as any;
 	for (const p of parts) {
