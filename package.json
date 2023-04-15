@@ -21,6 +21,9 @@
 	"files": [
 		"build/"
 	],
+	"engines": {
+		"node": ">=16.0.0"
+	},
 	"scripts": {
 		"clean": "rimraf build",
 		"build": "npm run clean && tsc",
@@ -35,6 +38,7 @@
 		"@balena/lint": "^5.4.2",
 		"@types/chai": "^4.2.18",
 		"@types/chai-as-promised": "^7.1.4",
+		"@types/debug": "^4.1.7",
 		"@types/mocha": "^8.2.2",
 		"@types/sinon": "^10.0.13",
 		"@types/sinon-chai": "^3.2.9",
@@ -51,6 +55,7 @@
 		"typescript": "^4.7.4"
 	},
 	"dependencies": {
+		"debug": "^4.3.4",
 		"optics-ts": "^2.4.0",
 		"rfc6902": "^5.0.1",
 		"ts-deepmerge": "^5.0.0"

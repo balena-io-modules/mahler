@@ -138,7 +138,7 @@ export interface Action<TState = any, TPath extends Path = '/'>
 	effect(s: TState): TState;
 
 	/**
-	 * The actual action the task performs
+	 * Run the action
 	 */
 	action(s: TState): Promise<TState>;
 }

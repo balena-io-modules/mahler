@@ -17,6 +17,17 @@ export interface Planner<TState = any> {
 	plan(current: TState, target: Goal<TState>): Array<Action<TState>>;
 }
 
+export class PlanNotFound extends Error {
+	constructor(readonly unapplied: Operation[] = []) {
+		super(
+			'Plan not found' +
+				(unapplied.length > 0
+					? `, no tasks could be applied to ops: ${JSON.stringify(unapplied)}`
+					: ''),
+		);
+	}
+}
+
 function extractPath(t: Path, p: Path) {
 	const tParts = Path.elems(t);
 	const pParts = Path.elems(p);
@@ -111,10 +122,10 @@ function plan<TState = any>(
 					continue;
 				}
 
-				let s = current;
+				let state = current;
 				let isValid = true;
 				for (const action of actions) {
-					if (!action.condition(s)) {
+					if (!action.condition(state)) {
 						isValid = false;
 						break;
 					}
@@ -125,7 +136,7 @@ function plan<TState = any>(
 						isValid = false;
 						break;
 					}
-					s = action.effect(s);
+					state = action.effect(state);
 				}
 
 				// This is not a valid path
@@ -135,13 +146,41 @@ function plan<TState = any>(
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(s, target, tasks, [...initial, ...actions]);
+					const next = plan(state, target, tasks, [...initial, ...actions]);
 
 					// TODO: how can we know if there is a shorter path available?
 					return [...actions, ...next];
 				} catch (e) {
-					const u = e as Operation[];
-					u.forEach((o) => {
+					if (!(e instanceof PlanNotFound)) {
+						throw e;
+					}
+
+					e.unapplied.forEach((o) => {
+						if (!unapplied.find((eo) => equals(eo, o))) {
+							unapplied.push(o);
+						}
+					});
+
+					// No plans found under this branch
+					continue;
+				}
+			} else {
+				// If the task is an action, then we can just apply it
+				const action = task(ctx as any);
+				if (initial.find((a) => Action.equals(a, action))) {
+					continue;
+				}
+				const state = action.effect(current);
+
+				try {
+					const next = plan(state, target, tasks, [...initial, action]);
+					return [action, ...next];
+				} catch (e) {
+					if (!(e instanceof PlanNotFound)) {
+						throw e;
+					}
+
+					e.unapplied.forEach((o) => {
 						if (!unapplied.find((eo) => equals(eo, o))) {
 							unapplied.push(o);
 						}
@@ -150,31 +189,10 @@ function plan<TState = any>(
 					continue;
 				}
 			}
-
-			// If the task is an action, then we can just apply it
-			const action = task(ctx as any);
-			if (initial.find((a) => Action.equals(a, action))) {
-				continue;
-			}
-			const s = action.effect(current);
-
-			try {
-				const next = plan(s, target, tasks, [...initial, action]);
-				return [action, ...next];
-			} catch (e) {
-				const u = e as Operation[];
-				u.forEach((o) => {
-					if (!unapplied.find((eo) => equals(eo, o))) {
-						unapplied.push(o);
-					}
-				});
-				// No plans found under this branch
-				continue;
-			}
 		}
 	}
 
-	throw unapplied;
+	throw new PlanNotFound(unapplied);
 }
 
 function of<TState = any>(
@@ -193,19 +211,7 @@ function of<TState = any>(
 
 	return {
 		plan(current: TState, target: Goal<TState>) {
-			try {
-				return plan(current, patch(current, target), tasks, []);
-			} catch (e: any) {
-				if (e.length) {
-					throw new Error(
-						`No plan found, no applicable tasks found for: ${JSON.stringify(
-							e,
-						)}`,
-					);
-				}
-
-				throw new Error(`No plan found`);
-			}
+			return plan(current, patch(current, target), tasks, []);
 		},
 	};
 }
