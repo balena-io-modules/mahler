@@ -1,12 +1,10 @@
-import { createPatch } from 'rfc6902';
-
 import { Path } from './path';
 import { Pointer } from './pointer';
 import { Context } from './context';
 import { Task, Action, Instruction, Method } from './task';
-import { Goal } from './goal';
+import { Target, Diff } from './target';
 import { Operation } from './operation';
-import { patch, equals } from './json';
+import { equals } from './json';
 
 export interface Planner<TState = any> {
 	/**
@@ -14,7 +12,7 @@ export interface Planner<TState = any> {
 	 * to the target state. It will throw an exception if a plan
 	 * cannot be found.
 	 */
-	plan(current: TState, target: Goal<TState>): Array<Action<TState>>;
+	plan(current: TState, target: Target<TState>): Array<Action<TState>>;
 }
 
 export class PlanNotFound extends Error {
@@ -69,20 +67,20 @@ function expandMethod<TState = any>(
 // Stack ?
 function plan<TState = any>(
 	current: TState,
-	target: TState,
+	diff: Diff<TState>,
 	tasks: Array<Task<TState>>,
 	initial: Array<Action<TState>>,
 ): Array<Action<TState>> {
-	// We patch the current state with the target before comparing
-	// so any optional elements in the state object can be ignored
-	// in the comparison
-	if (equals(current, patch(current, target))) {
+	// Get the list of operations from the patch
+	const ops = diff.operations(current);
+
+	// If there are no operations left, we have reached
+	// the target
+	if (ops.length === 0) {
 		return [];
 	}
-	// compare current and target state objects using json diff
-	const ops = createPatch(current, target).map((p) =>
-		Operation.fromRFC6902<TState>(p as any),
-	);
+
+	const target = diff.patch(current);
 
 	const unapplied = [] as Array<Operation<TState>>;
 	for (const op of ops) {
@@ -146,7 +144,7 @@ function plan<TState = any>(
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, target, tasks, [...initial, ...actions]);
+					const next = plan(state, diff, tasks, [...initial, ...actions]);
 
 					// TODO: how can we know if there is a shorter path available?
 					return [...actions, ...next];
@@ -173,7 +171,7 @@ function plan<TState = any>(
 				const state = action.effect(current);
 
 				try {
-					const next = plan(state, target, tasks, [...initial, action]);
+					const next = plan(state, diff, tasks, [...initial, action]);
 					return [action, ...next];
 				} catch (e) {
 					if (!(e instanceof PlanNotFound)) {
@@ -210,8 +208,9 @@ function of<TState = any>(
 	});
 
 	return {
-		plan(current: TState, target: Goal<TState>) {
-			return plan(current, patch(current, target), tasks, []);
+		plan(current: TState, target: Target<TState>) {
+			const patch = Diff.of(target);
+			return plan(current, patch, tasks, []);
 		},
 	};
 }

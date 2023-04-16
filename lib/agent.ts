@@ -3,7 +3,7 @@ import { promisify } from 'util';
 
 import assert from './assert';
 import { Task, Action } from './task';
-import { Goal } from './goal';
+import { Target } from './target';
 import { Planner, PlanNotFound } from './planner';
 import { Sensor, Subscribed } from './sensor';
 import { Logger } from './logger';
@@ -85,8 +85,8 @@ export class AgentTimeout extends Error {
 export type AgentResult = { success: true } | { success: false; error: Error };
 
 export interface Agent<TState = any> {
-	start(target: Goal<TState>): void;
-	goal(target: Goal<TState>): Promise<void>;
+	start(target: Target<TState>): void;
+	goal(target: Target<TState>): Promise<void>;
 	result(timeout?: number): Promise<AgentResult>;
 	state(): TState;
 	stop(): Promise<void>;
@@ -138,7 +138,7 @@ function of<TState>({
 		await promise;
 	};
 
-	const startRunner = (target: Goal<TState>) => {
+	const startRunner = (target: Target<TState>) => {
 		const planner = Planner.of(tasks);
 		stopped = false;
 

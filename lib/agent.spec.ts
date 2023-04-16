@@ -31,7 +31,7 @@ describe('Agent', () => {
 	});
 
 	describe('heater', () => {
-		type Heater = { roomTemp: number; resistorOn?: boolean };
+		type Heater = { roomTemp: number; resistorOn: boolean };
 		const turnOn = Task.of({
 			condition: (state: Heater, { target }) =>
 				state.roomTemp < target.roomTemp && !state.resistorOn,
@@ -76,7 +76,7 @@ describe('Agent', () => {
 				roomTemp: target.roomTemp,
 			}),
 			action: async (state: Heater) => {
-				await setTimeout(10);
+				// do nothing
 				return state;
 			},
 			description: 'wait for temperature to reach target',
@@ -104,14 +104,27 @@ describe('Agent', () => {
 
 		it('it should turn on the heater if temperature is below the target', async () => {
 			const agent = Agent.of({
-				initial: { roomTemp: 10 },
+				initial: { roomTemp: 10, resistorOn: false },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
-				opts: { pollIntervalMs: 10, stopOnSuccess: false },
+				opts: { pollIntervalMs: 10 },
 			});
 			agent.start({ roomTemp: 20 });
 			await expect(agent.result(1000)).to.be.fulfilled;
-			expect(agent.state()).to.deep.equal({ roomTemp: 20, resistorOn: true });
+			expect(agent.state().roomTemp).equal(20);
+			agent.stop();
+		});
+
+		it('it should turn off the heater if temperature is above the target', async () => {
+			const agent = Agent.of({
+				initial: { roomTemp: 30, resistorOn: true },
+				tasks: [turnOn, turnOff, wait],
+				sensors: [termometer],
+				opts: { pollIntervalMs: 10 },
+			});
+			agent.start({ roomTemp: 20 });
+			await expect(agent.result(1000)).to.be.fulfilled;
+			expect(agent.state().roomTemp).to.equal(20);
 			agent.stop();
 		});
 	});

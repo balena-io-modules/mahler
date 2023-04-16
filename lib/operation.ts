@@ -1,4 +1,3 @@
-import { Operation as RFC6902Operation } from 'rfc6902';
 import { Path } from './path';
 import { Pointer } from './pointer';
 
@@ -30,35 +29,6 @@ export class OperationNotSupported extends Error {
 	}
 }
 
-function fromRFC6902<T = any, P extends Path = '/'>(
-	operation: RFC6902Operation & { path: P },
-): Operation<T, P> {
-	switch (operation.op) {
-		case 'add':
-			return {
-				op: 'create',
-				path: operation.path,
-				value: operation.value,
-			};
-		case 'remove':
-			return {
-				op: 'delete',
-				path: operation.path,
-			};
-		case 'replace':
-			return {
-				op: 'update',
-				path: operation.path,
-				value: operation.value,
-			};
-		default:
-			// NOTE: we don't support `move` or `copy` but it seems
-			// the `createPatch` function of the rfc6902 library never
-			// returns those operations
-			throw new OperationNotSupported(operation.op);
-	}
-}
-
 function of<_ = any, P extends Path = '/'>(o: {
 	op: 'delete';
 	path: P;
@@ -87,7 +57,7 @@ function of<T = any, P extends Path = '/'>({
 			return {
 				op,
 				path,
-				value: value!,
+				value: value as any,
 			};
 		case 'delete':
 			return {
@@ -98,7 +68,7 @@ function of<T = any, P extends Path = '/'>({
 			return {
 				op,
 				path,
-				value: value!,
+				value: value as any,
 			};
 		default:
 			throw new OperationNotSupported(op);
@@ -106,6 +76,5 @@ function of<T = any, P extends Path = '/'>({
 }
 
 export const Operation = {
-	fromRFC6902,
 	of,
 };

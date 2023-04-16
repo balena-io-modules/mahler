@@ -1,17 +1,3 @@
-import merge from 'ts-deepmerge';
-
-type Patch<T> =
-	| T
-	| (T extends object
-			? {
-					[P in keyof T]?: Patch<T[P]>;
-			  }
-			: T);
-
-export function patch<T = any>(src: T, p: Patch<T>): T {
-	return merge.withOptions({ mergeArrays: false }, src as any, p) as T;
-}
-
 function isObject(value: unknown): value is object {
 	return typeof value === 'object' && value !== null;
 }
