@@ -97,9 +97,9 @@ const authenticate = Task.of({
 		network.get(state).signal > 0 &&
 		!network.get(state).authenticated
 	// The task has the effect of modifying the network state to authenticate
-	effect: (state: State, network) => network.set(state, {...network.get(state), authenticated: true})
+	effect: (state: State, network) => network.set(state, {...network.get(state), authenticated: true}),
 	// The action interacts with the system to authenticate with the SSID
-	action: async (state: State, network) => {/* TODO: actually authenticate to the network */ }
+	action: async (state: State, network) => {/* TODO: actually authenticate to the network */ },
 	description: (network) => `authenticate network ${network.id}`,
 });
 
@@ -113,9 +113,9 @@ const connect = Task.of({
 		network.get(state).authenticated &&
 		!network.get(state).connected,
 	// The task has the effect of modifying the network state to connected
-	effect: (state: State, network) => network.set(state, {...network.get(state), connected: true})
+	effect: (state: State, network) => network.set(state, {...network.get(state), connected: true}),
 	// The action interacts with the system to switch SSIDs
-	action: async (state: State, network) => {/* TODO: actually connect to the network */ }
+	action: async (state: State, network) => {/* TODO: actually connect to the network */ },
 	description: (network) => `connect to network ${network.id}`,
 });
 ```
@@ -140,6 +140,8 @@ const authenticateAndConnect = Task.of({
 
 		// Now add the connect instruction
 		tasks.push(connect({ id, target }));
+
+		return tasks;
 	},
 });
 ```
@@ -187,7 +189,8 @@ const networkScanner = Sensor.of(async (subscriber: Subscriber<State>) => {
 	while (true) {
 		// TODO: read signal
 
-		// Modify the state passed to the subscriber with the updated list
+		// Subscribers pass the current state object to the sensor, and the sensor
+		// modifies the state with the updated data
 		subscriber.next((state) => ({ ...state, knownNetworks: updatedNetworks }));
 
 		await delay(60);
