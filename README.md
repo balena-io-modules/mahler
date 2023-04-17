@@ -38,8 +38,6 @@ type Network = {
 	psk: string;
 	// To indicate if we have already
 	// authenticated with the network
-	// We make it optional as we usually won't care about this
-	// value in the target state
 	authenticated?: boolean;
 	// We are connected to this network.
 	connected?: boolean;
@@ -80,6 +78,8 @@ const addNetwork = Task.of({
 	action: async (state: State, network) => {
 		/* TODO: actually store the network in a local database */
 	},
+	// We can add a description that will be used in the logs
+	description: (network) => `create network ${network.id}`,
 });
 ```
 
@@ -100,6 +100,7 @@ const authenticate = Task.of({
 	effect: (state: State, network) => network.set(state, {...network.get(state), authenticated: true})
 	// The action interacts with the system to authenticate with the SSID
 	action: async (state: State, network) => {/* TODO: actually authenticate to the network */ }
+	description: (network) => `authenticate network ${network.id}`,
 });
 
 
@@ -115,6 +116,7 @@ const connect = Task.of({
 	effect: (state: State, network) => network.set(state, {...network.get(state), connected: true})
 	// The action interacts with the system to switch SSIDs
 	action: async (state: State, network) => {/* TODO: actually connect to the network */ }
+	description: (network) => `connect to network ${network.id}`,
 });
 ```
 
@@ -220,11 +222,17 @@ const agent = Agent.of<State>({
 		switchNetworks,
 	],
 	sensors: [networkScanner, connectivityCheck],
+	opts: {
+		// We want the agent to run forever
+		stopOnSuccess: false,
+		// And keep retrying on failure
+		maxRetries: 0,
+	},
 });
 
-// Set an initial goal for the agent. New goals can be defined once the agent is started
+// Start the agent with the initial target. New targets can be defined once the agent is started
 // Note that we don't need to provide a current network, we only care that the agent remains connected
-agent.goal({
+agent.start({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
@@ -233,13 +241,10 @@ agent.goal({
 	},
 });
 
-// Start the agent. Set it to keep retrying to reach the goal and waiting
-// 60 seconds goal check and retrying if nothing changes
-agent.start({ maxRetries: 0, retryTimeout: 60 });
-
-// We can modify the goal after the agent has started. In this case we are adding a new network, which
-// will cause the agent to re-calculate the plan to include the `addNetwork` task.
-agent.goal({
+// We can modify the target after the agent has started. In this case we are adding a new network, which
+// will cause the agent to re-calculate the plan to include the `addNetwork` task. We need to await it as this
+// will stop the plan runner (and wait for the stop) before restarting it with the new target
+await agent.target({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },

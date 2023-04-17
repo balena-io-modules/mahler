@@ -85,8 +85,8 @@ export class AgentTimeout extends Error {
 export type AgentResult = { success: true } | { success: false; error: Error };
 
 export interface Agent<TState = any> {
-	start(target: Target<TState>): void;
-	goal(target: Target<TState>): Promise<void>;
+	start(t: Target<TState>): void;
+	target(t: Target<TState>): Promise<void>;
 	result(timeout?: number): Promise<AgentResult>;
 	state(): TState;
 	stop(): Promise<void>;
@@ -273,7 +273,7 @@ function of<TState>({
 			// Start the plan runner
 			startRunner(target);
 		},
-		async goal(target) {
+		async target(target) {
 			await stopRunner();
 			startRunner(target);
 		},
