@@ -141,7 +141,7 @@ export interface Action<TState = any, TPath extends Path = '/'>
 	/**
 	 * Run the action
 	 */
-	action(s: TState): Promise<TState>;
+	run(s: TState): Promise<TState>;
 }
 
 /** A method task that has been applied to a specific context */
@@ -151,7 +151,7 @@ export interface Method<TState = any, TPath extends Path = '/'>
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
 	 */
-	method(s: TState): Array<Instruction<TState>>;
+	expand(s: TState): Array<Instruction<TState>>;
 }
 
 export type Instruction<TState = any, TPath extends Path = '/'> =
@@ -199,7 +199,7 @@ function ground<
 			target: ctx.target,
 			description,
 			condition: (s: TState) => task.condition(s, context),
-			method: (s: TState) => task.method(s, context),
+			expand: (s: TState) => task.method(s, context),
 		};
 	}
 
@@ -210,7 +210,7 @@ function ground<
 		description,
 		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
-		action: (s: TState) => task.action(s, context),
+		run: (s: TState) => task.action(s, context),
 	};
 }
 
@@ -229,7 +229,12 @@ function isMethodTask<
  * Check if an instruction is a method
  */
 function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
-	return (t as any).method != null && typeof (t as any).method === 'function';
+	return (
+		(t as any).condition != null &&
+		typeof (t as any).condition === 'function' &&
+		(t as any).expand != null &&
+		typeof (t as any).expand === 'function'
+	);
 }
 
 /**
@@ -253,10 +258,12 @@ function isActionTask<
  */
 function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	return (
+		(t as any).condition != null &&
+		typeof (t as any).condition === 'function' &&
 		(t as any).effect != null &&
 		typeof (t as any).effect === 'function' &&
 		(t as any).action != null &&
-		typeof (t as any).action === 'function'
+		typeof (t as any).run === 'function'
 	);
 }
 

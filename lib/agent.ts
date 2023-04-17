@@ -198,7 +198,7 @@ function of<TState>({
 							// TODO: maybe we can have some sort of subscription mechanism
 							// to notify state changes?
 							logger.info(`${action.description}: running the action`);
-							state = await action.action(state).catch((e) => {
+							state = await action.run(state).catch((e) => {
 								throw new ActionRunFailed(action, e);
 							});
 							logger.info(`${action.description}: success`);
