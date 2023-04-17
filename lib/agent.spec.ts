@@ -80,11 +80,10 @@ describe('Agent', () => {
 		});
 
 		const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
-			let roomTemp = 10;
-
 			while (true) {
 				subscriber.next((state) => {
-					if (!!state.resistorOn) {
+					let roomTemp = state.roomTemp;
+					if (state.resistorOn) {
 						roomTemp = roomTemp + 1;
 						// The heater is on, so the temperature increases
 						return { ...state, roomTemp };
