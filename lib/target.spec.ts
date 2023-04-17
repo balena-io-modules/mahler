@@ -2,7 +2,7 @@ import { expect } from '~/tests';
 import { Diff, DELETED } from './target';
 
 describe('Diff', () => {
-	describe('apply', () => {
+	describe('patch', () => {
 		it('applies the target to the current object', () => {
 			type S = { a?: number; b: string; c: { [k: string]: string } };
 			expect(

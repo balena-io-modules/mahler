@@ -9,6 +9,7 @@ import assert from './assert';
 export type TaskOp = Op | '*';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
+export const NoOp = <T>(s: T) => Promise.resolve(s);
 
 interface TaskSpec<
 	TState = any,

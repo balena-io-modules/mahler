@@ -1,6 +1,6 @@
 import { expect } from '~/tests';
 import { Agent } from './agent';
-import { Task } from './task';
+import { Task, NoOp } from './task';
 import { Sensor, Subscriber } from './sensor';
 
 import { setTimeout } from 'timers/promises';
@@ -75,10 +75,7 @@ describe('Agent', () => {
 				...state,
 				roomTemp: target.roomTemp,
 			}),
-			action: async (state: Heater) => {
-				// do nothing
-				return state;
-			},
+			action: NoOp,
 			description: 'wait for temperature to reach target',
 		});
 
