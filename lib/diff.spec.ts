@@ -1,5 +1,6 @@
 import { expect } from '~/tests';
-import { Diff, DELETED } from './target';
+import { DELETED } from './target';
+import { Diff } from './diff';
 
 describe('Diff', () => {
 	describe('patch', () => {

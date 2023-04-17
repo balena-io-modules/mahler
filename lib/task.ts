@@ -192,7 +192,7 @@ function ground<
 			? taskDescription(context)
 			: taskDescription;
 
-	if (isMethod(task)) {
+	if (isMethodTask(task)) {
 		return {
 			id,
 			path,
@@ -215,36 +215,43 @@ function ground<
 }
 
 /**
- * Check if a task or an instruction is a method
+ * Check if a task is a method
  */
-function isMethod<
+function isMethodTask<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = '*',
->(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp>;
-function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState>;
-function isMethod<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
->(t: Task<TState, TPath, TOp> | Instruction<TState>) {
+>(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
 }
 
 /**
- * Check if a task or an instruction is a method
+ * Check if an instruction is a method
  */
-function isAction<
+function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
+	return (t as any).method != null && typeof (t as any).method === 'function';
+}
+
+/**
+ * Check if a task or an instruction is an action
+ */
+function isActionTask<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = '*',
->(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp>;
-function isAction<TState = any>(t: Instruction<TState>): t is Action<TState>;
-function isAction<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
->(t: Task<TState, TPath, TOp> | Instruction<TState>) {
+>(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
+	return (
+		(t as any).effect != null &&
+		typeof (t as any).effect === 'function' &&
+		(t as any).action != null &&
+		typeof (t as any).action === 'function'
+	);
+}
+
+/**
+ * Check if an instruction is an action
+ */
+function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	return (
 		(t as any).effect != null &&
 		typeof (t as any).effect === 'function' &&
@@ -342,8 +349,8 @@ function isApplicable<
 
 export const Task = {
 	of,
-	isMethod,
-	isAction,
+	isMethod: isMethodTask,
+	isAction: isActionTask,
 	isApplicable,
 };
 

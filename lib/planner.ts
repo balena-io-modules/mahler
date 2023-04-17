@@ -2,7 +2,8 @@ import { Path } from './path';
 import { Pointer } from './pointer';
 import { Context } from './context';
 import { Task, Action, Instruction, Method } from './task';
-import { Target, Diff } from './target';
+import { Target } from './target';
+import { Diff } from './diff';
 import { Operation } from './operation';
 import { equals } from './json';
 
