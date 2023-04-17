@@ -267,6 +267,8 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	);
 }
 
+const taskIds = new Set<string>();
+
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
@@ -289,18 +291,22 @@ function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 	task: Partial<Task<TState, TPath, TOp>>,
 ) {
-	const { path = '/', op = '*' } = task;
+	const { path = '/', op = '*', id = randomUUID() } = task;
 
 	// Check that the path is valid
 	Path.assert(path);
+
+	// Check that the task name is unique
+	assert(!taskIds.has(id), `Task ID '${id}' is not unique`);
 
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath>) => {
 			return ground(t as any, ctx);
 		},
 		{
-			id: randomUUID(),
+			id,
 			description: (ctx: Context<TState, TPath>) =>
+				// QUESTION: what's a good default description
 				JSON.stringify({ path, op, ...ctx }),
 			path,
 			op,
@@ -314,6 +320,9 @@ function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 			...task,
 		},
 	);
+
+	// Register the task id
+	taskIds.add(id);
 
 	return t;
 }
