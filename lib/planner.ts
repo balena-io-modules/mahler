@@ -6,6 +6,7 @@ import { Target } from './target';
 import { Diff } from './diff';
 import { Operation } from './operation';
 import { equals } from './json';
+import { assert } from './assert';
 
 export interface Planner<TState = any> {
 	/**
@@ -194,6 +195,16 @@ function plan<TState = any>(
 function of<TState = any>(
 	tasks = [] as Array<Task<TState, any, any>>,
 ): Planner<TState> {
+	const taskIds = new Set<string>();
+	tasks.forEach((t) => {
+		assert(
+			!taskIds.has(t.id),
+			`Found duplicate task ID '${t.id}'. Task IDs must be unique`,
+		);
+
+		taskIds.add(t.id);
+	});
+
 	// Sort the tasks putting methods first
 	tasks = tasks.sort((a, b) => {
 		if (Task.isMethod(a) && Task.isAction(b)) {

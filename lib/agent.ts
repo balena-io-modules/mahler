@@ -126,6 +126,10 @@ function of<TState>({
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.pollIntervalMs > 0, 'opts.pollIntervalMs must be greater than 0');
 
+	// Create the planner early on, this will
+	// also run validation from the planner side
+	const planner = Planner.of(tasks);
+
 	const delay = promisify(setTimeout);
 	let promise: Promise<AgentResult> = Promise.resolve({
 		success: false,
@@ -139,7 +143,6 @@ function of<TState>({
 	};
 
 	const startRunner = (target: Target<TState>) => {
-		const planner = Planner.of(tasks);
 		stopped = false;
 
 		// We store the promise so we can wait for it before stopping
