@@ -1,4 +1,4 @@
-import { Path } from '../pointer';
+import { Path } from '../path';
 
 // Utility type to normalize intersections
 export type Identity<T> = T extends object
