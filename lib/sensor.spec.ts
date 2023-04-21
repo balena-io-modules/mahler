@@ -9,7 +9,7 @@ const delay = promisify(setTimeout);
 describe('Sensor', () => {
 	it('only starts execution once subscribers have been added', () => {
 		const read = stub();
-		const sensor = Sensor.of(async (subscriber: Subscriber<void>) => {
+		const sensor = Sensor.of((subscriber: Subscriber<void>) => {
 			read();
 			subscriber.next(() => void 0);
 		});
@@ -27,7 +27,7 @@ describe('Sensor', () => {
 	});
 
 	it('calls the subscriber function with the new value', async () => {
-		const sensor = Sensor.of(async (subscriber: Subscriber<number>) => {
+		const sensor = Sensor.of((subscriber: Subscriber<number>) => {
 			subscriber.next((x) => x + 123);
 		});
 

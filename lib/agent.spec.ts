@@ -82,14 +82,15 @@ describe('Agent', () => {
 		const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
 			while (true) {
 				subscriber.next((state) => {
-					let roomTemp = state.roomTemp;
+					// For this test we assume the temperature source of truth comes
+					// from the agent, but that won't be true in a real system,
+					// where the termometer would be the source of truth
+					const roomTemp = state.roomTemp;
 					if (state.resistorOn) {
-						roomTemp = roomTemp + 1;
 						// The heater is on, so the temperature increases
-						return { ...state, roomTemp };
+						return { ...state, roomTemp: roomTemp + 1 };
 					} else {
-						roomTemp = roomTemp - 1;
-						return { ...state, roomTemp };
+						return { ...state, roomTemp: roomTemp - 1 };
 					}
 				});
 
