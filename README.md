@@ -1,14 +1,17 @@
-# Planner (experimental, to be named)
+# Mahler
 
-An experimental HTN planner for building autonomous system agents.
+A automated task composer and [HTN](https://en.wikipedia.org/wiki/Hierarchical_task_network) based planner for building autonomous system agents.
+
+**NOTE** this project is still experimental, and ongoing active development.
 
 ## Features
 
-- Simple, declarative API. Define tasks from a JS object and use those tasks as functions in other methods. Declare the applicability of the task
-  to a specific part of the state or to a specific state operation (create, update, delete).
-- External interface to allow re-planning if goals change. Integrated event dispatcher allows external agents to track changes in state as the plan is executed.
-- Support for re-planning and cancelling current plan if goals or state changes by external target. The planner allows to use error data from previous runs in order to perform error recovery tasks.
-- Easy to debug. A failure to find a plan reports the initial and target states for easy reproducibility.
+- Simple, declarative API. Tasks are straightforward to define by declaring a pre-condition, effect, action and applicability. A task can be applicable to a specific part of the state object and/or data operation (create, update, delete). Tasks can be referenced in compound tasks (methods), to create more curated behaviors. Task runtime errors during previous plan executions may be used as contextual information to allow the planner to find alternative paths on the nexts run.
+- Highly configurable agent interface allows to create autonomous agents to serve a wide variety of use cases. The state of the agent can be queried at any point of the execution and observable interface allows to follow changes to the state or errors during the plan execution. Plans can be interrupted and goals can be modified if system objectives change.
+- Sensor interface allows to monitor changes in the state of the system coming from external events. Updated state may be used by agents to trigger a re-plan when necessary.
+- Easy to debug. Error reporting includes information about system state and goals for easy replicability.
+- Log ready. Agent uses task metadata and execution context to generate clear logs to communicate the state of the system to end users or for debugging. Plug your own logger to suit your system needs. 
+
 
 ## Concepts
 
@@ -26,9 +29,152 @@ The library design is inspired by the work in [Exploring HTN Planners through ex
 
 ![Planner design](./design.png)
 
-## Example
+## Example 
 
-Let's write an agent that switches the Wi-Fi network from a list of SSIDs if Internet connectivity is lost. The first step is to declare the shape of the state.
+Let's write an agent for a simple Space Heater controller. The heater design is very simple, it is composed by a resistor that can be turned ON or OFF to heat the room, and a termometer that detects the room temperature. The heater interface allows to set a target room temperature. The controller will turn the resistor ON if the temperature is below target or OFF if the temperature is above target.
+
+Let's start first by modelling the state. As the per the hardware design, the state needs to keep track of the resistor state and the room temperature.
+
+```typescript
+type Heater = { roomTemp: number; resistorOn: boolean };
+```
+
+Now let's define a task for turning the heater ON.
+
+```typescript
+const turnOn = Task.of({
+	// Only run this task if the room temperature is below target
+	condition: (state: Heater, { target }) =>
+		state.roomTemp < target.roomTemp && !state.resistorOn,
+	// What should the planner expect after running this task
+	effect: (state: Heater, { target }) => ({
+		...state,
+		// Turning the resistor on does not change the temperature
+		// immediately, but the effect is that the temperature eventually
+		// will reach that point
+		roomTemp: target.roomTemp,
+		resistorOn: true,
+	}),
+	// The actual operation that will be ran by the plan runner
+	action: async (state: Heater) => {
+		// TODO: trigger the actuator to actually turn the resistor ON
+
+		// Return the updated state
+		return {
+			...state,
+			resistorOn: true,
+		};
+	},
+	// A description of the task to use for logging purposes
+	description: 'turn resistor ON',
+});
+```
+
+A task, at minimum should define the following properties.
+
+- A *condition*, this tells the planner when the task is applicable. In this case the task should be ran only if the temperature is below target and the current state of the resistor is OFF.
+- An *effect*. This tells the planner what is the expected outcome of running the task. This allows the planner to decide that a potential plan allows to reach the target. As observed in the code, the effect is an intended outcome but it doesn't mean that the outcome is immediate. The effect function should not have any side effects.
+- An *action*. This is the operation that will actually be ran by the plan runner and can modify the state of the system. It must return the modified state.
+
+Opionally, a task may define the following properties
+
+- A *description*, this is a string or a function that describes the task purpose. It is used for logging by the Agent.
+- A *path*. This is a pointer to a part of the state that this action applies to, it defaults to '/', meaning task by default apply to the full state object. This will become more clear in the next example.
+- An operation *op* (`create`, `update`, `delete`), that this task is applicable for, for instance certain tasks may be relevant only when *deleting* a certain element of the state (e.g. removing a system service). This property defaults to `*`, meaning the task is by default applicable to any operation.
+
+
+Continuing with our example, as we defined a task to turn the heater ON, we need to define another to turn the heater resistor OFF.
+
+```typescript
+const turnOff = Task.of({
+	condition: (state: Heater, { target }) =>
+		state.roomTemp > target.roomTemp && !!state.resistorOn,
+	effect: (state: Heater, { target }) => ({
+		...state,
+		roomTemp: target.roomTemp,
+		resistorOn: false,
+	}),
+	action: async (state: Heater) => ({
+		...state,
+		resistorOn: false,
+	}),
+	description: 'turn resistor OFF',
+});
+```
+
+These two tasks specify the case where the temperature is off-target and the resistor is in the wrong state, however, what happens if the resistor is in the right state, but the temperature just has not been reached yet? In that case the planner would not be able to find any applicable tasks and fail. We can solve this by defining a task to handle this case.
+
+```typescript
+const wait = Task.of({
+	condition: (state: Heater, { target }) =>
+		// We have not reached the target but the resistor is already OFF
+		(state.roomTemp > target.roomTemp && !state.resistorOn) ||
+		// We have not reached the target but the resistor is already ON
+		(state.roomTemp < target.roomTemp && !!state.resistorOn),
+	effect: (state: Heater, { target }) => ({
+		...state,
+		roomTemp: target.roomTemp,
+	}),
+	// Nothing to do here, we let the agent wait 
+	action: NoOp,
+	description: 'wait for temperature to reach target',
+});
+```
+
+Finally, we need to define a temperature *Sensor*, a sensor monitors the state of the system allowing the agent to keep an up-to-date view of the world.
+
+```typescript
+const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
+	while (true) {
+		// TODO: read the actual temperature from the hardware
+		const temp = 10;
+
+		// The sensor subscriber receives a function that receives the current state as argument
+		// and returns the updated state
+		subscriber.next((state) => {
+			// Update the temperure in the state object
+			return {...state, roomTemp: temp};
+		});
+
+		// Wait 100ms before querying the sensor again
+		await setTimeout(100);
+	}
+});
+```
+
+Now that we have our tasks and our sensor defined, we can create our Heater agent.
+
+```typescript
+const Heater = Agent.of({
+	// Provide the initial state of the world
+	initial: { roomTemp: 10, resistorOn: false },
+
+	// The tasks that the agent uses for planning
+	tasks: [turnOn, turnOff, wait],
+
+	// The sensors the agent uses to read the system state
+	sensors: [termometer],
+
+	// Stop on success tells the agent to keep monitoring
+	// the state and re-plan if the state gets off-target. 
+	// By default, the agent wil terminate as soon as the 
+	// target has been reached.
+	opts: { stopOnSuccess: false },
+});
+```
+
+With that we can start the Heater controller with a specified target.
+
+```typescript
+// Set the heater target temperature to 23 degrees
+Heater.start({ roomTemp: 23 });
+```
+
+The above instruction will start the agent and have it run forever (because of the `stopOnSuccess: false`). The Heater will continue monitoring the room temperature and turning the resistor ON or OFF as the temperature goes outside the expected value.
+
+## Another example
+
+Let's now write an agent that monitors the connectivity of a system and switches the Wi-Fi network from a list of SSIDs if Internet connectivity is lost. As before, the first step is to declare the shape of the state.
 
 ```typescript
 type NetworkId = string;
@@ -77,19 +223,19 @@ const addNetwork = Task.of({
 	// The action is what will be run by the task planner if the action gets selected.
 	action: async (state: State, network) => {
 		/* TODO: actually store the network in a local database */
+		return network.set(state, network.target);
 	},
 	// We can add a description that will be used in the logs
 	description: (network) => `create network ${network.id}`,
 });
 ```
 
+As we mentioned in the previous example, the applicability of a task can be further specified by the use of the `op` and `path` properties. The `op` property, tells the planner that this task is applicable only for a specific type of modification of the state. For instance, in the example above, the `op: 'create'` tells the planner that this task is applicable only if the given target is introducing a new entry to the `/knownNetworks` dictionary. The `path` object, tells the planner that the task is relevant for changes to a specific portion of the state object. In the example above, the `path: '/knownNetworks/:id'` tells the planner the task is only relevant for values of the `knownNetworks` dictionary.
+
 Now let's define tasks to authenticate and connect to a specific network.
 
 ```typescript
 const authenticate = Task.of({
-	// We don't care about the operation so we use `*`, this is the default so
-	// it can be omitted
-	op: '*',
 	// This task applies to a specific network
 	path: '/knownNetworks/:id',
 	// Only run if the network is within reach and not authenticated
@@ -99,7 +245,10 @@ const authenticate = Task.of({
 	// The task has the effect of modifying the network state to authenticate
 	effect: (state: State, network) => network.set(state, {...network.get(state), authenticated: true}),
 	// The action interacts with the system to authenticate with the SSID
-	action: async (state: State, network) => {/* TODO: actually authenticate to the network */ },
+	action: async (state: State, network) => {
+		/* TODO: actually authenticate to the network */ 
+		return network.set(state, {...network.get(state), authenticated: true});
+	},
 	description: (network) => `authenticate network ${network.id}`,
 });
 
@@ -107,7 +256,7 @@ const authenticate = Task.of({
 const connect = Task.of({
 	// This task applies to a specific network
 	path: '/knownNetworks/:id',
-	// Only run if the network is not connected and the network is at least 20%
+	// Only run if the network is not connected and the signal is at least 20%
 	condition: (state: State, network) =>
 		network.get(state).signal > 20 &&
 		network.get(state).authenticated &&
@@ -115,7 +264,10 @@ const connect = Task.of({
 	// The task has the effect of modifying the network state to connected
 	effect: (state: State, network) => network.set(state, {...network.get(state), connected: true}),
 	// The action interacts with the system to switch SSIDs
-	action: async (state: State, network) => {/* TODO: actually connect to the network */ },
+	action: async (state: State, network) => {
+		/* TODO: actually connect to the network */ 
+		return network.set(state, {...network.get(state), connected: true});
+	},
 	description: (network) => `connect to network ${network.id}`,
 });
 ```
@@ -193,7 +345,8 @@ const networkScanner = Sensor.of(async (subscriber: Subscriber<State>) => {
 		// modifies the state with the updated data
 		subscriber.next((state) => ({ ...state, knownNetworks: updatedNetworks }));
 
-		await delay(60);
+		// Scan the network again in 60 seconds
+		await setTimeout(60*1000);
 	}
 });
 
@@ -207,7 +360,8 @@ const connectivityCheck = Sensor.of(async (subscriber: Subscriber<State>) => {
 			internetAccess: currentInternetAccess,
 		}));
 
-		await delay(60);
+		// Check the connectivity again in 60 seconds
+		await setTimeout(60*1000);
 	}
 });
 ```
@@ -215,7 +369,7 @@ const connectivityCheck = Sensor.of(async (subscriber: Subscriber<State>) => {
 Now that we have all our tasks and sensors defined, we can define our agent
 
 ```typescript
-const agent = Agent.of<State>({
+const WifiConnect = Agent.of<State>({
 	initial: { internetAccess: false, knownNetworks: {} },
 	tasks: [
 		addNetwork,
@@ -228,14 +382,18 @@ const agent = Agent.of<State>({
 	opts: {
 		// We want the agent to run forever
 		stopOnSuccess: false,
-		// And keep retrying on failure
+		// And keep retrying on failure (this is the default)
 		maxRetries: 0,
 	},
 });
+```
 
-// Start the agent with the initial target. New targets can be defined once the agent is started
-// Note that we don't need to provide a current network, we only care that the agent remains connected
-agent.start({
+Now we start can start the agent with the initial target. As this introduces new networks and requires that the
+system is connected, this will add the networks to the internal database, perform authentication tasks and connect to 
+the first network that is available.
+
+```typescript
+WifiConnect.start({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
@@ -243,11 +401,14 @@ agent.start({
 		office2: { ssid: 'Second floor', psk: '' },
 	},
 });
+```
 
-// We can modify the target after the agent has started. In this case we are adding a new network, which
-// will cause the agent to re-calculate the plan to include the `addNetwork` task. We need to await it as this
-// will stop the plan runner (and wait for the stop) before restarting it with the new target
-await agent.target({
+We can modify the target after the agent has started. In this case we are adding a new network, which
+will cause the agent to re-calculate the plan to include the `addNetwork` task. We need to await it as this
+will stop the plan runner (and wait for the stop) before restarting it with the new target
+
+```typescript
+await WifiConnect.target({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
@@ -257,3 +418,7 @@ await agent.target({
 	},
 });
 ```
+
+## More examples
+
+You can see more examples in the [planner unit tests](lib/planer.spec.ts), the [agent unit tests](lib/agent.spec.ts) or the integration tests in the `tests` folder.
