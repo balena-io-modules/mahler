@@ -65,5 +65,8 @@
   "dependencies": {
     "debug": "^4.3.4",
     "optics-ts": "^2.4.0"
+  },
+  "versionist": {
+    "publishedAt": "2023-04-24T22:22:00.461Z"
   }
 }

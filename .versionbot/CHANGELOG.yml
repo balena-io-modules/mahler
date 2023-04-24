@@ -1,0 +1,34 @@
+- commits:
+    - subject: Add service to docker-compose to enable flowzone testing
+      hash: 8422902ede14e359c4394ef27083325ed2b13172
+      body: |
+        Also set the logging level for tests
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Move default logger to its own module
+      hash: 1f3a0914665fcdd0d6fd9679ffa94d36cfa6f851
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Setup flowzone
+      hash: 6962d09ab00e6f191c3eeec535450d996f336ed7
+      body: |
+        Set the change to minor so the first published version is 0.1.0
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Update package.json with repository metadata
+      hash: 4fd6666505c812583d4732e357448b0d61b33db2
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.1.0
+  title: ""
+  date: 2023-04-24T22:22:00.390Z
