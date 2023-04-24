@@ -1,0 +1,34 @@
+version: '2.4'
+
+services:
+  sut:
+    build: ./
+    command:
+      [
+        './tests/wait-for-it.sh',
+        '--',
+        'npm',
+        'run',
+        'test:integration'
+      ]
+    stop_grace_period: 3s
+    environment:
+      DOCKER_HOST: 'unix:///var/run/docker.sock'
+    volumes:
+      - dind:/var/run
+    depends_on:
+      - docker
+
+  docker:
+    image: docker:dind
+    stop_grace_period: 3s
+    privileged: true
+    volumes:
+      - dind:/var/run
+
+volumes:
+  dind:
+    driver_opts:
+      # Use tmpfs to avoid files remaining between runs
+      type: tmpfs
+      device: tmpfs

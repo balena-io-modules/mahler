@@ -37,7 +37,7 @@ export interface AgentOpts {
 
 	/**
 	 *  The interval (in millis) to re-check the state after the goal has been reached. This only makes
-	 *  sense with stopOnSuccess: false. Defaults to 10 seconds
+	 *  sense with stopOnSuccess: false. Defaults to 1 second
 	 */
 	pollIntervalMs: number;
 
@@ -100,12 +100,13 @@ class ActionRunFailed extends Error {
 
 function of<TState>({
 	initial: state,
+	// TODO: accepts a planner instead
 	tasks = [],
 	sensors = [],
 	opts: userOpts = {},
 }: {
 	initial: TState;
-	tasks?: Array<Task<TState>>;
+	tasks?: Array<Task<TState, any, any>>;
 	sensors?: Array<Sensor<TState>>;
 	opts?: Partial<AgentOpts>;
 }): Agent<TState> {
@@ -155,6 +156,7 @@ function of<TState>({
 				try {
 					logger.debug('finding a plan to the target');
 					logger.debug('current state', state);
+					// TODO: print the full target state here
 					logger.debug('target state', target);
 					const actions = planner.plan(state, target);
 
@@ -165,6 +167,8 @@ function of<TState>({
 
 					if (actions.length === 0) {
 						logger.debug('plan empty, nothing to do');
+						// TODO: this will probably be replaced by a re-check of the state
+						// in case the state has changed (probably protected by a throttle)
 						if (opts.stopOnSuccess) {
 							return resolve({ success: true });
 						}
