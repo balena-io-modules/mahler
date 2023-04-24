@@ -1,22 +1,25 @@
 {
-  "name": "balena-typescript-skeleton",
+  "name": "mahler",
   "version": "0.1.0",
-  "description": "Skeleton template for a balena TypeScript project",
-  "homepage": "https://github.com/balena-io-experimental/planner#readme",
+  "description": "A automated task composer and HTN based planner for building autonomous system agents",
+  "homepage": "https://github.com/balena-io-modules/mahler#readme",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "keywords": [
     "balena",
-    "typescript"
+    "typescript",
+    "htn",
+    "planning",
+    "orchestration"
   ],
-  "author": "",
+  "author": "Balena Inc. <hello@balena.io>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/balena-io-experimental/planner.git"
+    "url": "git+https://github.com/balena-io-modules/mahler.git"
   },
   "bugs": {
-    "url": "https://github.com/balena-io-experimental/planner/issues"
+    "url": "https://github.com/balena-io-modules/mahler/issues"
   },
   "files": [
     "build/"
