@@ -1,4 +1,3 @@
-import debug from 'debug';
 import { promisify } from 'util';
 
 import assert from './assert';
@@ -7,17 +6,7 @@ import { Target } from './target';
 import { Planner, PlanNotFound } from './planner';
 import { Sensor, Subscribed } from './sensor';
 import { Logger } from './logger';
-
-// Send logger.info() and logger.debug() output to stdout
-const info = debug('agent');
-info.log = console.log.bind(console);
-
-const logger = {
-	info,
-	warn: debug('agent:warn'),
-	error: debug('agent:error'),
-	debug: info.extend('debug'),
-};
+import console from './console';
 
 export interface AgentOpts {
 	/**
@@ -116,9 +105,11 @@ function of<TState>({
 		maxWaitMs: 5 * 60 * 1000,
 		pollIntervalMs: 10 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.pollIntervalMs,
-		logger,
+		logger: console,
 		...userOpts,
 	};
+
+	const { logger } = opts;
 
 	assert(
 		opts.maxRetries >= 0,

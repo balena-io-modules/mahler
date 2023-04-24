@@ -1,1 +1,6 @@
 version: '2.4'
+
+services:
+  sut:
+    build: ./
+    command: sleep infinity

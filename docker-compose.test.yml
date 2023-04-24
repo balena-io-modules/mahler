@@ -14,6 +14,7 @@ services:
     stop_grace_period: 3s
     environment:
       DOCKER_HOST: 'unix:///var/run/docker.sock'
+      DEBUG: 'mahler:warn,mahler:error'
     volumes:
       - dind:/var/run
     depends_on:
