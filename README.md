@@ -10,8 +10,7 @@ A automated task composer and [HTN](https://en.wikipedia.org/wiki/Hierarchical_t
 - Highly configurable agent interface allows to create autonomous agents to serve a wide variety of use cases. The state of the agent can be queried at any point of the execution and observable interface allows to follow changes to the state or errors during the plan execution. Plans can be interrupted and goals can be modified if system objectives change.
 - Sensor interface allows to monitor changes in the state of the system coming from external events. Updated state may be used by agents to trigger a re-plan when necessary.
 - Easy to debug. Error reporting includes information about system state and goals for easy replicability.
-- Log ready. Agent uses task metadata and execution context to generate clear logs to communicate the state of the system to end users or for debugging. Plug your own logger to suit your system needs. 
-
+- Log ready. Agent uses task metadata and execution context to generate clear logs to communicate the state of the system to end users or for debugging. Plug your own logger to suit your system needs.
 
 ## Concepts
 
@@ -29,7 +28,7 @@ The library design is inspired by the work in [Exploring HTN Planners through ex
 
 ![Planner design](./design.png)
 
-## Example 
+## Example
 
 Let's write an agent for a simple Space Heater controller. The heater design is very simple, it is composed by a resistor that can be turned ON or OFF to heat the room, and a termometer that detects the room temperature. The heater interface allows to set a target room temperature. The controller will turn the resistor ON if the temperature is below target or OFF if the temperature is above target.
 
@@ -72,16 +71,15 @@ const turnOn = Task.of({
 
 A task, at minimum should define the following properties.
 
-- A *condition*, this tells the planner when the task is applicable. In this case the task should be ran only if the temperature is below target and the current state of the resistor is OFF.
-- An *effect*. This tells the planner what is the expected outcome of running the task. This allows the planner to decide that a potential plan allows to reach the target. As observed in the code, the effect is an intended outcome but it doesn't mean that the outcome is immediate. The effect function should not have any side effects.
-- An *action*. This is the operation that will actually be ran by the plan runner and can modify the state of the system. It must return the modified state.
+- A _condition_, this tells the planner when the task is applicable. In this case the task should be ran only if the temperature is below target and the current state of the resistor is OFF.
+- An _effect_. This tells the planner what is the expected outcome of running the task. This allows the planner to decide that a potential plan allows to reach the target. As observed in the code, the effect is an intended outcome but it doesn't mean that the outcome is immediate. The effect function should not have any side effects.
+- An _action_. This is the operation that will actually be ran by the plan runner and can modify the state of the system. It must return the modified state.
 
 Opionally, a task may define the following properties
 
-- A *description*, this is a string or a function that describes the task purpose. It is used for logging by the Agent.
-- A *path*. This is a pointer to a part of the state that this action applies to, it defaults to '/', meaning task by default apply to the full state object. This will become more clear in the next example.
-- An operation *op* (`create`, `update`, `delete`), that this task is applicable for, for instance certain tasks may be relevant only when *deleting* a certain element of the state (e.g. removing a system service). This property defaults to `*`, meaning the task is by default applicable to any operation.
-
+- A _description_, this is a string or a function that describes the task purpose. It is used for logging by the Agent.
+- A _path_. This is a pointer to a part of the state that this action applies to, it defaults to '/', meaning task by default apply to the full state object. This will become more clear in the next example.
+- An operation _op_ (`create`, `update`, `delete`), that this task is applicable for, for instance certain tasks may be relevant only when _deleting_ a certain element of the state (e.g. removing a system service). This property defaults to `*`, meaning the task is by default applicable to any operation.
 
 Continuing with our example, as we defined a task to turn the heater ON, we need to define another to turn the heater resistor OFF.
 
@@ -115,13 +113,13 @@ const wait = Task.of({
 		...state,
 		roomTemp: target.roomTemp,
 	}),
-	// Nothing to do here, we let the agent wait 
+	// Nothing to do here, we let the agent wait
 	action: NoOp,
 	description: 'wait for temperature to reach target',
 });
 ```
 
-Finally, we need to define a temperature *Sensor*, a sensor monitors the state of the system allowing the agent to keep an up-to-date view of the world.
+Finally, we need to define a temperature _Sensor_, a sensor monitors the state of the system allowing the agent to keep an up-to-date view of the world.
 
 ```typescript
 const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
@@ -133,7 +131,7 @@ const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
 		// and returns the updated state
 		subscriber.next((state) => {
 			// Update the temperure in the state object
-			return {...state, roomTemp: temp};
+			return { ...state, roomTemp: temp };
 		});
 
 		// Wait 100ms before querying the sensor again
@@ -156,8 +154,8 @@ const Heater = Agent.of({
 	sensors: [termometer],
 
 	// Stop on success tells the agent to keep monitoring
-	// the state and re-plan if the state gets off-target. 
-	// By default, the agent wil terminate as soon as the 
+	// the state and re-plan if the state gets off-target.
+	// By default, the agent wil terminate as soon as the
 	// target has been reached.
 	opts: { stopOnSuccess: false },
 });
@@ -246,7 +244,7 @@ const authenticate = Task.of({
 	effect: (state: State, network) => network.set(state, {...network.get(state), authenticated: true}),
 	// The action interacts with the system to authenticate with the SSID
 	action: async (state: State, network) => {
-		/* TODO: actually authenticate to the network */ 
+		/* TODO: actually authenticate to the network */
 		return network.set(state, {...network.get(state), authenticated: true});
 	},
 	description: (network) => `authenticate network ${network.id}`,
@@ -265,7 +263,7 @@ const connect = Task.of({
 	effect: (state: State, network) => network.set(state, {...network.get(state), connected: true}),
 	// The action interacts with the system to switch SSIDs
 	action: async (state: State, network) => {
-		/* TODO: actually connect to the network */ 
+		/* TODO: actually connect to the network */
 		return network.set(state, {...network.get(state), connected: true});
 	},
 	description: (network) => `connect to network ${network.id}`,
@@ -346,7 +344,7 @@ const networkScanner = Sensor.of(async (subscriber: Subscriber<State>) => {
 		subscriber.next((state) => ({ ...state, knownNetworks: updatedNetworks }));
 
 		// Scan the network again in 60 seconds
-		await setTimeout(60*1000);
+		await setTimeout(60 * 1000);
 	}
 });
 
@@ -361,7 +359,7 @@ const connectivityCheck = Sensor.of(async (subscriber: Subscriber<State>) => {
 		}));
 
 		// Check the connectivity again in 60 seconds
-		await setTimeout(60*1000);
+		await setTimeout(60 * 1000);
 	}
 });
 ```
@@ -389,7 +387,7 @@ const WifiConnect = Agent.of<State>({
 ```
 
 Now we start can start the agent with the initial target. As this introduces new networks and requires that the
-system is connected, this will add the networks to the internal database, perform authentication tasks and connect to 
+system is connected, this will add the networks to the internal database, perform authentication tasks and connect to
 the first network that is available.
 
 ```typescript
@@ -421,4 +419,4 @@ await WifiConnect.target({
 
 ## More examples
 
-You can see more examples in the [planner unit tests](lib/planer.spec.ts), the [agent unit tests](lib/agent.spec.ts) or the integration tests in the `tests` folder.
+You can see more examples in the [planner unit tests](lib/planner.spec.ts), the [agent unit tests](lib/agent.spec.ts) or the integration tests in the `tests` folder.
