@@ -17,7 +17,6 @@ interface Service {
 
 interface Image {
 	readonly name: string;
-	readonly tag?: string;
 	readonly imageId?: string;
 }
 
@@ -35,6 +34,10 @@ function isStatusError(x: unknown): x is StatusError {
 	return x instanceof Error && typeof (x as any).statusCode === 'number';
 }
 
+function isEqualConfig(s1: Service, s2: Service) {
+	return s1.image === s2.image && s1.command.join(' ') === s2.command.join(' ');
+}
+
 const docker = new Docker();
 
 const fetch = Task.of({
@@ -47,7 +50,6 @@ const fetch = Task.of({
 			...state.images,
 			{
 				name: service.target.image,
-				tag: `${state.name}_${service.name}:latest`,
 			},
 		],
 	}),
@@ -93,6 +95,45 @@ const install = Task.of({
 			containerId: 'deadbeef',
 		}),
 	action: async (app: App, service) => {
+		// This is our way to update the internal agent state, we look for
+		// the service before we do anything, and if it exists, we update
+		// the state with the service metadata.
+		const existing = await docker
+			.getContainer(`${app.name}_${service.name}`)
+			.inspect()
+			.catch((e) => {
+				if (isStatusError(e) && e.statusCode === 404) {
+					return null;
+				}
+				throw e;
+			});
+
+		if (existing != null) {
+			const status: ServiceStatus = (() => {
+				if (existing.State.Running) {
+					return 'running';
+				}
+				if (existing.State.ExitCode === 0) {
+					return 'stopped';
+				}
+				return 'created';
+			})();
+			const s: Service = {
+				image:
+					(await docker.getImage(existing.Image).inspect()).RepoTags[0] ||
+					existing.Image,
+				startedAt: new Date(existing.State.StartedAt),
+				createdAt: new Date(existing.Created),
+				containerId: existing.Id,
+				status,
+				command: existing.Config.Cmd,
+			};
+
+			// If the service has a different config to what we are expecting
+			// the service start step will fail and we'll need to re-plan
+			return service.set(app, s);
+		}
+
 		const container = await docker.createContainer({
 			name: `${app.name}_${service.name}`,
 			Image: service.target.image,
@@ -116,6 +157,7 @@ const start = Task.of({
 	path: '/services/:name',
 	condition: (app: App, service) =>
 		service.get(app)?.containerId != null &&
+		isEqualConfig(service.get(app), service.target) &&
 		service.get(app)?.status !== 'running',
 	effect: (app: App, service) =>
 		service.set(app, {
@@ -164,17 +206,36 @@ const stop = Task.of({
 		return service.set(app, {
 			...service.get(app),
 			status: 'stopped',
-			startedAt: new Date(State.FinishedAt),
+			finishedAt: new Date(State.FinishedAt),
 		});
 	},
 	description: ({ name }) => `stopping container for service '${name}'`,
 });
 
-const planner = Planner.of<App>([fetch, install, start, stop]);
+const remove = Task.of({
+	path: '/services/:name',
+	condition: (app: App, service) =>
+		service.get(app)?.containerId != null &&
+		service.get(app)?.status !== 'running',
+	effect: (app: App, service) => {
+		const { [service.name]: _, ...services } = app.services;
+		return { ...app, services };
+	},
+	action: async (app: App, service) => {
+		const container = docker.getContainer(service.get(app).containerId!);
+		await container.remove({ v: true });
+
+		const { [service.name]: _, ...services } = app.services;
+		return { ...app, services };
+	},
+	description: ({ name }) => `removing container for service '${name}'`,
+});
+
+const planner = Planner.of<App>([fetch, install, start, stop, remove]);
 
 describe('container-compose', () => {
-	describe('plan', () => {
-		it('pulls images if it does not exist yet', () => {
+	describe('single container plans', () => {
+		it('pulls the service image if it does not exist yet', () => {
 			const app = {
 				name: 'test',
 				services: {
@@ -276,6 +337,100 @@ describe('container-compose', () => {
 				"stopping container for service 'main'",
 			]);
 		});
+
+		it('knows to recreate the service if the image changes', () => {
+			const app = {
+				name: 'test',
+				services: {
+					main: {
+						status: 'running' as ServiceStatus,
+						image: 'alpine:3.13',
+						containerId: 'deadbeef',
+						command: ['sleep', 'infinity'],
+					},
+				},
+				images: [{ name: 'alpine:3.13', imageId: '123' }],
+			};
+
+			const plan = planner.plan(app, {
+				services: {
+					main: {
+						status: 'running',
+						image: 'alpine:3.14',
+					},
+				},
+			});
+
+			expect(plan.map((a) => a.description)).to.deep.equal([
+				"pulling image 'alpine:3.14' for service 'main'",
+				"stopping container for service 'main'",
+				"removing container for service 'main'",
+				"installing container for service 'main'",
+				"starting container for service 'main'",
+			]);
+		});
+
+		it('knows to recreate the service if the image changes and the service is stopped', () => {
+			const app = {
+				name: 'test',
+				services: {
+					main: {
+						status: 'stopped' as ServiceStatus,
+						image: 'alpine:3.13',
+						containerId: 'deadbeef',
+						command: ['sleep', 'infinity'],
+					},
+				},
+				images: [{ name: 'alpine:3.13', imageId: '123' }],
+			};
+
+			const plan = planner.plan(app, {
+				services: {
+					main: {
+						status: 'running',
+						image: 'alpine:3.14',
+					},
+				},
+			});
+
+			expect(plan.map((a) => a.description)).to.deep.equal([
+				"pulling image 'alpine:3.14' for service 'main'",
+				"removing container for service 'main'",
+				"installing container for service 'main'",
+				"starting container for service 'main'",
+			]);
+		});
+	});
+
+	it('knows to recreate service if config has changed', () => {
+		const app = {
+			name: 'test',
+			services: {
+				main: {
+					status: 'running' as ServiceStatus,
+					image: 'alpine:3.13',
+					containerId: 'deadbeef',
+					command: ['sleep', 'infinity'],
+				},
+			},
+			images: [{ name: 'alpine:3.13', imageId: '123' }],
+		};
+
+		const plan = planner.plan(app, {
+			services: {
+				main: {
+					status: 'running',
+					command: ['sleep', '10'],
+				},
+			},
+		});
+
+		expect(plan.map((a) => a.description)).to.deep.equal([
+			"stopping container for service 'main'",
+			"removing container for service 'main'",
+			"installing container for service 'main'",
+			"starting container for service 'main'",
+		]);
 	});
 
 	describe('agent', () => {
@@ -302,10 +457,10 @@ describe('container-compose', () => {
 			await cleanup();
 		});
 
-		it('runs the plan', async () => {
+		it('can execute a single container plan', async () => {
 			const agent = Agent.of<App>({
 				initial: { name: appname, services: {}, images: [] },
-				tasks: [fetch, install, start],
+				tasks: [fetch, install, start, stop, remove],
 				opts: { pollIntervalMs: 1000 },
 			});
 
@@ -313,23 +468,56 @@ describe('container-compose', () => {
 				services: {
 					main: {
 						status: 'running',
-						image: 'alpine:latest',
+						image: 'alpine:3.12',
 						command: ['sleep', 'infinity'],
 					},
 				},
 			});
 
-			expect(await agent.result())
-				.to.have.property('success')
-				.that.equals(true);
+			expect(await agent.result()).to.deep.equal({ success: true });
 
 			const service = agent.state().services.main;
 			expect(service).to.not.be.undefined;
 			expect(service.containerId).to.not.be.undefined;
 
-			expect(await docker.getContainer(service.containerId!).inspect())
-				.to.have.property('Name')
-				.that.equals('/testapp_main');
+			expect((await docker.getContainer(service.containerId!).inspect()).State)
+				.to.have.property('Running')
+				.that.equals(true);
+
+			// Update the target
+			await agent.target({
+				services: {
+					main: {
+						status: 'stopped',
+					},
+				},
+			});
+
+			expect(await agent.result()).to.deep.equal({ success: true });
+			expect((await docker.getContainer(service.containerId!).inspect()).State)
+				.to.have.property('Running')
+				.that.equals(false);
+
+			console.log(agent.state());
+			await agent.target({
+				services: {
+					main: {
+						status: 'running',
+						image: 'alpine:3.13',
+					},
+				},
+			});
+			expect(await agent.result()).to.deep.equal({ success: true });
+
+			const newService = agent.state().services.main;
+			expect(newService).to.not.be.undefined;
+			expect(newService.containerId).to.not.be.undefined;
+			expect(newService.containerId).to.not.equal(service.containerId);
+			expect(
+				(await docker.getContainer(newService.containerId!).inspect()).State,
+			)
+				.to.have.property('Running')
+				.that.equals(true);
 		});
 	});
 });
