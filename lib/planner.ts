@@ -67,6 +67,7 @@ function expandMethod<TState = any>(
 // Stack ?
 function plan<TState = any>(
 	current: TState,
+	target: TState,
 	diff: Diff<TState>,
 	tasks: Array<Task<TState>>,
 	initial: Array<Action<TState>>,
@@ -79,8 +80,6 @@ function plan<TState = any>(
 	if (ops.length === 0) {
 		return [];
 	}
-
-	const target = diff.patch(current);
 
 	const unapplied = [] as Array<Operation<TState>>;
 	for (const op of ops) {
@@ -144,7 +143,10 @@ function plan<TState = any>(
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, diff, tasks, [...initial, ...actions]);
+					const next = plan(state, target, diff, tasks, [
+						...initial,
+						...actions,
+					]);
 
 					// TODO: how can we know if there is a shorter path available?
 					return [...actions, ...next];
@@ -171,7 +173,7 @@ function plan<TState = any>(
 				const state = action.effect(current);
 
 				try {
-					const next = plan(state, diff, tasks, [...initial, action]);
+					const next = plan(state, target, diff, tasks, [...initial, action]);
 					return [action, ...next];
 				} catch (e) {
 					if (!(e instanceof PlanNotFound)) {
@@ -219,8 +221,8 @@ function of<TState = any>(
 
 	return {
 		plan(current: TState, target: Target<TState>) {
-			const patch = Diff.of(target);
-			return plan(current, patch, tasks, []);
+			const diff = Diff.of(target);
+			return plan(current, diff.patch(current), diff, tasks, []);
 		},
 	};
 }
