@@ -91,7 +91,7 @@ const run = Task.of({
 
 const planner = Planner.of<App>([pull, run]);
 
-describe('docker-compose', () => {
+describe('container-compose', () => {
 	describe('planner', () => {
 		it('pulls images if it does not exist yet', async () => {
 			const app = {
