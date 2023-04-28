@@ -7,12 +7,14 @@ interface Service {
 	readonly image: string;
 	readonly status?: 'created' | 'stopped' | 'running';
 	readonly createdAt?: Date;
+	readonly startedAt?: Date;
 	readonly containerId?: string;
 	readonly command: string[];
 }
 
 interface Image {
 	readonly name: string;
+	readonly tag?: string;
 	readonly imageId?: string;
 }
 
@@ -24,16 +26,21 @@ type App = {
 
 const docker = new Docker();
 
-const pull = Task.of({
+const fetch = Task.of({
 	path: '/services/:name',
-	condition: (state: App, service) =>
-		!state.images.some((img) => img.name === service.target.image),
+	condition: (app: App, service) =>
+		!app.images.some((img) => img.name === service.target.image),
 	effect: (state: App, service) => ({
 		...state,
-		images: [...state.images, { name: service.target.image }],
+		images: [
+			...state.images,
+			{
+				name: service.target.image,
+				tag: `${state.name}_${service.name}:latest`,
+			},
+		],
 	}),
-	action: async (state: App, service) => {
-		// Pull the image
+	action: async (app: App, service) => {
 		await new Promise((resolve, reject) =>
 			docker
 				.pull(service.target.image)
@@ -50,9 +57,9 @@ const pull = Task.of({
 		const dockerImage = await docker.getImage(service.target.image).inspect();
 
 		return {
-			...state,
+			...app,
 			images: [
-				...state.images,
+				...app.images,
 				{ name: service.target.image, imageId: dockerImage.Id },
 			],
 		};
@@ -61,38 +68,70 @@ const pull = Task.of({
 		`pulling image '${service.target.image}' for service '${service.name}'`,
 });
 
-const run = Task.of({
+const install = Task.of({
 	path: '/services/:name',
-	condition: (state: App, service) =>
-		state.images.some((img) => img.name === service.target.image) &&
-		service.get(state)?.status !== 'running',
-	effect: (app: App, { target: service, set }) =>
-		set(app, { ...service, status: 'running' }),
-	action: async (app: App, { name, target: service, set }) => {
+	condition: (app: App, service) =>
+		app.images.some((img) => img.name === service.target.image) &&
+		service.get(app)?.status == null,
+	effect: (app: App, service) =>
+		service.set(app, {
+			...service.target,
+			...service.get(app),
+			status: 'created',
+			// We just need a random string here
+			containerId: 'deadbeef',
+		}),
+	action: async (app: App, service) => {
 		const container = await docker.createContainer({
-			name: `${app.name}_${name}`,
-			Image: service.image,
-			Cmd: service.command || [],
+			name: `${app.name}_${service.name}`,
+			Image: service.target.image,
+			Cmd: service.target.command || [],
 		});
-
-		await container.start();
 
 		const { Id: containerId, Created } = await container.inspect();
 
-		return set(app, {
-			...service,
-			status: 'running',
+		return service.set(app, {
+			...service.target,
+			...service.get(app),
+			status: 'created',
 			containerId,
 			createdAt: new Date(Created),
+		});
+	},
+	description: ({ name }) => `installing container for service '${name}'`,
+});
+
+const start = Task.of({
+	path: '/services/:name',
+	condition: (app: App, service) =>
+		app.images.some((img) => img.name === service.target.image) &&
+		service.get(app)?.containerId != null &&
+		service.get(app)?.status !== 'running',
+	effect: (app: App, service) =>
+		service.set(app, {
+			...service.target,
+			...service.get(app),
+			status: 'running',
+		}),
+	action: async (app: App, service) => {
+		const container = docker.getContainer(service.get(app).containerId!);
+		await container.start();
+
+		const { State } = await container.inspect();
+
+		return service.set(app, {
+			...service.get(app),
+			status: 'running',
+			startedAt: new Date(State.StartedAt),
 		});
 	},
 	description: ({ name }) => `starting container for service '${name}'`,
 });
 
-const planner = Planner.of<App>([pull, run]);
+const planner = Planner.of<App>([fetch, install, start]);
 
 describe('container-compose', () => {
-	describe('planner', () => {
+	describe('plan', () => {
 		it('pulls images if it does not exist yet', async () => {
 			const app = {
 				name: 'test',
@@ -115,6 +154,7 @@ describe('container-compose', () => {
 
 			expect(plan.map((a) => a.description)).to.deep.equal([
 				"pulling image 'alpine:latest' for service 'main'",
+				"installing container for service 'main'",
 				"starting container for service 'main'",
 			]);
 		});
@@ -137,16 +177,41 @@ describe('container-compose', () => {
 			});
 
 			expect(plan.map((a) => a.description)).to.deep.equal([
+				"installing container for service 'main'",
 				"starting container for service 'main'",
 			]);
 		});
 	});
 
 	describe('agent', () => {
+		const appname = 'testapp';
+
+		const cleanup = async () => {
+			const containers = await docker.listContainers({ all: true });
+			await Promise.all(
+				containers
+					.filter(({ Names }) =>
+						Names.some((name) => name.startsWith(`/${appname}_`)),
+					)
+					.map(({ Id }) => docker.getContainer(Id).remove({ force: true })),
+			);
+
+			await docker.pruneImages();
+		};
+
+		beforeEach(async () => {
+			await cleanup();
+		});
+
+		after(async () => {
+			await cleanup();
+		});
+
 		it('runs the plan', async () => {
 			const agent = Agent.of<App>({
-				initial: { name: 'test', services: {}, images: [] },
-				tasks: [pull, run],
+				initial: { name: appname, services: {}, images: [] },
+				tasks: [fetch, install, start],
+				opts: { pollIntervalMs: 1000 },
 			});
 
 			agent.start({
@@ -159,7 +224,17 @@ describe('container-compose', () => {
 				},
 			});
 
-			await agent.result();
+			expect(await agent.result())
+				.to.have.property('success')
+				.that.equals(true);
+
+			const service = agent.state().services.main;
+			expect(service).to.not.be.undefined;
+			expect(service.containerId).to.not.be.undefined;
+
+			expect(await docker.getContainer(service.containerId!).inspect())
+				.to.have.property('Name')
+				.that.equals('/testapp_main');
 		});
 	});
 });
