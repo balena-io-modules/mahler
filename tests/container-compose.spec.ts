@@ -3,11 +3,14 @@ import { expect } from '~/tests';
 import { Task, Planner, Agent } from '~/lib';
 import * as Docker from 'dockerode';
 
+type ServiceStatus = 'created' | 'stopped' | 'running';
+
 interface Service {
 	readonly image: string;
-	readonly status?: 'created' | 'stopped' | 'running';
+	readonly status?: ServiceStatus;
 	readonly createdAt?: Date;
 	readonly startedAt?: Date;
+	readonly finishedAt?: Date;
 	readonly containerId?: string;
 	readonly command: string[];
 }
@@ -23,6 +26,14 @@ type App = {
 	services: Record<string, Service>;
 	images: Image[];
 };
+
+interface StatusError extends Error {
+	statusCode: number;
+}
+
+function isStatusError(x: unknown): x is StatusError {
+	return x instanceof Error && typeof (x as any).statusCode === 'number';
+}
 
 const docker = new Docker();
 
@@ -104,12 +115,10 @@ const install = Task.of({
 const start = Task.of({
 	path: '/services/:name',
 	condition: (app: App, service) =>
-		app.images.some((img) => img.name === service.target.image) &&
 		service.get(app)?.containerId != null &&
 		service.get(app)?.status !== 'running',
 	effect: (app: App, service) =>
 		service.set(app, {
-			...service.target,
 			...service.get(app),
 			status: 'running',
 		}),
@@ -128,11 +137,44 @@ const start = Task.of({
 	description: ({ name }) => `starting container for service '${name}'`,
 });
 
-const planner = Planner.of<App>([fetch, install, start]);
+const stop = Task.of({
+	path: '/services/:name',
+	condition: (app: App, service) =>
+		service.get(app)?.containerId != null &&
+		service.get(app)?.status === 'running',
+	effect: (app: App, service) =>
+		service.set(app, {
+			...service.get(app),
+			status: 'stopped',
+		}),
+	action: async (app: App, service) => {
+		const container = docker.getContainer(service.get(app).containerId!);
+		await container.stop().catch((e) => {
+			if (isStatusError(e)) {
+				if (e.statusCode !== 304 && e.statusCode !== 404) {
+					throw e;
+				}
+			} else {
+				throw e;
+			}
+		});
+
+		const { State } = await container.inspect();
+
+		return service.set(app, {
+			...service.get(app),
+			status: 'stopped',
+			startedAt: new Date(State.FinishedAt),
+		});
+	},
+	description: ({ name }) => `stopping container for service '${name}'`,
+});
+
+const planner = Planner.of<App>([fetch, install, start, stop]);
 
 describe('container-compose', () => {
 	describe('plan', () => {
-		it('pulls images if it does not exist yet', async () => {
+		it('pulls images if it does not exist yet', () => {
 			const app = {
 				name: 'test',
 				services: {
@@ -159,7 +201,7 @@ describe('container-compose', () => {
 			]);
 		});
 
-		it('skips pull if it image already exists', async () => {
+		it('skips pull if it image already exists', () => {
 			const app = {
 				name: 'test',
 				services: {},
@@ -179,6 +221,59 @@ describe('container-compose', () => {
 			expect(plan.map((a) => a.description)).to.deep.equal([
 				"installing container for service 'main'",
 				"starting container for service 'main'",
+			]);
+		});
+
+		it('stops running service if target state is "stopped"', () => {
+			const app = {
+				name: 'test',
+				services: {
+					main: {
+						status: 'running' as ServiceStatus,
+						image: 'alpine:latest',
+						containerId: 'deadbeef',
+						command: ['sleep', 'infinity'],
+					},
+				},
+				images: [{ name: 'alpine:latest', imageId: '123' }],
+			};
+
+			const plan = planner.plan(app, {
+				services: {
+					main: {
+						status: 'stopped',
+					},
+				},
+			});
+
+			expect(plan.map((a) => a.description)).to.deep.equal([
+				"stopping container for service 'main'",
+			]);
+		});
+
+		it('installs and stops service if service does not exist and target state is "stopped"', () => {
+			const app = {
+				name: 'test',
+				services: {},
+				images: [],
+			};
+
+			const plan = planner.plan(app, {
+				services: {
+					main: {
+						status: 'stopped',
+						image: 'alpine:latest',
+						containerId: 'deadbeef',
+						command: ['sleep', 'infinity'],
+					},
+				},
+			});
+
+			expect(plan.map((a) => a.description)).to.deep.equal([
+				"pulling image 'alpine:latest' for service 'main'",
+				"installing container for service 'main'",
+				"starting container for service 'main'",
+				"stopping container for service 'main'",
 			]);
 		});
 	});
