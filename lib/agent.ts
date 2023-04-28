@@ -146,9 +146,9 @@ function of<TState>({
 				let planFound = false;
 				try {
 					logger.debug('finding a plan to the target');
-					logger.debug('current state', state);
+					logger.debug('current state', JSON.stringify(state, null, 2));
 					// TODO: print the full target state here
-					logger.debug('target state', target);
+					logger.debug('target state', JSON.stringify(target, null, 2));
 					const actions = planner.plan(state, target);
 
 					// Reset the counter if we've found a plan
@@ -185,7 +185,7 @@ function of<TState>({
 								});
 							}
 
-							logger.info(`${action.description}: checking pre-condition`);
+							logger.info(`${action.description}: testing pre-condition`);
 							if (!action.condition(state)) {
 								logger.warn(`${action.description}: pre-condition failed`);
 								break;
@@ -195,11 +195,11 @@ function of<TState>({
 							// coming from sensors?
 							// TODO: maybe we can have some sort of subscription mechanism
 							// to notify state changes?
-							logger.info(`${action.description}: running the action`);
+							logger.info(`${action.description}: executing`);
 							state = await action.run(state).catch((e) => {
 								throw new ActionRunFailed(action, e);
 							});
-							logger.info(`${action.description}: success`);
+							logger.info(`${action.description}: ready`);
 						}
 
 						// We've executed the plan succesfully
