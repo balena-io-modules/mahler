@@ -367,16 +367,16 @@ function isApplicable<
 		return false;
 	}
 
-	const templateParts = Path.elems(t.path);
-	const parts = Path.elems(o.path);
+	const taskParts = Path.elems(t.path);
+	const opParts = Path.elems(o.path);
 
-	if (templateParts.length > parts.length) {
+	if (taskParts.length > opParts.length) {
 		return false;
 	}
 
-	for (const templateElem of templateParts) {
-		const pathElem = parts.shift();
-		if (!templateElem.startsWith(':') && templateElem !== pathElem) {
+	for (const tElem of taskParts) {
+		const oElem = opParts.shift();
+		if (!tElem.startsWith(':') && tElem !== oElem) {
 			return false;
 		}
 	}

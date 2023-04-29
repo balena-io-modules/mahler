@@ -1,7 +1,10 @@
+import Debug from 'debug';
 import { expect } from '~/tests';
 
-import { Task, Planner, Agent } from '~/lib';
 import * as Docker from 'dockerode';
+import { Agent, Planner, Task } from '~/lib';
+
+const debug = Debug('mahler:tests');
 
 type ServiceStatus = 'created' | 'stopped' | 'running';
 
@@ -231,7 +234,10 @@ const remove = Task.of({
 	description: ({ name }) => `removing container for service '${name}'`,
 });
 
-const planner = Planner.of<App>([fetch, install, start, stop, remove]);
+const planner = Planner.of<App>({
+	tasks: [fetch, install, start, stop, remove],
+	opts: { debug },
+});
 
 describe('container-compose', () => {
 	describe('single container plans', () => {

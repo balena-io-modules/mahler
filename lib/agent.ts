@@ -120,7 +120,7 @@ function of<TState>({
 
 	// Create the planner early on, this will
 	// also run validation from the planner side
-	const planner = Planner.of(tasks);
+	const planner = Planner.of({ tasks });
 
 	const delay = promisify(setTimeout);
 	let promise: Promise<AgentResult> = Promise.resolve({

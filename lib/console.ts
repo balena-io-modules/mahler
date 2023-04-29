@@ -3,7 +3,7 @@ import { Logger } from './logger';
 
 // Create the default logger
 // Send logger.info() and logger.debug() output to stdout
-export const debug = Debug('mahler');
+const debug = Debug('mahler');
 debug.log = console.log.bind(console);
 
 const logger: Logger = {

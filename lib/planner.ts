@@ -7,9 +7,6 @@ import { Diff } from './diff';
 import { Operation } from './operation';
 import { equals } from './json';
 import { assert } from './assert';
-import { debug as globalDebug } from './console';
-
-const debug = globalDebug.extend('plan');
 
 export interface Planner<TState = any> {
 	/**
@@ -19,6 +16,14 @@ export interface Planner<TState = any> {
 	 * TODO: accept a diff too
 	 */
 	plan(current: TState, target: Target<TState>): Array<Action<TState>>;
+}
+
+export interface PlannerOpts {
+	/**
+	 * A function used by the planner to debug the search
+	 * for a plan. It defaults to a noop.
+	 */
+	debug: (...args: any[]) => void;
 }
 
 export class PlanNotFound extends Error {
@@ -54,7 +59,7 @@ function expandMethod<TState = any>(
 	instruction: Instruction<TState>,
 ): Array<Action<TState>> {
 	// QUESTION: if some instructions are not applicable,
-	// should we stop the operation entirely to avoid creating
+	// should we stop the operation entirely to avoid testing
 	// a plan that is not valid?
 	if (Method.is(instruction)) {
 		return instruction.expand(state).flatMap((i) => expandMethod(state, i));
@@ -73,6 +78,7 @@ function plan<TState = any>(
 	target: TState,
 	diff: Diff<TState>,
 	tasks: Array<Task<TState>>,
+	debug: PlannerOpts['debug'],
 	initial: Array<Action<TState>>,
 ): Array<Action<TState>> {
 	// Get the list of operations from the patch
@@ -84,6 +90,10 @@ function plan<TState = any>(
 		debug(`plan found`);
 		return [];
 	}
+
+	debug('current state', JSON.stringify(current));
+	debug('target state', JSON.stringify(target));
+	debug('pending ops', JSON.stringify(ops));
 
 	const unapplied = [] as Array<Operation<TState>>;
 	for (const op of ops) {
@@ -122,17 +132,10 @@ function plan<TState = any>(
 				}
 			}
 
-			debug(`${description}: is applicable`);
 			// If the task condition is not met, then go to the next task
 			debug(`${description}: checking condition`);
 			if (!task.condition(current, ctx)) {
-				debug(
-					`${description}: condition failed!`,
-					'State',
-					JSON.stringify(current),
-					'Target:',
-					JSON.stringify(ctx.target),
-				);
+				debug(`${description}: condition is not met`);
 				continue;
 			}
 			debug(`${description}: condition met`);
@@ -157,11 +160,9 @@ function plan<TState = any>(
 					);
 					if (!action.condition(state)) {
 						debug(
-							`${description}: action ${action.description}, condition failed!`,
+							`${description}: action ${action.description}, condition is not met`,
 							'State',
 							JSON.stringify(state),
-							'Target',
-							JSON.stringify(action.target),
 						);
 						isValid = false;
 						break;
@@ -188,7 +189,7 @@ function plan<TState = any>(
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, target, diff, tasks, [
+					const next = plan(state, target, diff, tasks, debug, [
 						...initial,
 						...actions,
 					]);
@@ -216,7 +217,10 @@ function plan<TState = any>(
 
 				debug(`${description}: selected`);
 				try {
-					const next = plan(state, target, diff, tasks, [...initial, action]);
+					const next = plan(state, target, diff, tasks, debug, [
+						...initial,
+						action,
+					]);
 					return [action, ...next];
 				} catch (e) {
 					if (!(e instanceof PlanNotFound)) {
@@ -238,9 +242,13 @@ function plan<TState = any>(
 	throw new PlanNotFound(unapplied);
 }
 
-function of<TState = any>(
-	tasks = [] as Array<Task<TState, any, any>>,
-): Planner<TState> {
+function of<TState = any>({
+	tasks = [],
+	opts: userOpts = {},
+}: {
+	tasks?: Array<Task<TState, any, any>>;
+	opts?: Partial<PlannerOpts>;
+}): Planner<TState> {
 	const taskIds = new Set<string>();
 	tasks.forEach((t) => {
 		assert(
@@ -250,6 +258,13 @@ function of<TState = any>(
 
 		taskIds.add(t.id);
 	});
+
+	const opts = {
+		debug: () => {
+			/* noop */
+		},
+		...userOpts,
+	};
 
 	// Sort the tasks putting methods first
 	tasks = tasks.sort((a, b) => {
@@ -265,7 +280,7 @@ function of<TState = any>(
 	return {
 		plan(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
-			return plan(current, diff.patch(current), diff, tasks, []);
+			return plan(current, diff.patch(current), diff, tasks, opts.debug, []);
 		},
 	};
 }

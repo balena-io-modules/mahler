@@ -104,7 +104,7 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>([take, put, move]);
+			const planner = Planner.of<State>({ tasks: [take, put, move] });
 
 			expect(
 				planner
@@ -295,15 +295,9 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>([
-				pickup,
-				unstack,
-				putdown,
-				stack,
-				take,
-				put,
-				move,
-			]);
+			const planner = Planner.of<State>({
+				tasks: [pickup, unstack, putdown, stack, take, put, move],
+			});
 
 			expect(
 				planner
