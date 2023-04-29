@@ -446,7 +446,7 @@ describe('container-compose', () => {
 					.map(({ Id }) => docker.getContainer(Id).remove({ force: true })),
 			);
 
-			await docker.pruneImages();
+			await docker.pruneImages({ filters: { dangling: { false: true } } });
 		};
 
 		beforeEach(async () => {
@@ -498,7 +498,6 @@ describe('container-compose', () => {
 				.to.have.property('Running')
 				.that.equals(false);
 
-			console.log(agent.state());
 			await agent.target({
 				services: {
 					main: {

@@ -6,15 +6,13 @@ import { Op, Operation } from './operation';
 import { equals } from './json';
 import assert from './assert';
 
-export type TaskOp = Op | '*';
-
 export const NotImplemented = () => Promise.reject('Not implemented');
 export const NoOp = <T>(s: T) => Promise.resolve(s);
 
 interface TaskSpec<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 > {
 	/**
 	 * A unique identifier for the task
@@ -46,7 +44,7 @@ interface TaskSpec<
 interface ActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The effect on the state that the action
@@ -77,7 +75,7 @@ interface ActionTask<
 interface MethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The method to be called when the task is executed
@@ -161,7 +159,7 @@ export type Instruction<TState = any, TPath extends Path = '/'> =
 function ground<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 >(
 	task: Task<TState, TPath, TOp>,
 	ctx: ContextAsArgs<TState, TPath>,
@@ -220,7 +218,7 @@ function ground<
 function isMethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 >(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
 }
@@ -243,7 +241,7 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 function isActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 >(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
 	return (
 		(t as any).effect != null &&
@@ -267,29 +265,46 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	);
 }
 
+/**
+ * A task is base unit of knowledge of an autonomous agent.
+ *
+ * Task applicability
+ *
+ *                |---------------------------|
+ *                |   Operation: /a/b/c       |
+ * |------------------------------------------|
+ * |  Task: /a/b  | create | update | delete  |
+ * | -----------------------------------------|
+ * |  create      | yes    |   no   |   no    |
+ * |  update      | yes    |   yes  |   yes   |
+ * |  delete      | no     |   no   |   yes   |
+ */
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
-function of<TState = any, TOp extends TaskOp = '*'>({
+/**
+ * Create a task
+ */
+function of<TState = any, TOp extends Op = 'update'>({
 	path = '/',
 }: Partial<Task<TState, '/', TOp>>): Task<TState, '/', TOp>;
 function of<TState = any, TPath extends Path = '/'>({
-	op = '*',
-}: Partial<Task<TState, TPath, '*'>>): Task<TState, TPath, '*'>;
+	op = 'update',
+}: Partial<Task<TState, TPath, 'update'>>): Task<TState, TPath, 'update'>;
 function of<TState = any>({
 	path = '/',
-	op = '*',
-}: Partial<Task<TState, '/', '*'>>): Task<TState, '/', '*'>;
-function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
+	op = 'update',
+}: Partial<Task<TState, '/', 'update'>>): Task<TState, '/', 'update'>;
+function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
 	t: Partial<Task<TState, TPath, TOp>>,
 ): Task<TState, TPath, TOp>;
-function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
+function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
 	task: Partial<Task<TState, TPath, TOp>>,
 ) {
-	const { path = '/', op = '*', id = randomUUID() } = task;
+	const { path = '/', op = 'update', id = randomUUID() } = task;
 
 	// Check that the path is valid
 	Path.assert(path);
@@ -329,12 +344,26 @@ function isEqual<TState = any>(
 	return equals(id1, id2);
 }
 
+/**
+ * Identify if a task is applicable for a specific operation
+ *
+ * Applicability is determined according to the following table
+ *
+ *                |---------------------------|
+ *                |   Operation: /a/b/c       |
+ * |------------------------------------------|
+ * |  Task: /a/b  | create | update | delete  |
+ * | -----------------------------------------|
+ * |  create      | yes    |   no   |   no    |
+ * |  update      | yes    |   yes  |   yes   |
+ * |  delete      | no     |   no   |   yes   |
+ */
 function isApplicable<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends Op = 'update',
 >(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
-	if (t.op !== '*' && t.op !== o.op) {
+	if (t.op !== 'update' && t.op !== o.op) {
 		return false;
 	}
 
