@@ -7,6 +7,9 @@ import { Diff } from './diff';
 import { Operation } from './operation';
 import { equals } from './json';
 import { assert } from './assert';
+import { debug as globalDebug } from './console';
+
+const debug = globalDebug.extend('plan');
 
 export interface Planner<TState = any> {
 	/**
@@ -67,6 +70,7 @@ function expandMethod<TState = any>(
 // Stack ?
 function plan<TState = any>(
 	current: TState,
+	target: TState,
 	diff: Diff<TState>,
 	tasks: Array<Task<TState>>,
 	initial: Array<Action<TState>>,
@@ -77,10 +81,9 @@ function plan<TState = any>(
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
+		debug(`plan found`);
 		return [];
 	}
-
-	const target = diff.patch(current);
 
 	const unapplied = [] as Array<Operation<TState>>;
 	for (const op of ops) {
@@ -105,16 +108,41 @@ function plan<TState = any>(
 				Pointer.of(target, path)!,
 			);
 
+			const description =
+				typeof task.description === 'function'
+					? task.description(ctx)
+					: task.description;
+
+			// We check early if the action already exists on the path to
+			// improve debugging
+			if (Task.isAction(task)) {
+				const action = task(ctx as any);
+				if (initial.find((a) => Action.equals(a, action))) {
+					continue;
+				}
+			}
+
+			debug(`${description}: is applicable`);
 			// If the task condition is not met, then go to the next task
+			debug(`${description}: checking condition`);
 			if (!task.condition(current, ctx)) {
+				debug(
+					`${description}: condition failed!`,
+					'State',
+					JSON.stringify(current),
+					'Target:',
+					JSON.stringify(ctx.target),
+				);
 				continue;
 			}
+			debug(`${description}: condition met`);
 
 			if (Task.isMethod(task)) {
 				// If the task is a method we need to expand it recursively and check that none of
 				// the operations has an invalid condition
 				// if all of the operations are applicable, continue evaluating the plan with the
 				// added operations
+				debug(`${description}: expanding method`);
 				const actions = expandMethod(current, task(ctx as any));
 				if (actions.length === 0) {
 					continue;
@@ -122,15 +150,30 @@ function plan<TState = any>(
 
 				let state = current;
 				let isValid = true;
+				debug(`${description}: testing actions`);
 				for (const action of actions) {
+					debug(
+						`${description}: action ${action.description}, testing condition`,
+					);
 					if (!action.condition(state)) {
+						debug(
+							`${description}: action ${action.description}, condition failed!`,
+							'State',
+							JSON.stringify(state),
+							'Target',
+							JSON.stringify(action.target),
+						);
 						isValid = false;
 						break;
 					}
+					debug(`${description}: action ${action.description}, condition met`);
 
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
+						debug(
+							`${description}: action ${action.description} is already on the plan`,
+						);
 						isValid = false;
 						break;
 					}
@@ -141,10 +184,14 @@ function plan<TState = any>(
 				if (!isValid) {
 					continue;
 				}
+				debug(`${description}: selected`);
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, diff, tasks, [...initial, ...actions]);
+					const next = plan(state, target, diff, tasks, [
+						...initial,
+						...actions,
+					]);
 
 					// TODO: how can we know if there is a shorter path available?
 					return [...actions, ...next];
@@ -165,13 +212,11 @@ function plan<TState = any>(
 			} else {
 				// If the task is an action, then we can just apply it
 				const action = task(ctx as any);
-				if (initial.find((a) => Action.equals(a, action))) {
-					continue;
-				}
 				const state = action.effect(current);
 
+				debug(`${description}: selected`);
 				try {
-					const next = plan(state, diff, tasks, [...initial, action]);
+					const next = plan(state, target, diff, tasks, [...initial, action]);
 					return [action, ...next];
 				} catch (e) {
 					if (!(e instanceof PlanNotFound)) {
@@ -219,8 +264,8 @@ function of<TState = any>(
 
 	return {
 		plan(current: TState, target: Target<TState>) {
-			const patch = Diff.of(target);
-			return plan(current, patch, tasks, []);
+			const diff = Diff.of(target);
+			return plan(current, diff.patch(current), diff, tasks, []);
 		},
 	};
 }
