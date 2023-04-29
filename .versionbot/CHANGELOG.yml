@@ -1,4 +1,18 @@
 - commits:
+    - subject: Change '*' to 'update' as default task operation
+      hash: 8bd9f3a49f6c5289529d07555c38ee30984118f1
+      body: |
+        After creating the applicability table between tasks and state
+        operations, it became clear that these two values had the same effect,
+        so '*' was removed for simplicity
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.3.0
+  title: ""
+  date: 2023-04-29T17:37:55.595Z
+- commits:
     - subject: Add updating tasks to container composer tests
       hash: fc4f66364b2dd37fa2496bf8c3d3fa844f067ec5
       body: ""
