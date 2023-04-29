@@ -1,4 +1,55 @@
 - commits:
+    - subject: Add updating tasks to container composer tests
+      hash: fc4f66364b2dd37fa2496bf8c3d3fa844f067ec5
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add debugging to planning function
+      hash: 266cc987f292d27fe60d7425686786196116f1da
+      body: |
+        This helps debug reasons for planning failure
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Calculate the target before planning
+      hash: 95167c187444815866dd199ca11b741e1e5a7e54
+      body: |
+        The target state was being calculated at each planning state, allowing
+        effects to leech into next iterations of the plan via the target.
+
+        This now calculates the target state only at the beginning, when the
+        current state comes from the actual system state. While this is still
+        not perfect, as the target may end up containing stuff that we really
+        might not want in the final state (think a container re-start, where
+        we don't care about the final containerId), the target at least is
+        calculated from real data
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Split service tasks into install and start
+      hash: 3891cf7f209d5743b015cb78558b6324839aafc8
+      body: |
+        This allows to handle more granular scenarios, for instance, that the
+        service stopped on error and we want it to be restarted.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Rename docker-compose test to container-compose
+      hash: f61c4ed63a4da024bae52ae12bf5b3599ba3a35d
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.2.0
+  title: ""
+  date: 2023-04-29T00:59:58.877Z
+- commits:
     - subject: Add service to docker-compose to enable flowzone testing
       hash: 8422902ede14e359c4394ef27083325ed2b13172
       body: |
