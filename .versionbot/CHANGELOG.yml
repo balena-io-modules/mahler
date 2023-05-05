@@ -1,4 +1,16 @@
 - commits:
+    - subject: Allow providing a planner instance to Agent init
+      hash: 7b7a7685488dc74ea7c2af8df343c1572f0cebf1
+      body: |
+        This allows custom planners to be given to an agent instance.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.5.0
+  title: ""
+  date: 2023-05-05T22:11:30.730Z
+- commits:
     - subject: Improve plan search trace logic
       hash: 0c84a620f554d8d170bd5512df79102122f3e16a
       body: |
