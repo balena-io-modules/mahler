@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import { Logger } from './logger';
+import { Logger } from '~/lib';
 
 // Create the default logger
 // Send logger.info() and logger.debug() output to stdout
@@ -11,6 +11,7 @@ const logger: Logger = {
 	warn: Debug('mahler:warn'),
 	error: Debug('mahler:error'),
 	debug: debug.extend('debug'),
+	trace: debug.extend('trace'),
 };
 
 export default logger;

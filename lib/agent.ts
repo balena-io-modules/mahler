@@ -5,8 +5,7 @@ import { Task, Action } from './task';
 import { Target } from './target';
 import { Planner, PlanNotFound } from './planner';
 import { Sensor, Subscribed } from './sensor';
-import { Logger } from './logger';
-import console from './console';
+import { Logger, NullLogger } from './logger';
 
 export interface AgentOpts {
 	/**
@@ -87,6 +86,14 @@ class ActionRunFailed extends Error {
 	}
 }
 
+type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
+	? T
+	: T extends object
+	? {
+			[P in keyof T]?: DeepPartial<T[P]>;
+	  }
+	: T;
+
 function of<TState>({
 	initial: state,
 	// TODO: accepts a planner instead
@@ -97,7 +104,7 @@ function of<TState>({
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	sensors?: Array<Sensor<TState>>;
-	opts?: Partial<AgentOpts>;
+	opts?: DeepPartial<AgentOpts>;
 }): Agent<TState> {
 	const opts: AgentOpts = {
 		maxRetries: 0,
@@ -105,8 +112,8 @@ function of<TState>({
 		maxWaitMs: 5 * 60 * 1000,
 		pollIntervalMs: 10 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.pollIntervalMs,
-		logger: console,
 		...userOpts,
+		logger: { ...NullLogger, ...userOpts.logger },
 	};
 
 	const { logger } = opts;
@@ -120,7 +127,7 @@ function of<TState>({
 
 	// Create the planner early on, this will
 	// also run validation from the planner side
-	const planner = Planner.of({ tasks });
+	const planner = Planner.of({ tasks, opts: { trace: logger.trace } });
 
 	const delay = promisify(setTimeout);
 	let promise: Promise<AgentResult> = Promise.resolve({

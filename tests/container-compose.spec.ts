@@ -1,10 +1,9 @@
-import Debug from 'debug';
 import { expect } from '~/tests';
 
 import * as Docker from 'dockerode';
 import { Agent, Planner, Task } from '~/lib';
 
-const debug = Debug('mahler:tests');
+import console from './console';
 
 type ServiceStatus = 'created' | 'stopped' | 'running';
 
@@ -85,6 +84,7 @@ const fetch = Task.of({
 });
 
 const install = Task.of({
+	op: 'create',
 	path: '/services/:name',
 	condition: (app: App, service) =>
 		app.images.some((img) => img.name === service.target.image) &&
@@ -236,7 +236,7 @@ const remove = Task.of({
 
 const planner = Planner.of<App>({
 	tasks: [fetch, install, start, stop, remove],
-	opts: { debug },
+	opts: { trace: console.trace },
 });
 
 describe('container-compose', () => {
@@ -467,7 +467,7 @@ describe('container-compose', () => {
 			const agent = Agent.of<App>({
 				initial: { name: appname, services: {}, images: [] },
 				tasks: [fetch, install, start, stop, remove],
-				opts: { pollIntervalMs: 1000 },
+				opts: { pollIntervalMs: 1000, logger: console },
 			});
 
 			agent.start({

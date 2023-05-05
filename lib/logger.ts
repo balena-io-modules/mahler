@@ -3,6 +3,7 @@ export interface Logger {
 	info(...args: any[]): void;
 	warn(...args: any[]): void;
 	error(...args: any[]): void;
+	trace(...args: any[]): void;
 }
 
 export const NullLogger: Logger = {
@@ -16,6 +17,9 @@ export const NullLogger: Logger = {
 		/*noop*/
 	},
 	error: () => {
+		/*noop*/
+	},
+	trace: () => {
 		/*noop*/
 	},
 };

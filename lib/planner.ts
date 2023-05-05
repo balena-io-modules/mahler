@@ -21,7 +21,7 @@ export interface PlannerOpts {
 	 * A function used by the planner to debug the search
 	 * for a plan. It defaults to a noop.
 	 */
-	debug: (...args: any[]) => void;
+	trace: (...args: any[]) => void;
 }
 
 export class PlanNotFound extends Error {
@@ -71,7 +71,7 @@ function plan<TState = any>(
 	target: TState,
 	diff: Diff<TState>,
 	tasks: Array<Task<TState>>,
-	debug: PlannerOpts['debug'],
+	trace: PlannerOpts['trace'],
 	initial: Array<Action<TState>>,
 ): Array<Action<TState>> {
 	// Get the list of operations from the patch
@@ -80,13 +80,13 @@ function plan<TState = any>(
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		debug(`plan found`);
+		trace(`plan found`);
 		return [];
 	}
 
-	debug('current state', JSON.stringify(current));
-	debug('target state', JSON.stringify(target));
-	debug('pending ops', JSON.stringify(ops));
+	trace('current state', JSON.stringify(current));
+	trace('target state', JSON.stringify(target));
+	trace('pending ops', JSON.stringify(ops));
 
 	for (const op of ops) {
 		// Find the tasks that are applicable to the operations
@@ -121,19 +121,19 @@ function plan<TState = any>(
 			}
 
 			// If the task condition is not met, then go to the next task
-			debug(`${description}: checking condition`);
+			trace(`${description}: checking condition`);
 			if (!task.condition(current, ctx)) {
-				debug(`${description}: condition is not met`);
+				trace(`${description}: condition is not met`);
 				continue;
 			}
-			debug(`${description}: condition met`);
+			trace(`${description}: condition met`);
 
 			if (Task.isMethod(task)) {
 				// If the task is a method we need to expand it recursively and check that none of
 				// the operations has an invalid condition
 				// if all of the operations are applicable, continue evaluating the plan with the
 				// added operations
-				debug(`${description}: expanding method`);
+				trace(`${description}: expanding method`);
 				const actions = expandMethod(current, task(ctx as any));
 				if (actions.length === 0) {
 					continue;
@@ -141,13 +141,13 @@ function plan<TState = any>(
 
 				let state = current;
 				let isValid = true;
-				debug(`${description}: testing actions`);
+				trace(`${description}: testing actions`);
 				for (const action of actions) {
-					debug(
+					trace(
 						`${description}: action ${action.description}, testing condition`,
 					);
 					if (!action.condition(state)) {
-						debug(
+						trace(
 							`${description}: action ${action.description}, condition is not met`,
 							'State',
 							JSON.stringify(state),
@@ -155,12 +155,12 @@ function plan<TState = any>(
 						isValid = false;
 						break;
 					}
-					debug(`${description}: action ${action.description}, condition met`);
+					trace(`${description}: action ${action.description}, condition met`);
 
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
-						debug(
+						trace(
 							`${description}: action ${action.description} is already on the plan`,
 						);
 						isValid = false;
@@ -173,11 +173,11 @@ function plan<TState = any>(
 				if (!isValid) {
 					continue;
 				}
-				debug(`${description}: selected`);
+				trace(`${description}: selected`);
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, target, diff, tasks, debug, [
+					const next = plan(state, target, diff, tasks, trace, [
 						...initial,
 						...actions,
 					]);
@@ -196,9 +196,9 @@ function plan<TState = any>(
 				const action = task(ctx as any);
 				const state = action.effect(current);
 
-				debug(`${description}: selected`);
+				trace(`${description}: selected`);
 				try {
-					const next = plan(state, target, diff, tasks, debug, [
+					const next = plan(state, target, diff, tasks, trace, [
 						...initial,
 						action,
 					]);
@@ -235,7 +235,7 @@ function of<TState = any>({
 	});
 
 	const opts = {
-		debug: () => {
+		trace: () => {
 			/* noop */
 		},
 		...userOpts,
@@ -255,7 +255,7 @@ function of<TState = any>({
 	return {
 		plan(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
-			return plan(current, diff.patch(current), diff, tasks, opts.debug, []);
+			return plan(current, diff.patch(current), diff, tasks, opts.trace, []);
 		},
 	};
 }
