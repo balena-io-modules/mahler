@@ -3,18 +3,11 @@ version: '2.4'
 services:
   sut:
     build: ./
-    command:
-      [
-        './tests/wait-for-it.sh',
-        '--',
-        'npm',
-        'run',
-        'test:integration'
-      ]
+    command: ['./tests/wait-for-it.sh', '--', 'npm', 'run', 'test:integration']
     stop_grace_period: 3s
     environment:
       DOCKER_HOST: 'unix:///var/run/docker.sock'
-      DEBUG: 'mahler:warn,mahler:error'
+      DEBUG: 'mahler:warn,mahler:error,mahler:info'
     volumes:
       - dind:/var/run
     depends_on:
