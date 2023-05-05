@@ -13,7 +13,7 @@ export interface Planner<TState = any> {
 	 * cannot be found.
 	 * TODO: accept a diff too
 	 */
-	plan(current: TState, target: Target<TState>): Array<Action<TState>>;
+	find(current: TState, target: Target<TState>): Array<Action<TState>>;
 }
 
 export interface PlannerOpts {
@@ -66,7 +66,7 @@ function expandMethod<TState = any>(
 // Target as a combination of the level patches
 // Tentative plan
 // Stack ?
-function plan<TState = any>(
+function findPlan<TState = any>(
 	current: TState,
 	target: TState,
 	diff: Diff<TState>,
@@ -177,7 +177,7 @@ function plan<TState = any>(
 
 				// This is a valid path, continue finding a plan recursively
 				try {
-					const next = plan(state, target, diff, tasks, trace, [
+					const next = findPlan(state, target, diff, tasks, trace, [
 						...initial,
 						...actions,
 					]);
@@ -198,7 +198,7 @@ function plan<TState = any>(
 
 				trace(`${description}: selected`);
 				try {
-					const next = plan(state, target, diff, tasks, trace, [
+					const next = findPlan(state, target, diff, tasks, trace, [
 						...initial,
 						action,
 					]);
@@ -253,9 +253,16 @@ function of<TState = any>({
 	});
 
 	return {
-		plan(current: TState, target: Target<TState>) {
+		find(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
-			return plan(current, diff.patch(current), diff, tasks, opts.trace, []);
+			return findPlan(
+				current,
+				diff.patch(current),
+				diff,
+				tasks,
+				opts.trace,
+				[],
+			);
 		},
 	};
 }

@@ -108,7 +108,7 @@ describe('Planner', () => {
 
 			expect(
 				planner
-					.plan(
+					.find(
 						{
 							blocks: { a: 'table', b: 'a', c: 'b' },
 						},
@@ -301,7 +301,7 @@ describe('Planner', () => {
 
 			expect(
 				planner
-					.plan(
+					.find(
 						{
 							blocks: { a: 'table', b: 'a', c: 'b' },
 						},

@@ -253,7 +253,7 @@ describe('container-compose', () => {
 				images: [],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -275,7 +275,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:latest', imageId: '123' }],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -305,7 +305,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:latest', imageId: '123' }],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'stopped',
@@ -325,7 +325,7 @@ describe('container-compose', () => {
 				images: [],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'stopped',
@@ -358,7 +358,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:3.13', imageId: '123' }],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -390,7 +390,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:3.13', imageId: '123' }],
 			};
 
-			const plan = planner.plan(app, {
+			const plan = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -422,7 +422,7 @@ describe('container-compose', () => {
 			images: [{ name: 'alpine:3.13', imageId: '123' }],
 		};
 
-		const plan = planner.plan(app, {
+		const plan = planner.find(app, {
 			services: {
 				main: {
 					status: 'running',

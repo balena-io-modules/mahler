@@ -156,7 +156,7 @@ function of<TState>({
 					logger.debug('current state', JSON.stringify(state, null, 2));
 					// TODO: print the full target state here
 					logger.debug('target state', JSON.stringify(target, null, 2));
-					const actions = planner.plan(state, target);
+					const actions = planner.find(state, target);
 
 					// Reset the counter if we've found a plan
 					planFoundOnce = true;
