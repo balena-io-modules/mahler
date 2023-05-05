@@ -1,9 +1,8 @@
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
 import { Path } from './path';
 import { Context, ContextAsArgs } from './context';
 import { Op, Operation } from './operation';
-import { equals } from './json';
 import assert from './assert';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
@@ -96,7 +95,7 @@ interface MethodTask<
 	(ctx: ContextAsArgs<TState, TPath>): Method<TState>;
 }
 
-interface Instance<TState, TPath extends Path> {
+interface Instance<TState> {
 	/**
 	 * The instance id
 	 */
@@ -108,27 +107,13 @@ interface Instance<TState, TPath extends Path> {
 	readonly description: string;
 
 	/**
-	 * The path that this task applies to
-	 */
-	readonly path: Path;
-
-	/**
-	 * The target used in the context to create this instance. We store this so we
-	 * can compare between instances. If an instance comes from a method, we don't
-	 * want to use an instance with the same id, path and target again when
-	 * planning
-	 */
-	readonly target: Context<TState, TPath>['target'];
-
-	/**
 	 * A pre-condition that needs to be met before the instance can be used
 	 */
 	condition(s: TState): boolean;
 }
 
 /** An action task that has been applied to a specific context */
-export interface Action<TState = any, TPath extends Path = '/'>
-	extends Instance<TState, TPath> {
+export interface Action<TState = any> extends Instance<TState> {
 	/**
 	 * The effect on the state that the action
 	 * provides. If the effect returns none, then the task is not applicable
@@ -143,8 +128,7 @@ export interface Action<TState = any, TPath extends Path = '/'>
 }
 
 /** A method task that has been applied to a specific context */
-export interface Method<TState = any, TPath extends Path = '/'>
-	extends Instance<TState, TPath> {
+export interface Method<TState = any> extends Instance<TState> {
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
@@ -152,9 +136,7 @@ export interface Method<TState = any, TPath extends Path = '/'>
 	expand(s: TState): Array<Instruction<TState>>;
 }
 
-export type Instruction<TState = any, TPath extends Path = '/'> =
-	| Action<TState, TPath>
-	| Method<TState, TPath>;
+export type Instruction<TState = any> = Action<TState> | Method<TState>;
 
 function ground<
 	TState = any,
@@ -163,7 +145,7 @@ function ground<
 >(
 	task: Task<TState, TPath, TOp>,
 	ctx: ContextAsArgs<TState, TPath>,
-): Instruction<TState, TPath> {
+): Instruction<TState> {
 	const templateParts = Path.elems(task.path);
 
 	const path =
@@ -184,17 +166,19 @@ function ground<
 
 	const context = Context.of(task.path, `/${path}`, ctx.target);
 
-	const { id, description: taskDescription } = task;
+	const { id: taskId, description: taskDescription } = task;
 	const description =
 		typeof taskDescription === 'function'
 			? taskDescription(context)
 			: taskDescription;
 
+	const id = createHash('sha256')
+		.update(JSON.stringify({ id: taskId, path, target: ctx.target }))
+		.digest('hex');
+
 	if (isMethodTask(task)) {
 		return {
 			id,
-			path,
-			target: ctx.target,
 			description,
 			condition: (s: TState) => task.condition(s, context),
 			expand: (s: TState) => task.method(s, context),
@@ -203,8 +187,6 @@ function ground<
 
 	return {
 		id,
-		path,
-		target: ctx.target,
 		description,
 		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
@@ -338,10 +320,7 @@ function isEqual<TState = any>(
 	i1: Instruction<TState>,
 	i2: Instruction<TState>,
 ): boolean {
-	// Two instructions are equal if their respective id, path, and targets match
-	const id1 = { id: i1.id, path: i1.path, target: i1.target };
-	const id2 = { id: i2.id, path: i2.path, target: i2.target };
-	return equals(id1, id2);
+	return i1.id === i2.id;
 }
 
 /**
