@@ -81,15 +81,25 @@ function expandMethod<TState = any>(
 // Target as a combination of the level patches
 // Tentative plan
 // Stack ?
-function findPlan<TState = any>(
-	current: TState,
-	target: TState,
-	diff: Diff<TState>,
-	tasks: Array<Task<TState>>,
-	trace: PlannerOpts['trace'],
-	initial: Array<Action<TState>>,
+function findPlan<TState = any>({
+	current,
+	target,
+	diff,
+	tasks,
+	trace = () => {
+		/* noop */
+	},
+	initial = [],
 	stats = { iterations: 0, depth: 0, time: 0 },
-): PlannerResult<TState> {
+}: {
+	current: TState;
+	target: TState;
+	diff: Diff<TState>;
+	tasks: Array<Task<TState>>;
+	trace?: PlannerOpts['trace'];
+	initial?: Array<Action<TState>>;
+	stats?: PlannerStats;
+}): PlannerResult<TState> {
 	// Get the list of operations from the patch
 	const ops = diff.operations(current);
 
@@ -194,15 +204,15 @@ function findPlan<TState = any>(
 				trace(`${description}: selected`);
 
 				// This is a valid path, continue finding a plan recursively
-				const res = findPlan(
-					state,
+				const res = findPlan({
+					current: state,
 					target,
 					diff,
 					tasks,
 					trace,
-					[...initial, ...actions],
-					{ ...stats, depth: stats.depth + 1 },
-				);
+					initial: [...initial, ...actions],
+					stats: { ...stats, depth: stats.depth + 1 },
+				});
 
 				if (res.success) {
 					return { ...res, plan: [...actions, ...res.plan] };
@@ -213,15 +223,15 @@ function findPlan<TState = any>(
 				const state = action.effect(current);
 
 				trace(`${description}: selected`);
-				const res = findPlan(
-					state,
+				const res = findPlan({
+					current: state,
 					target,
 					diff,
 					tasks,
 					trace,
-					[...initial, action],
-					{ ...stats, depth: stats.depth + 1 },
-				);
+					initial: [...initial, action],
+					stats: { ...stats, depth: stats.depth + 1 },
+				});
 
 				if (res.success) {
 					return { ...res, plan: [action, ...res.plan] };
@@ -235,7 +245,7 @@ function findPlan<TState = any>(
 
 function of<TState = any>({
 	tasks = [],
-	opts: userOpts = {},
+	opts = {},
 }: {
 	tasks?: Array<Task<TState, any, any>>;
 	opts?: Partial<PlannerOpts>;
@@ -249,13 +259,6 @@ function of<TState = any>({
 
 		taskIds.add(t.id);
 	});
-
-	const opts = {
-		trace: () => {
-			/* noop */
-		},
-		...userOpts,
-	};
 
 	// Sort the tasks putting methods first
 	tasks = tasks.sort((a, b) => {
@@ -272,14 +275,13 @@ function of<TState = any>({
 		find(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
 			const time = performance.now();
-			const res = findPlan(
+			const res = findPlan({
 				current,
-				diff.patch(current),
+				target: diff.patch(current),
 				diff,
 				tasks,
-				opts.trace,
-				[],
-			);
+				trace: opts.trace,
+			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			return res;
 		},
