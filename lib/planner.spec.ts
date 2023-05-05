@@ -1,4 +1,4 @@
-import { expect } from '~/tests';
+import { expect, console } from '~/tests';
 import { Planner } from './planner';
 import { Task } from './task';
 
@@ -102,9 +102,14 @@ describe('Planner', () => {
 					// The method is not applicable here
 					return [];
 				},
+				description:
+					'find blocks that can be moved to the final location or to the table',
 			});
 
-			const planner = Planner.of<State>({ tasks: [take, put, move] });
+			const planner = Planner.of<State>({
+				tasks: [take, put, move],
+				opts: { trace: console.trace },
+			});
 
 			const result = planner.find(
 				{
@@ -226,6 +231,7 @@ describe('Planner', () => {
 					}
 					return [];
 				},
+				description: (location) => `take block ${location.block}`,
 			});
 
 			// There is really not that much of a difference between putdown and stack
@@ -243,6 +249,7 @@ describe('Planner', () => {
 					}
 					return [];
 				},
+				description: (location) => `put block ${location.block}`,
 			});
 
 			const allClearBlocks = (blocks: State['blocks']) => {
@@ -294,10 +301,13 @@ describe('Planner', () => {
 					// The method is not applicable here
 					return [];
 				},
+				description:
+					'find a block that can be moved to the final location or to the table',
 			});
 
 			const planner = Planner.of<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
+				opts: { trace: console.trace },
 			});
 
 			const result = planner.find(
