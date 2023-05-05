@@ -80,7 +80,7 @@ const fetch = Task.of({
 		};
 	},
 	description: (service) =>
-		`pulling image '${service.target.image}' for service '${service.name}'`,
+		`pull image '${service.target.image}' for service '${service.name}'`,
 });
 
 const install = Task.of({
@@ -263,7 +263,7 @@ describe('container-compose', () => {
 
 			if (result.success) {
 				expect(result.plan.map((a) => a.description)).to.deep.equal([
-					"pulling image 'alpine:latest' for service 'main'",
+					"pull image 'alpine:latest' for service 'main'",
 					"installing container for service 'main'",
 					"starting container for service 'main'",
 				]);
@@ -350,7 +350,7 @@ describe('container-compose', () => {
 
 			if (result.success) {
 				expect(result.plan.map((a) => a.description)).to.deep.equal([
-					"pulling image 'alpine:latest' for service 'main'",
+					"pull image 'alpine:latest' for service 'main'",
 					"installing container for service 'main'",
 					"starting container for service 'main'",
 					"stopping container for service 'main'",
@@ -385,7 +385,7 @@ describe('container-compose', () => {
 
 			if (result.success) {
 				expect(result.plan.map((a) => a.description)).to.deep.equal([
-					"pulling image 'alpine:3.14' for service 'main'",
+					"pull image 'alpine:3.14' for service 'main'",
 					"stopping container for service 'main'",
 					"removing container for service 'main'",
 					"installing container for service 'main'",
@@ -421,7 +421,7 @@ describe('container-compose', () => {
 
 			if (result.success) {
 				expect(result.plan.map((a) => a.description)).to.deep.equal([
-					"pulling image 'alpine:3.14' for service 'main'",
+					"pull image 'alpine:3.14' for service 'main'",
 					"removing container for service 'main'",
 					"installing container for service 'main'",
 					"starting container for service 'main'",
@@ -494,7 +494,7 @@ describe('container-compose', () => {
 		it('can execute a single container plan', async () => {
 			const agent = Agent.of<App>({
 				initial: { name: appname, services: {}, images: [] },
-				tasks: [fetch, install, start, stop, remove],
+				planner,
 				opts: { pollIntervalMs: 1000, logger: console },
 			});
 

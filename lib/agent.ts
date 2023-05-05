@@ -100,15 +100,34 @@ type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
 	  }
 	: T;
 
+function of<TState>(
+	opts:
+		| {
+				initial: TState;
+				planner?: Planner<TState>;
+				sensors?: Array<Sensor<TState>>;
+				opts?: DeepPartial<AgentOpts>;
+		  }
+		| {
+				initial: TState;
+				tasks?: Array<Task<TState, any, any>>;
+				sensors?: Array<Sensor<TState>>;
+				opts?: DeepPartial<AgentOpts>;
+		  },
+): Agent<TState>;
 function of<TState>({
 	initial: state,
-	// TODO: accepts a planner instead
 	tasks = [],
 	sensors = [],
 	opts: userOpts = {},
+	planner = Planner.of({
+		tasks,
+		opts: { trace: userOpts.logger?.trace ?? NullLogger.trace },
+	}),
 }: {
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
+	planner?: Planner<TState>;
 	sensors?: Array<Sensor<TState>>;
 	opts?: DeepPartial<AgentOpts>;
 }): Agent<TState> {
@@ -130,10 +149,6 @@ function of<TState>({
 	);
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.pollIntervalMs > 0, 'opts.pollIntervalMs must be greater than 0');
-
-	// Create the planner early on, this will
-	// also run validation from the planner side
-	const planner = Planner.of({ tasks, opts: { trace: logger.trace } });
 
 	const delay = promisify(setTimeout);
 	let promise: Promise<AgentResult> = Promise.resolve({
