@@ -51,6 +51,7 @@
     "@types/sinon-chai": "^3.2.9",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "debug": "^4.3.4",
     "dockerode": "^3.3.5",
     "husky": "^4.2.5",
     "lint-staged": "^11.0.0",
@@ -63,7 +64,6 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "debug": "^4.3.4",
     "optics-ts": "^2.4.0"
   },
   "versionist": {

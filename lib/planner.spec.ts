@@ -104,25 +104,26 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>([take, put, move]);
+			const planner = Planner.of<State>({ tasks: [take, put, move] });
 
-			expect(
-				planner
-					.plan(
-						{
-							blocks: { a: 'table', b: 'a', c: 'b' },
-						},
-						{ blocks: { a: 'b', b: 'c', c: 'table' } },
-					)
-					.map((a) => a.description),
-			).to.deep.equal([
-				'take block c',
-				'put c on table',
-				'take block b',
-				'put b on c',
-				'take block a',
-				'put a on b',
-			]);
+			const result = planner.find(
+				{
+					blocks: { a: 'table', b: 'a', c: 'b' },
+				},
+				{ blocks: { a: 'b', b: 'c', c: 'table' } },
+			);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					'take block c',
+					'put c on table',
+					'take block b',
+					'put b on c',
+					'take block a',
+					'put a on b',
+				]);
+			} else {
+				expect.fail('No plan found');
+			}
 		});
 
 		it('block stacking problem: fancy version', () => {
@@ -295,33 +296,29 @@ describe('Planner', () => {
 				},
 			});
 
-			const planner = Planner.of<State>([
-				pickup,
-				unstack,
-				putdown,
-				stack,
-				take,
-				put,
-				move,
-			]);
+			const planner = Planner.of<State>({
+				tasks: [pickup, unstack, putdown, stack, take, put, move],
+			});
 
-			expect(
-				planner
-					.plan(
-						{
-							blocks: { a: 'table', b: 'a', c: 'b' },
-						},
-						{ blocks: { a: 'b', b: 'c', c: 'table' } },
-					)
-					.map((action) => action.description),
-			).to.deep.equal([
-				'unstack block c',
-				'put down block c',
-				'unstack block b',
-				'stack block b on top of block c',
-				'pickup block a',
-				'stack block a on top of block b',
-			]);
+			const result = planner.find(
+				{
+					blocks: { a: 'table', b: 'a', c: 'b' },
+				},
+				{ blocks: { a: 'b', b: 'c', c: 'table' } },
+			);
+
+			if (result.success) {
+				expect(result.plan.map((action) => action.description)).to.deep.equal([
+					'unstack block c',
+					'put down block c',
+					'unstack block b',
+					'stack block b on top of block c',
+					'pickup block a',
+					'stack block a on top of block b',
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it.skip('simple travel problem', async () => {

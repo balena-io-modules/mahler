@@ -3,10 +3,9 @@ import { promisify } from 'util';
 import assert from './assert';
 import { Task, Action } from './task';
 import { Target } from './target';
-import { Planner, PlanNotFound } from './planner';
+import { Planner } from './planner';
 import { Sensor, Subscribed } from './sensor';
-import { Logger } from './logger';
-import console from './console';
+import { Logger, NullLogger } from './logger';
 
 export interface AgentOpts {
 	/**
@@ -87,6 +86,20 @@ class ActionRunFailed extends Error {
 	}
 }
 
+class PlanNotFound extends Error {
+	constructor() {
+		super('Plan not found');
+	}
+}
+
+type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
+	? T
+	: T extends object
+	? {
+			[P in keyof T]?: DeepPartial<T[P]>;
+	  }
+	: T;
+
 function of<TState>({
 	initial: state,
 	// TODO: accepts a planner instead
@@ -97,7 +110,7 @@ function of<TState>({
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	sensors?: Array<Sensor<TState>>;
-	opts?: Partial<AgentOpts>;
+	opts?: DeepPartial<AgentOpts>;
 }): Agent<TState> {
 	const opts: AgentOpts = {
 		maxRetries: 0,
@@ -105,8 +118,8 @@ function of<TState>({
 		maxWaitMs: 5 * 60 * 1000,
 		pollIntervalMs: 10 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.pollIntervalMs,
-		logger: console,
 		...userOpts,
+		logger: { ...NullLogger, ...userOpts.logger },
 	};
 
 	const { logger } = opts;
@@ -120,7 +133,7 @@ function of<TState>({
 
 	// Create the planner early on, this will
 	// also run validation from the planner side
-	const planner = Planner.of(tasks);
+	const planner = Planner.of({ tasks, opts: { trace: logger.trace } });
 
 	const delay = promisify(setTimeout);
 	let promise: Promise<AgentResult> = Promise.resolve({
@@ -146,10 +159,20 @@ function of<TState>({
 				let planFound = false;
 				try {
 					logger.debug('finding a plan to the target');
-					logger.debug('current state', JSON.stringify(state, null, 2));
-					// TODO: print the full target state here
-					logger.debug('target state', JSON.stringify(target, null, 2));
-					const actions = planner.plan(state, target);
+					logger.trace({
+						current: state,
+						target,
+						retries,
+						status: 'finding plan to target',
+					});
+					const result = planner.find(state, target);
+
+					if (!result.success) {
+						// Jump to the catch below
+						throw new PlanNotFound();
+					}
+
+					const actions = result.plan;
 
 					// Reset the counter if we've found a plan
 					planFoundOnce = true;
@@ -173,6 +196,7 @@ function of<TState>({
 								2,
 							),
 						);
+						logger.debug('planner stats', JSON.stringify(result.stats));
 						for (const action of actions) {
 							if (stopped) {
 								// TODO: log the cancellation of the plan

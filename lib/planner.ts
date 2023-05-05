@@ -4,12 +4,28 @@ import { Context } from './context';
 import { Task, Action, Instruction, Method } from './task';
 import { Target } from './target';
 import { Diff } from './diff';
-import { Operation } from './operation';
-import { equals } from './json';
 import { assert } from './assert';
-import { debug as globalDebug } from './console';
 
-const debug = globalDebug.extend('plan');
+interface PlannerStats {
+	/**
+	 * Number of iterations (tasks tested) in total
+	 */
+	iterations: number;
+
+	/**
+	 * Search depth
+	 */
+	depth: number;
+
+	/**
+	 * Total search time in ms
+	 */
+	time: number;
+}
+
+export type PlannerResult<TState> =
+	| { success: true; plan: Array<Action<TState>>; stats: PlannerStats }
+	| { success: false; stats: PlannerStats };
 
 export interface Planner<TState = any> {
 	/**
@@ -18,18 +34,15 @@ export interface Planner<TState = any> {
 	 * cannot be found.
 	 * TODO: accept a diff too
 	 */
-	plan(current: TState, target: Target<TState>): Array<Action<TState>>;
+	find(current: TState, target: Target<TState>): PlannerResult<TState>;
 }
 
-export class PlanNotFound extends Error {
-	constructor(readonly unapplied: Operation[] = []) {
-		super(
-			'Plan not found' +
-				(unapplied.length > 0
-					? `, no tasks could be applied to ops: ${JSON.stringify(unapplied)}`
-					: ''),
-		);
-	}
+export interface PlannerOpts {
+	/**
+	 * A function used by the planner to debug the search
+	 * for a plan. It defaults to a noop.
+	 */
+	trace: (...args: any[]) => void;
 }
 
 function extractPath(t: Path, p: Path) {
@@ -54,7 +67,7 @@ function expandMethod<TState = any>(
 	instruction: Instruction<TState>,
 ): Array<Action<TState>> {
 	// QUESTION: if some instructions are not applicable,
-	// should we stop the operation entirely to avoid creating
+	// should we stop the operation entirely to avoid testing
 	// a plan that is not valid?
 	if (Method.is(instruction)) {
 		return instruction.expand(state).flatMap((i) => expandMethod(state, i));
@@ -68,35 +81,50 @@ function expandMethod<TState = any>(
 // Target as a combination of the level patches
 // Tentative plan
 // Stack ?
-function plan<TState = any>(
-	current: TState,
-	target: TState,
-	diff: Diff<TState>,
-	tasks: Array<Task<TState>>,
-	initial: Array<Action<TState>>,
-): Array<Action<TState>> {
+function findPlan<TState = any>({
+	current,
+	target,
+	diff,
+	tasks,
+	trace = () => {
+		/* noop */
+	},
+	initial = [],
+	stats = { iterations: 0, depth: 0, time: 0 },
+}: {
+	current: TState;
+	target: TState;
+	diff: Diff<TState>;
+	tasks: Array<Task<TState>>;
+	trace?: PlannerOpts['trace'];
+	initial?: Array<Action<TState>>;
+	stats?: PlannerStats;
+}): PlannerResult<TState> {
 	// Get the list of operations from the patch
 	const ops = diff.operations(current);
 
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		debug(`plan found`);
-		return [];
+		return { success: true, plan: [], stats };
 	}
 
-	const unapplied = [] as Array<Operation<TState>>;
-	for (const op of ops) {
+	trace({
+		depth: stats.depth,
+		current,
+		target,
+		pending: ops,
+		plan: initial.map((a) => a.description),
+	});
+	for (const operation of ops) {
 		// Find the tasks that are applicable to the operations
-		const applicable = tasks.filter((t) => Task.isApplicable(t, op));
-		if (applicable.length === 0) {
-			unapplied.push(op);
-		}
-
+		const applicable = tasks.filter((t) => Task.isApplicable(t, operation));
 		for (const task of applicable) {
+			stats.iterations++;
+
 			// Extract the path from the task template and the
 			// operation
-			const path = extractPath(task.path, op.path);
+			const path = extractPath(task.path, operation.path);
 
 			// Get the context expected by the task
 			// we get the target value for the context from the pointer
@@ -122,27 +150,34 @@ function plan<TState = any>(
 				}
 			}
 
-			debug(`${description}: is applicable`);
 			// If the task condition is not met, then go to the next task
-			debug(`${description}: checking condition`);
+			trace({
+				depth: stats.depth,
+				operation,
+				task: description,
+				status: 'checking condition',
+			});
 			if (!task.condition(current, ctx)) {
-				debug(
-					`${description}: condition failed!`,
-					'State',
-					JSON.stringify(current),
-					'Target:',
-					JSON.stringify(ctx.target),
-				);
+				trace({
+					depth: stats.depth,
+					operation,
+					task: description,
+					status: 'condition is not met',
+				});
 				continue;
 			}
-			debug(`${description}: condition met`);
 
 			if (Task.isMethod(task)) {
 				// If the task is a method we need to expand it recursively and check that none of
 				// the operations has an invalid condition
 				// if all of the operations are applicable, continue evaluating the plan with the
 				// added operations
-				debug(`${description}: expanding method`);
+				trace({
+					depth: stats.depth,
+					operation,
+					method: description,
+					status: 'expanding method',
+				});
 				const actions = expandMethod(current, task(ctx as any));
 				if (actions.length === 0) {
 					continue;
@@ -150,30 +185,37 @@ function plan<TState = any>(
 
 				let state = current;
 				let isValid = true;
-				debug(`${description}: testing actions`);
 				for (const action of actions) {
-					debug(
-						`${description}: action ${action.description}, testing condition`,
-					);
+					trace({
+						depth: stats.depth,
+						operation,
+						method: description,
+						action: action.description,
+						status: 'testing condition',
+					});
 					if (!action.condition(state)) {
-						debug(
-							`${description}: action ${action.description}, condition failed!`,
-							'State',
-							JSON.stringify(state),
-							'Target',
-							JSON.stringify(action.target),
-						);
+						trace({
+							depth: stats.depth,
+							operation,
+							method: description,
+							action: action.description,
+							status: 'condition is not met',
+							state,
+						});
 						isValid = false;
 						break;
 					}
-					debug(`${description}: action ${action.description}, condition met`);
 
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
-						debug(
-							`${description}: action ${action.description} is already on the plan`,
-						);
+						trace({
+							depth: stats.depth,
+							operation,
+							method: description,
+							action: action.description,
+							status: 'action already in plan',
+						});
 						isValid = false;
 						break;
 					}
@@ -184,63 +226,65 @@ function plan<TState = any>(
 				if (!isValid) {
 					continue;
 				}
-				debug(`${description}: selected`);
+				trace({
+					depth: stats.depth,
+					operation,
+					method: description,
+					status: 'selected',
+				});
 
 				// This is a valid path, continue finding a plan recursively
-				try {
-					const next = plan(state, target, diff, tasks, [
-						...initial,
-						...actions,
-					]);
+				const res = findPlan({
+					current: state,
+					target,
+					diff,
+					tasks,
+					trace,
+					initial: [...initial, ...actions],
+					stats: { ...stats, depth: stats.depth + 1 },
+				});
 
-					// TODO: how can we know if there is a shorter path available?
-					return [...actions, ...next];
-				} catch (e) {
-					if (!(e instanceof PlanNotFound)) {
-						throw e;
-					}
-
-					e.unapplied.forEach((o) => {
-						if (!unapplied.find((eo) => equals(eo, o))) {
-							unapplied.push(o);
-						}
-					});
-
-					// No plans found under this branch
-					continue;
+				if (res.success) {
+					return { ...res, plan: [...actions, ...res.plan] };
 				}
 			} else {
 				// If the task is an action, then we can just apply it
 				const action = task(ctx as any);
 				const state = action.effect(current);
 
-				debug(`${description}: selected`);
-				try {
-					const next = plan(state, target, diff, tasks, [...initial, action]);
-					return [action, ...next];
-				} catch (e) {
-					if (!(e instanceof PlanNotFound)) {
-						throw e;
-					}
+				trace({
+					depth: stats.depth,
+					operation,
+					action: description,
+					status: 'selected',
+				});
+				const res = findPlan({
+					current: state,
+					target,
+					diff,
+					tasks,
+					trace,
+					initial: [...initial, action],
+					stats: { ...stats, depth: stats.depth + 1 },
+				});
 
-					e.unapplied.forEach((o) => {
-						if (!unapplied.find((eo) => equals(eo, o))) {
-							unapplied.push(o);
-						}
-					});
-					// No plans found under this branch
-					continue;
+				if (res.success) {
+					return { ...res, plan: [action, ...res.plan] };
 				}
 			}
 		}
 	}
 
-	throw new PlanNotFound(unapplied);
+	return { success: false, stats };
 }
 
-function of<TState = any>(
-	tasks = [] as Array<Task<TState, any, any>>,
-): Planner<TState> {
+function of<TState = any>({
+	tasks = [],
+	opts = {},
+}: {
+	tasks?: Array<Task<TState, any, any>>;
+	opts?: Partial<PlannerOpts>;
+}): Planner<TState> {
 	const taskIds = new Set<string>();
 	tasks.forEach((t) => {
 		assert(
@@ -263,9 +307,18 @@ function of<TState = any>(
 	});
 
 	return {
-		plan(current: TState, target: Target<TState>) {
+		find(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
-			return plan(current, diff.patch(current), diff, tasks, []);
+			const time = performance.now();
+			const res = findPlan({
+				current,
+				target: diff.patch(current),
+				diff,
+				tasks,
+				trace: opts.trace,
+			});
+			res.stats = { ...res.stats, time: performance.now() - time };
+			return res;
 		},
 	};
 }
