@@ -1,4 +1,27 @@
 - commits:
+    - subject: Make task description default to the id
+      hash: 65a5962d02648e1e725320d737e1288abe8ffe9e
+      body: |
+        Also add some additional loging in unit tests.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Simplify task interface and remove unused code
+      hash: 30687ff9cb1164501d25c57cd154e95058fd083a
+      body: |
+        This removes path and target from `Instance` interface in `task.ts` in
+        favour of comparing by an id generated as a sha256 hash of the grounded
+        task info. This simplifies the interface and makes comparison easier,
+        removing the need for the `json.ts` utils module
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.6.0
+  title: ""
+  date: 2023-05-05T23:34:56.128Z
+- commits:
     - subject: Allow providing a planner instance to Agent init
       hash: 7b7a7685488dc74ea7c2af8df343c1572f0cebf1
       body: |
