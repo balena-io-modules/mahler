@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import assert from './assert';
 import { Task, Action } from './task';
 import { Target } from './target';
-import { Planner, PlanNotFound } from './planner';
+import { Planner } from './planner';
 import { Sensor, Subscribed } from './sensor';
 import { Logger, NullLogger } from './logger';
 
@@ -86,6 +86,12 @@ class ActionRunFailed extends Error {
 	}
 }
 
+class PlanNotFound extends Error {
+	constructor() {
+		super('Plan not found');
+	}
+}
+
 type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
 	? T
 	: T extends object
@@ -156,7 +162,14 @@ function of<TState>({
 					logger.debug('current state', JSON.stringify(state, null, 2));
 					// TODO: print the full target state here
 					logger.debug('target state', JSON.stringify(target, null, 2));
-					const actions = planner.find(state, target);
+					const result = planner.find(state, target);
+
+					if (!result.success) {
+						// Jump to the catch below
+						throw new PlanNotFound();
+					}
+
+					const actions = result.plan;
 
 					// Reset the counter if we've found a plan
 					planFoundOnce = true;

@@ -253,7 +253,7 @@ describe('container-compose', () => {
 				images: [],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -261,11 +261,15 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"pulling image 'alpine:latest' for service 'main'",
-				"installing container for service 'main'",
-				"starting container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"pulling image 'alpine:latest' for service 'main'",
+					"installing container for service 'main'",
+					"starting container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it('skips pull if it image already exists', () => {
@@ -275,7 +279,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:latest', imageId: '123' }],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -285,10 +289,14 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"installing container for service 'main'",
-				"starting container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"installing container for service 'main'",
+					"starting container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it('stops running service if target state is "stopped"', () => {
@@ -305,7 +313,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:latest', imageId: '123' }],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'stopped',
@@ -313,9 +321,13 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"stopping container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"stopping container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it('installs and stops service if service does not exist and target state is "stopped"', () => {
@@ -325,7 +337,7 @@ describe('container-compose', () => {
 				images: [],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'stopped',
@@ -336,12 +348,16 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"pulling image 'alpine:latest' for service 'main'",
-				"installing container for service 'main'",
-				"starting container for service 'main'",
-				"stopping container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"pulling image 'alpine:latest' for service 'main'",
+					"installing container for service 'main'",
+					"starting container for service 'main'",
+					"stopping container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it('knows to recreate the service if the image changes', () => {
@@ -358,7 +374,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:3.13', imageId: '123' }],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -367,13 +383,17 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"pulling image 'alpine:3.14' for service 'main'",
-				"stopping container for service 'main'",
-				"removing container for service 'main'",
-				"installing container for service 'main'",
-				"starting container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"pulling image 'alpine:3.14' for service 'main'",
+					"stopping container for service 'main'",
+					"removing container for service 'main'",
+					"installing container for service 'main'",
+					"starting container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 
 		it('knows to recreate the service if the image changes and the service is stopped', () => {
@@ -390,7 +410,7 @@ describe('container-compose', () => {
 				images: [{ name: 'alpine:3.13', imageId: '123' }],
 			};
 
-			const plan = planner.find(app, {
+			const result = planner.find(app, {
 				services: {
 					main: {
 						status: 'running',
@@ -399,12 +419,16 @@ describe('container-compose', () => {
 				},
 			});
 
-			expect(plan.map((a) => a.description)).to.deep.equal([
-				"pulling image 'alpine:3.14' for service 'main'",
-				"removing container for service 'main'",
-				"installing container for service 'main'",
-				"starting container for service 'main'",
-			]);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					"pulling image 'alpine:3.14' for service 'main'",
+					"removing container for service 'main'",
+					"installing container for service 'main'",
+					"starting container for service 'main'",
+				]);
+			} else {
+				expect.fail('Plan not found');
+			}
 		});
 	});
 
@@ -422,7 +446,7 @@ describe('container-compose', () => {
 			images: [{ name: 'alpine:3.13', imageId: '123' }],
 		};
 
-		const plan = planner.find(app, {
+		const result = planner.find(app, {
 			services: {
 				main: {
 					status: 'running',
@@ -431,12 +455,16 @@ describe('container-compose', () => {
 			},
 		});
 
-		expect(plan.map((a) => a.description)).to.deep.equal([
-			"stopping container for service 'main'",
-			"removing container for service 'main'",
-			"installing container for service 'main'",
-			"starting container for service 'main'",
-		]);
+		if (result.success) {
+			expect(result.plan.map((a) => a.description)).to.deep.equal([
+				"stopping container for service 'main'",
+				"removing container for service 'main'",
+				"installing container for service 'main'",
+				"starting container for service 'main'",
+			]);
+		} else {
+			expect.fail('Plan not found');
+		}
 	});
 
 	describe('agent', () => {

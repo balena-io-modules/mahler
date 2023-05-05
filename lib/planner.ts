@@ -6,6 +6,27 @@ import { Target } from './target';
 import { Diff } from './diff';
 import { assert } from './assert';
 
+interface PlannerStats {
+	/**
+	 * Number of iterations (tasks tested) in total
+	 */
+	iterations: number;
+
+	/**
+	 * Search depth
+	 */
+	depth: number;
+
+	/**
+	 * Total search time in ms
+	 */
+	time: number;
+}
+
+export type PlannerResult<TState> =
+	| { success: true; plan: Array<Action<TState>>; stats: PlannerStats }
+	| { success: false; stats: PlannerStats };
+
 export interface Planner<TState = any> {
 	/**
 	 * Calculate a plan to get from the current state
@@ -13,7 +34,7 @@ export interface Planner<TState = any> {
 	 * cannot be found.
 	 * TODO: accept a diff too
 	 */
-	find(current: TState, target: Target<TState>): Array<Action<TState>>;
+	find(current: TState, target: Target<TState>): PlannerResult<TState>;
 }
 
 export interface PlannerOpts {
@@ -22,12 +43,6 @@ export interface PlannerOpts {
 	 * for a plan. It defaults to a noop.
 	 */
 	trace: (...args: any[]) => void;
-}
-
-export class PlanNotFound extends Error {
-	constructor() {
-		super('Plan not found');
-	}
 }
 
 function extractPath(t: Path, p: Path) {
@@ -73,7 +88,8 @@ function findPlan<TState = any>(
 	tasks: Array<Task<TState>>,
 	trace: PlannerOpts['trace'],
 	initial: Array<Action<TState>>,
-): Array<Action<TState>> {
+	stats = { iterations: 0, depth: 0, time: 0 },
+): PlannerResult<TState> {
 	// Get the list of operations from the patch
 	const ops = diff.operations(current);
 
@@ -81,7 +97,7 @@ function findPlan<TState = any>(
 	// the target
 	if (ops.length === 0) {
 		trace(`plan found`);
-		return [];
+		return { success: true, plan: [], stats };
 	}
 
 	trace('current state', JSON.stringify(current));
@@ -92,6 +108,8 @@ function findPlan<TState = any>(
 		// Find the tasks that are applicable to the operations
 		const applicable = tasks.filter((t) => Task.isApplicable(t, op));
 		for (const task of applicable) {
+			stats.iterations++;
+
 			// Extract the path from the task template and the
 			// operation
 			const path = extractPath(task.path, op.path);
@@ -176,20 +194,18 @@ function findPlan<TState = any>(
 				trace(`${description}: selected`);
 
 				// This is a valid path, continue finding a plan recursively
-				try {
-					const next = findPlan(state, target, diff, tasks, trace, [
-						...initial,
-						...actions,
-					]);
+				const res = findPlan(
+					state,
+					target,
+					diff,
+					tasks,
+					trace,
+					[...initial, ...actions],
+					{ ...stats, depth: stats.depth + 1 },
+				);
 
-					// TODO: how can we know if there is a shorter path available?
-					return [...actions, ...next];
-				} catch (e) {
-					if (!(e instanceof PlanNotFound)) {
-						throw e;
-					}
-					// No plans found under this branch
-					continue;
+				if (res.success) {
+					return { ...res, plan: [...actions, ...res.plan] };
 				}
 			} else {
 				// If the task is an action, then we can just apply it
@@ -197,24 +213,24 @@ function findPlan<TState = any>(
 				const state = action.effect(current);
 
 				trace(`${description}: selected`);
-				try {
-					const next = findPlan(state, target, diff, tasks, trace, [
-						...initial,
-						action,
-					]);
-					return [action, ...next];
-				} catch (e) {
-					if (!(e instanceof PlanNotFound)) {
-						throw e;
-					}
-					// No plans found under this branch
-					continue;
+				const res = findPlan(
+					state,
+					target,
+					diff,
+					tasks,
+					trace,
+					[...initial, action],
+					{ ...stats, depth: stats.depth + 1 },
+				);
+
+				if (res.success) {
+					return { ...res, plan: [action, ...res.plan] };
 				}
 			}
 		}
 	}
 
-	throw new PlanNotFound();
+	return { success: false, stats };
 }
 
 function of<TState = any>({
@@ -255,7 +271,8 @@ function of<TState = any>({
 	return {
 		find(current: TState, target: Target<TState>) {
 			const diff = Diff.of(target);
-			return findPlan(
+			const time = performance.now();
+			const res = findPlan(
 				current,
 				diff.patch(current),
 				diff,
@@ -263,6 +280,8 @@ function of<TState = any>({
 				opts.trace,
 				[],
 			);
+			res.stats = { ...res.stats, time: performance.now() - time };
+			return res;
 		},
 	};
 }
