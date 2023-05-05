@@ -297,9 +297,7 @@ function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
 		},
 		{
 			id,
-			description: (ctx: Context<TState, TPath>) =>
-				// QUESTION: what's a good default description
-				JSON.stringify({ path, op, ...ctx }),
+			description: id,
 			path,
 			op,
 			condition: () => true,

@@ -1,9 +1,7 @@
-import { expect } from '~/tests';
+import { expect, console } from '~/tests';
 
 import * as Docker from 'dockerode';
 import { Agent, Planner, Task } from '~/lib';
-
-import console from './console';
 
 type ServiceStatus = 'created' | 'stopped' | 'running';
 

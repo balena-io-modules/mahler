@@ -1,4 +1,4 @@
-import { expect } from '~/tests';
+import { expect, console } from '~/tests';
 import { Agent } from './agent';
 import { Task, NoOp } from './task';
 import { Sensor, Subscriber } from './sensor';
@@ -104,7 +104,7 @@ describe('Agent', () => {
 				initial: { roomTemp: 10, resistorOn: false },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
-				opts: { pollIntervalMs: 10 },
+				opts: { pollIntervalMs: 10, logger: console },
 			});
 			agent.start({ roomTemp: 20 });
 			await expect(agent.result(1000)).to.be.fulfilled;
@@ -117,7 +117,7 @@ describe('Agent', () => {
 				initial: { roomTemp: 30, resistorOn: true },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
-				opts: { pollIntervalMs: 10 },
+				opts: { pollIntervalMs: 10, logger: console },
 			});
 			agent.start({ roomTemp: 20 });
 			await expect(agent.result(1000)).to.be.fulfilled;
