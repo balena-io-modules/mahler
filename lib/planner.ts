@@ -106,23 +106,25 @@ function findPlan<TState = any>({
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		trace(`plan found`);
 		return { success: true, plan: [], stats };
 	}
 
-	trace('current state', JSON.stringify(current));
-	trace('target state', JSON.stringify(target));
-	trace('pending ops', JSON.stringify(ops));
-
-	for (const op of ops) {
+	trace({
+		depth: stats.depth,
+		current,
+		target,
+		pending: ops,
+		plan: initial.map((a) => a.description),
+	});
+	for (const operation of ops) {
 		// Find the tasks that are applicable to the operations
-		const applicable = tasks.filter((t) => Task.isApplicable(t, op));
+		const applicable = tasks.filter((t) => Task.isApplicable(t, operation));
 		for (const task of applicable) {
 			stats.iterations++;
 
 			// Extract the path from the task template and the
 			// operation
-			const path = extractPath(task.path, op.path);
+			const path = extractPath(task.path, operation.path);
 
 			// Get the context expected by the task
 			// we get the target value for the context from the pointer
@@ -149,19 +151,33 @@ function findPlan<TState = any>({
 			}
 
 			// If the task condition is not met, then go to the next task
-			trace(`${description}: checking condition`);
+			trace({
+				depth: stats.depth,
+				operation,
+				task: description,
+				status: 'checking condition',
+			});
 			if (!task.condition(current, ctx)) {
-				trace(`${description}: condition is not met`);
+				trace({
+					depth: stats.depth,
+					operation,
+					task: description,
+					status: 'condition is not met',
+				});
 				continue;
 			}
-			trace(`${description}: condition met`);
 
 			if (Task.isMethod(task)) {
 				// If the task is a method we need to expand it recursively and check that none of
 				// the operations has an invalid condition
 				// if all of the operations are applicable, continue evaluating the plan with the
 				// added operations
-				trace(`${description}: expanding method`);
+				trace({
+					depth: stats.depth,
+					operation,
+					method: description,
+					status: 'expanding method',
+				});
 				const actions = expandMethod(current, task(ctx as any));
 				if (actions.length === 0) {
 					continue;
@@ -169,28 +185,37 @@ function findPlan<TState = any>({
 
 				let state = current;
 				let isValid = true;
-				trace(`${description}: testing actions`);
 				for (const action of actions) {
-					trace(
-						`${description}: action ${action.description}, testing condition`,
-					);
+					trace({
+						depth: stats.depth,
+						operation,
+						method: description,
+						action: action.description,
+						status: 'testing condition',
+					});
 					if (!action.condition(state)) {
-						trace(
-							`${description}: action ${action.description}, condition is not met`,
-							'State',
-							JSON.stringify(state),
-						);
+						trace({
+							depth: stats.depth,
+							operation,
+							method: description,
+							action: action.description,
+							status: 'condition is not met',
+							state,
+						});
 						isValid = false;
 						break;
 					}
-					trace(`${description}: action ${action.description}, condition met`);
 
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
-						trace(
-							`${description}: action ${action.description} is already on the plan`,
-						);
+						trace({
+							depth: stats.depth,
+							operation,
+							method: description,
+							action: action.description,
+							status: 'action already in plan',
+						});
 						isValid = false;
 						break;
 					}
@@ -201,7 +226,12 @@ function findPlan<TState = any>({
 				if (!isValid) {
 					continue;
 				}
-				trace(`${description}: selected`);
+				trace({
+					depth: stats.depth,
+					operation,
+					method: description,
+					status: 'selected',
+				});
 
 				// This is a valid path, continue finding a plan recursively
 				const res = findPlan({
@@ -222,7 +252,12 @@ function findPlan<TState = any>({
 				const action = task(ctx as any);
 				const state = action.effect(current);
 
-				trace(`${description}: selected`);
+				trace({
+					depth: stats.depth,
+					operation,
+					action: description,
+					status: 'selected',
+				});
 				const res = findPlan({
 					current: state,
 					target,

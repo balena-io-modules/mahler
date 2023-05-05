@@ -159,9 +159,12 @@ function of<TState>({
 				let planFound = false;
 				try {
 					logger.debug('finding a plan to the target');
-					logger.debug('current state', JSON.stringify(state, null, 2));
-					// TODO: print the full target state here
-					logger.debug('target state', JSON.stringify(target, null, 2));
+					logger.trace({
+						current: state,
+						target,
+						retries,
+						status: 'finding plan to target',
+					});
 					const result = planner.find(state, target);
 
 					if (!result.success) {
@@ -193,6 +196,7 @@ function of<TState>({
 								2,
 							),
 						);
+						logger.debug('planner stats', JSON.stringify(result.stats));
 						for (const action of actions) {
 							if (stopped) {
 								// TODO: log the cancellation of the plan

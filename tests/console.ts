@@ -6,12 +6,16 @@ import { Logger } from '~/lib';
 const debug = Debug('mahler');
 debug.log = console.log.bind(console);
 
+const trace = debug.extend('trace');
+
 const logger: Logger = {
 	info: debug.extend('info'),
 	warn: Debug('mahler:warn'),
 	error: Debug('mahler:error'),
 	debug: debug.extend('debug'),
-	trace: debug.extend('trace'),
+	trace: (...v: any[]) => {
+		trace('%j', ...v);
+	},
 };
 
 export default logger;
