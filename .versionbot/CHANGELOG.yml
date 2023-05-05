@@ -1,4 +1,67 @@
 - commits:
+    - subject: Improve plan search trace logic
+      hash: 0c84a620f554d8d170bd5512df79102122f3e16a
+      body: |
+        Trace is now given an object with the state of the search. Loggers are
+        welcome to parse the object as they see fit.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Refactor findPlan function of planne for readability
+      hash: bd76a0e2d6e5157fc475f0a7d7db59570fb3c46b
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Refactor planner to return a result object
+      hash: cab7ca51f7d4dbe143b238ca54a6a879b9796c87
+      body: |
+        The object now also returns planner stats, which can be used
+        to benchmark changes in the knowledge based
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Rename Planner.plan to Planner.find
+      hash: 3b6b2a9c5f7d2f4f8773949dad18413e6cf41060
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Make debug module a dev dependency
+      hash: e1209d5773b5f7047708a5d687c1e4b4186099c1
+      body: |
+        Agent now receives a partial logger, where missing functions will be
+        replaced by the defaults in NullLogger. The debug module is only used
+        for tests
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Simplify PlanNotFound error
+      hash: cf6505d2d259f9c6cc6226fabba9a79d7f4bed8c
+      body: |
+        Remove the `unnapplied` property as it wasn't that useful.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Allow passing a debugging function to the planner
+      hash: 55b22a7eb6390291a8e61a9166d780faac60aef2
+      body: |
+        This allows to debug the plan search during development and identify
+        bugs in the task definitions
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.4.0
+  title: ""
+  date: 2023-05-05T19:55:31.113Z
+- commits:
     - subject: Change '*' to 'update' as default task operation
       hash: 8bd9f3a49f6c5289529d07555c38ee30984118f1
       body: |
