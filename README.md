@@ -153,11 +153,11 @@ const Heater = Agent.of({
 	// The sensors the agent uses to read the system state
 	sensors: [termometer],
 
-	// Stop on success tells the agent to keep monitoring
+	// The `follow` flag tells the agent to keep monitoring
 	// the state and re-plan if the state gets off-target.
 	// By default, the agent wil terminate as soon as the
 	// target has been reached.
-	opts: { stopOnSuccess: false },
+	opts: { follow: true },
 });
 ```
 
@@ -168,7 +168,7 @@ With that we can start the Heater controller with a specified target.
 Heater.start({ roomTemp: 23 });
 ```
 
-The above instruction will start the agent and have it run forever (because of the `stopOnSuccess: false`). The Heater will continue monitoring the room temperature and turning the resistor ON or OFF as the temperature goes outside the expected value.
+The above instruction will start the agent and have it run forever (because of the `follow: true`). The Heater will continue monitoring the room temperature and turning the resistor ON or OFF as the temperature goes outside the expected value.
 
 ## Another example
 
@@ -379,7 +379,7 @@ const WifiConnect = Agent.of<State>({
 	sensors: [networkScanner, connectivityCheck],
 	opts: {
 		// We want the agent to run forever
-		stopOnSuccess: false,
+		follow: true,
 		// And keep retrying on failure (this is the default)
 		maxRetries: 0,
 	},
