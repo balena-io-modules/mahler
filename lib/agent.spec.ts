@@ -8,13 +8,16 @@ import { setTimeout } from 'timers/promises';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.of({ initial: {} });
+			const agent = Agent.of({ initial: {}, opts: { logger: console } });
 			agent.start({});
 			await expect(agent.result()).to.eventually.deep.equal({ success: true });
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
-			const agent = Agent.of({ initial: {}, opts: { pollIntervalMs: 10 } });
+			const agent = Agent.of({
+				initial: {},
+				opts: { minWaitMs: 10, logger: console },
+			});
 			agent.start({ never: true });
 			await expect(agent.result(1000)).to.be.rejected;
 			await agent.stop();
@@ -23,7 +26,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.of({
 				initial: {},
-				opts: { pollIntervalMs: 10, maxRetries: 2 },
+				opts: { minWaitMs: 10, maxRetries: 2, logger: console },
 			});
 			agent.start({ never: true });
 			await expect(agent.result(1000)).to.be.fulfilled;
@@ -104,7 +107,7 @@ describe('Agent', () => {
 				initial: { roomTemp: 10, resistorOn: false },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
-				opts: { pollIntervalMs: 10, logger: console },
+				opts: { minWaitMs: 10, logger: console },
 			});
 			agent.start({ roomTemp: 20 });
 			await expect(agent.result(1000)).to.be.fulfilled;
@@ -117,7 +120,7 @@ describe('Agent', () => {
 				initial: { roomTemp: 30, resistorOn: true },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
-				opts: { pollIntervalMs: 10, logger: console },
+				opts: { minWaitMs: 10, logger: console },
 			});
 			agent.start({ roomTemp: 20 });
 			await expect(agent.result(1000)).to.be.fulfilled;

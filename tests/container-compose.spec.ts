@@ -493,7 +493,7 @@ describe('container-compose', () => {
 			const agent = Agent.of<App>({
 				initial: { name: appname, services: {}, images: [] },
 				planner,
-				opts: { pollIntervalMs: 1000, logger: console },
+				opts: { minWaitMs: 1000, logger: console },
 			});
 
 			agent.start({
