@@ -1,4 +1,23 @@
 - commits:
+    - subject: Refactor agent, split into multiple files
+      hash: c96373e2ddcc06ac40aa3256f682667beab1bde0
+      body: |
+        This moves the runtime behavior of the agent to a `Runtime` class, now
+        under `lib/agent/runtime.ts`, making the code easier to read. The agent
+        interface definition is now under `lib/agent/index.ts`
+
+        This also modifies the behavior of the agent from polling to being
+        influenced by sensors. Configuring an agent with `follow` true, means
+        that new state changes coming from sensors will trigger re-plans to
+        check if the state has gone off-target.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.7.0
+  title: ""
+  date: 2023-05-09T15:56:29.374Z
+- commits:
     - subject: Make task description default to the id
       hash: 65a5962d02648e1e725320d737e1288abe8ffe9e
       body: |
