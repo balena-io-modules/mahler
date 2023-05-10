@@ -83,7 +83,6 @@ function expandMethod<TState = any>(
 // Stack ?
 function findPlan<TState = any>({
 	current,
-	target,
 	diff,
 	tasks,
 	trace = () => {
@@ -93,7 +92,6 @@ function findPlan<TState = any>({
 	stats = { iterations: 0, depth: 0, time: 0 },
 }: {
 	current: TState;
-	target: TState;
 	diff: Diff<TState>;
 	tasks: Array<Task<TState>>;
 	trace?: PlannerOpts['trace'];
@@ -101,7 +99,7 @@ function findPlan<TState = any>({
 	stats?: PlannerStats;
 }): PlannerResult<TState> {
 	// Get the list of operations from the patch
-	const ops = diff.operations(current);
+	const ops = diff(current);
 
 	// If there are no operations left, we have reached
 	// the target
@@ -112,7 +110,7 @@ function findPlan<TState = any>({
 	trace({
 		depth: stats.depth,
 		current,
-		target,
+		target: diff.target,
 		pending: ops,
 		plan: initial.map((a) => a.description),
 	});
@@ -133,7 +131,7 @@ function findPlan<TState = any>({
 			const ctx = Context.of<TState>(
 				task.path,
 				path,
-				Pointer.of(target, path)!,
+				Pointer.of(diff.target, path)!,
 			);
 
 			const description =
@@ -236,7 +234,6 @@ function findPlan<TState = any>({
 				// This is a valid path, continue finding a plan recursively
 				const res = findPlan({
 					current: state,
-					target,
 					diff,
 					tasks,
 					trace,
@@ -260,7 +257,6 @@ function findPlan<TState = any>({
 				});
 				const res = findPlan({
 					current: state,
-					target,
 					diff,
 					tasks,
 					trace,
@@ -308,12 +304,10 @@ function of<TState = any>({
 
 	return {
 		find(current: TState, target: Target<TState>) {
-			const diff = Diff.of(target);
 			const time = performance.now();
 			const res = findPlan({
 				current,
-				target: diff.patch(current),
-				diff,
+				diff: Diff.of(current, target),
 				tasks,
 				trace: opts.trace,
 			});

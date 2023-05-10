@@ -4,45 +4,64 @@ import { Path } from './path';
 import { Target, DELETED } from './target';
 
 /**
- * A diff is a set of operations that can be applied to an object
- * to transform it into a new object that matches a given target
+ * A diff is a function that allows to a list of pending operations and a
+ * target.
  */
 export interface Diff<S> {
 	/**
-	 * Modify a source object by applying the changes set by the target
+	 * Return the list of operations that need to be applied to the given object
+	 * to meet the target.
+	 *
+	 * If the array is empty, that means the object meets the target and no more
+	 * changes are necessary.
 	 */
-	patch(s: S): S;
+	(s: S): Array<Operation<S, any>>;
 
 	/**
-	 * Return the list of operations that would be applied to a source.
-	 * If the array is empty, that means the object has reached the target.
+	 * Get the target of this diff. Note that because of how targets are defined,
+	 * where the target passed to the `of` function is really a list of requirements to
+	 * meet, that means that `diff(obj).length === 0` only means that `obj` meets the target, but
+	 * not that `obj` is equal to `diff.target`.
 	 */
-	operations(t: S): Array<Operation<S>>;
+	get target(): S;
 }
 
-interface Goal<S, P extends Path> {
+interface Requirement<T extends Target<any>, P extends Path> {
 	path: P;
-	value: Pointer<S, P> | DELETED;
+	value: Pointer<T, P>;
 }
 
-function goals<S>(t: Target<S>, parent = '' as Path): Array<Goal<S, any>> {
-	if (t != null && !Array.isArray(t) && typeof t === 'object') {
-		return Object.keys(t).flatMap((key) =>
-			goals((t as any)[key], `${parent}/${key}`),
-		);
+type Requirements<T extends Target<any>> = Array<Requirement<T, any>>;
+
+function getRequirements<T extends Target<any>>(t: T): Requirements<T> {
+	const stack: Array<{ obj: Target<any>; path: Path }> = [{ obj: t, path: '' }];
+	const result: Requirements<T> = [];
+
+	while (stack.length > 0) {
+		const { obj, path } = stack.pop()!;
+
+		if (obj != null && !Array.isArray(obj) && typeof obj === 'object') {
+			for (const key of Object.keys(obj)) {
+				const value = obj[key];
+				const newPath = `${path}/${key}`;
+				stack.push({ obj: value, path: newPath });
+			}
+		} else {
+			result.push({ path, value: obj });
+		}
 	}
 
-	return [{ path: parent, value: t as any }];
+	return result;
 }
 
-function patch<S>(s: S, t: Target<S>): S {
+function applyPatch<S>(s: S, t: Target<S>): S {
 	if (t != null && !Array.isArray(t) && typeof t === 'object') {
 		const result = { ...s } as any;
 		for (const [key, value] of Object.entries(t)) {
 			if (value === DELETED) {
 				delete result[key];
 			} else {
-				result[key] = patch(result[key], value);
+				result[key] = applyPatch(result[key], value);
 			}
 		}
 		return result;
@@ -51,41 +70,45 @@ function patch<S>(s: S, t: Target<S>): S {
 	return t as S;
 }
 
-function of<S>(t: Target<S>): Diff<S> {
-	const goalList = goals(t);
+function of<S>(src: S, tgt: Target<S>): Diff<S> {
+	const requirements = getRequirements(tgt);
+	const target = applyPatch(src, tgt);
 
-	return {
-		patch(s) {
-			return patch(s, t);
-		},
-
-		operations(s) {
+	return Object.assign(
+		(s: S) => {
 			const ops = [] as Array<Operation<S, any>>;
-			for (const goal of goalList) {
-				const value = Pointer.of(s, goal.path);
+			for (const p of requirements) {
+				const value = Pointer.of(s, p.path);
 
-				if (value == null) {
-					ops.push({
-						op: 'create',
-						path: goal.path,
-						value: goal.value as any,
-					});
-				} else if (goal.value === DELETED) {
+				if (p.value === DELETED && value != null) {
 					ops.push({
 						op: 'delete',
-						path: goal.path,
+						path: p.path,
 					});
-				} else if (value !== goal.value) {
-					ops.push({
-						op: 'update',
-						path: goal.path,
-						value: goal.value as any,
-					});
+				} else if (p.value !== DELETED) {
+					if (value == null) {
+						ops.push({
+							op: 'create',
+							path: p.path,
+							value: p.value as any,
+						});
+					} else if (value !== p.value) {
+						ops.push({
+							op: 'update',
+							path: p.path,
+							value: p.value as any,
+						});
+					}
 				}
 			}
 			return ops;
 		},
-	};
+		{
+			get target() {
+				return target;
+			},
+		},
+	);
 }
 
 export const Diff = {
