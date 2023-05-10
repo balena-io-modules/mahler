@@ -1,4 +1,22 @@
 - commits:
+    - subject: Refactor Diff interface
+      hash: 89e8401dae78fa5339944c3bf7083146f80c07d7
+      body: >
+        Creating a new instance with `Diff.of` will now return a function to
+
+        calculate pending operations. This removes the public `patch` function as that
+
+        is not used by the planner and that is replaced by a readonly property
+
+        returning the result of patching a source object with the provided target.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.8.0
+  title: ""
+  date: 2023-05-10T22:10:21.013Z
+- commits:
     - subject: Refactor agent, split into multiple files
       hash: c96373e2ddcc06ac40aa3256f682667beab1bde0
       body: |
