@@ -18,4 +18,8 @@ const logger: Logger = {
 	},
 };
 
+if (process.env.DEBUG == null) {
+	Debug.enable('mahler:error,mahler:warn,mahler:info');
+}
+
 export default logger;
