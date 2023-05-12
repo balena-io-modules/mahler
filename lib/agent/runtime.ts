@@ -119,7 +119,7 @@ export class Runtime<TState> {
 						// TODO: maybe we can have some sort of subscription mechanism
 						// to notify state changes?
 						logger.info(`${action.description}: running`);
-						this.internal = await action.run(this.internal).catch((e) => {
+						this.internal = await action(this.internal).catch((e) => {
 							throw new ActionRunFailed(action, e);
 						});
 						logger.info(`${action.description}: ready`);

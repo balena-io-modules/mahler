@@ -115,6 +115,8 @@ interface Instance<TState> {
 
 /** An action task that has been applied to a specific context */
 export interface Action<TState = any> extends Instance<TState> {
+	readonly _tag: 'action';
+
 	/**
 	 * The effect on the state that the action
 	 * provides. If the effect returns none, then the task is not applicable
@@ -125,16 +127,17 @@ export interface Action<TState = any> extends Instance<TState> {
 	/**
 	 * Run the action
 	 */
-	run(s: TState): Promise<TState>;
+	(s: TState): Promise<TState>;
 }
 
 /** A method task that has been applied to a specific context */
 export interface Method<TState = any> extends Instance<TState> {
+	readonly _tag: 'method';
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
 	 */
-	expand(s: TState): Array<Instruction<TState>>;
+	(s: TState): Array<Instruction<TState>>;
 }
 
 export type Instruction<TState = any> = Action<TState> | Method<TState>;
@@ -178,21 +181,21 @@ function ground<
 		.digest('hex');
 
 	if (isMethodTask(task)) {
-		return {
+		return Object.assign((s: TState) => task.method(s, context), {
 			id,
+			_tag: 'method' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
-			expand: (s: TState) => task.method(s, context),
-		};
+		});
 	}
 
-	return {
+	return Object.assign((s: TState) => task.action(s, context), {
 		id,
+		_tag: 'action' as const,
 		description,
 		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
-		run: (s: TState) => task.action(s, context),
-	};
+	});
 }
 
 /**
@@ -213,8 +216,8 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 	return (
 		(t as any).condition != null &&
 		typeof (t as any).condition === 'function' &&
-		(t as any).expand != null &&
-		typeof (t as any).expand === 'function'
+		typeof t === 'function' &&
+		(t as any)._tag === 'method'
 	);
 }
 
@@ -243,8 +246,8 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 		typeof (t as any).condition === 'function' &&
 		(t as any).effect != null &&
 		typeof (t as any).effect === 'function' &&
-		(t as any).action != null &&
-		typeof (t as any).run === 'function'
+		typeof t === 'function' &&
+		(t as any)._tag === 'action'
 	);
 }
 

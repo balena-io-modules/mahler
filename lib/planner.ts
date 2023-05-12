@@ -70,7 +70,7 @@ function expandMethod<TState = any>(
 	// should we stop the operation entirely to avoid testing
 	// a plan that is not valid?
 	if (Method.is(instruction)) {
-		return instruction.expand(state).flatMap((i) => expandMethod(state, i));
+		return instruction(state).flatMap((i) => expandMethod(state, i));
 	}
 
 	return [instruction];
