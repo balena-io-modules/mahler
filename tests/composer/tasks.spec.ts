@@ -9,7 +9,7 @@ const docker = new Docker();
 describe('composer/tasks', () => {
 	describe('fetch', () => {
 		const doFetch = fetch({
-			name: 'my-service',
+			serviceName: 'my-service',
 			target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
 		});
 
@@ -26,4 +26,6 @@ describe('composer/tasks', () => {
 				.that.contains('alpine:latest');
 		});
 	});
+
+	// TODO: add more tests for other tasks
 });

@@ -17,7 +17,7 @@ function isEqualConfig(s1: Service, s2: Service) {
 const docker = new Docker();
 
 export const fetch = Task.of({
-	path: '/services/:name',
+	path: '/services/:serviceName',
 	condition: (app: App, service) =>
 		!app.images.some((img) => img.name === service.target.image),
 	effect: (state: App, service) => ({
@@ -54,7 +54,7 @@ export const fetch = Task.of({
 		};
 	},
 	description: (service) =>
-		`pull image '${service.target.image}' for service '${service.name}'`,
+		`pull image '${service.target.image}' for service '${service.serviceName}'`,
 });
 
 export const install = Task.of({
