@@ -7,6 +7,7 @@ import assert from './assert';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 export const NoOp = <T>(s: T) => Promise.resolve(s);
+export const NoEffect = <T>(s: T) => s;
 
 interface TaskSpec<
 	TState = any,
@@ -40,7 +41,7 @@ interface TaskSpec<
 }
 
 // An action definition
-interface ActionTask<
+export interface ActionTask<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends Op = 'update',
@@ -71,7 +72,7 @@ interface ActionTask<
 }
 
 // A method definition
-interface MethodTask<
+export interface MethodTask<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends Op = 'update',
@@ -267,24 +268,61 @@ export type Task<
 	TOp extends Op = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
+type MethodTaskProps<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends Op = 'update',
+> = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method'>> &
+	Pick<MethodTask<TState, TPath, TOp>, 'method'>;
+
+type ActionTaskProps<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends Op = 'update',
+> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
+	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
+
 /**
  * Create a task
  */
 function of<TState = any, TOp extends Op = 'update'>({
 	path = '/',
-}: Partial<Task<TState, '/', TOp>>): Task<TState, '/', TOp>;
+}: ActionTaskProps<TState, '/', TOp>): ActionTask<TState, '/', TOp>;
+function of<TState = any, TOp extends Op = 'update'>({
+	path = '/',
+}: MethodTaskProps<TState, '/', TOp>): MethodTask<TState, '/', TOp>;
 function of<TState = any, TPath extends Path = '/'>({
 	op = 'update',
-}: Partial<Task<TState, TPath, 'update'>>): Task<TState, TPath, 'update'>;
+}: ActionTaskProps<TState, TPath, 'update'>): ActionTask<
+	TState,
+	TPath,
+	'update'
+>;
+function of<TState = any, TPath extends Path = '/'>({
+	op = 'update',
+}: MethodTaskProps<TState, TPath, 'update'>): MethodTask<
+	TState,
+	TPath,
+	'update'
+>;
 function of<TState = any>({
 	path = '/',
 	op = 'update',
-}: Partial<Task<TState, '/', 'update'>>): Task<TState, '/', 'update'>;
+}: ActionTaskProps<TState, '/', 'update'>): ActionTask<TState, '/', 'update'>;
+function of<TState = any>({
+	path = '/',
+	op = 'update',
+}: MethodTaskProps<TState, '/', 'update'>): MethodTask<TState, '/', 'update'>;
 function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
-	t: Partial<Task<TState, TPath, TOp>>,
-): Task<TState, TPath, TOp>;
+	t: ActionTaskProps<TState, TPath, TOp>,
+): ActionTask<TState, TPath, TOp>;
 function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
-	task: Partial<Task<TState, TPath, TOp>>,
+	t: MethodTaskProps<TState, TPath, TOp>,
+): MethodTask<TState, TPath, TOp>;
+function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
+	task:
+		| ActionTaskProps<TState, TPath, TOp>
+		| MethodTaskProps<TState, TPath, TOp>,
 ) {
 	const { path = '/', op = 'update', id = randomUUID() } = task;
 
