@@ -1,4 +1,18 @@
 - commits:
+    - subject: Remove tests from build
+      hash: 20ff3dbea6dc84d48289e3ad5f676d0f3e6d3f4a
+      body: |
+        Fix package build by removing tests. Before the package would be
+        unusable as the configuration in `package.json` would not match the
+        build folder structure.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.8.1
+  title: ""
+  date: 2023-06-09T19:34:38.664Z
+- commits:
     - subject: Refactor Diff interface
       hash: 89e8401dae78fa5339944c3bf7083146f80c07d7
       body: >

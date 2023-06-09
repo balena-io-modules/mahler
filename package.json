@@ -1,6 +1,6 @@
 {
   "name": "mahler",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "A automated task composer and HTN based planner for building autonomous system agents",
   "homepage": "https://github.com/balena-io-modules/mahler#readme",
   "main": "build/index.js",
@@ -69,6 +69,6 @@
     "optics-ts": "^2.4.0"
   },
   "versionist": {
-    "publishedAt": "2023-05-10T22:10:21.084Z"
+    "publishedAt": "2023-06-09T19:34:38.764Z"
   }
 }
