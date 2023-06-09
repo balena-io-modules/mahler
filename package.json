@@ -22,14 +22,16 @@
     "url": "https://github.com/balena-io-modules/mahler/issues"
   },
   "files": [
-    "build/"
+    "build/",
+    "CHANGELOG.md",
+    "README.md"
   ],
   "engines": {
     "node": ">=16.0.0"
   },
   "scripts": {
     "clean": "rimraf build",
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && tsc --project tsconfig.release.json",
     "lint": "balena-lint --typescript lib tests",
     "lint-fix": "balena-lint --typescript --fix lib tests",
     "test:node": "mocha --reporter spec lib/**/*.spec.ts --config tests/.mocharc.js",
