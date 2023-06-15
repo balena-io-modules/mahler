@@ -79,7 +79,7 @@ Opionally, a task may define the following properties
 
 - A _description_, this is a string or a function that describes the task purpose. It is used for logging by the Agent.
 - A _path_. This is a pointer to a part of the state that this action applies to, it defaults to '/', meaning task by default apply to the full state object. This will become more clear in the next example.
-- An operation _op_ (`create`, `update`, `delete`), that this task is applicable for, for instance certain tasks may be relevant only when _deleting_ a certain element of the state (e.g. removing a system service). This property defaults to `update`, meaning the task is by default applicable to any operation (as `'update' = 'delete' + 'create'`).
+- An operation _op_ (`create`, `update`, `delete` or `*`), that this task is applicable for, for instance certain tasks may be relevant only when _deleting_ a certain element of the state (e.g. removing a system service). This property defaults to `*`, meaning the task is by default applicable to any operation.
 
 Continuing with our example, as we defined a task to turn the heater ON, we need to define another to turn the heater resistor OFF.
 

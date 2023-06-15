@@ -9,10 +9,12 @@ export const NotImplemented = () => Promise.reject('Not implemented');
 export const NoOp = <T>(s: T) => Promise.resolve(s);
 export const NoEffect = <T>(s: T) => s;
 
+type TaskOp = Op | '*';
+
 interface TaskSpec<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > {
 	/**
 	 * A unique identifier for the task
@@ -44,7 +46,7 @@ interface TaskSpec<
 export interface ActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The effect on the state that the action
@@ -75,7 +77,7 @@ export interface ActionTask<
 export interface MethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The method to be called when the task is executed
@@ -145,7 +147,7 @@ export type Instruction<TState = any> = Action<TState> | Method<TState>;
 function ground<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 >(
 	task: Task<TState, TPath, TOp>,
 	ctx: ContextAsArgs<TState, TPath>,
@@ -204,7 +206,7 @@ function ground<
 function isMethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 >(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
 }
@@ -227,7 +229,7 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 function isActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 >(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
 	return (
 		(t as any).effect != null &&
@@ -253,81 +255,62 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 
 /**
  * A task is base unit of knowledge of an autonomous agent.
- *
- * Task applicability
- *
- *                |---------------------------|
- *                |   Operation: /a/b/c       |
- * |------------------------------------------|
- * |  Task: /a/b  | create | update | delete  |
- * | -----------------------------------------|
- * |  create      | yes    |   no   |   no    |
- * |  update      | yes    |   yes  |   yes   |
- * |  delete      | no     |   no   |   yes   |
  */
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
 type MethodTaskProps<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method'>> &
 	Pick<MethodTask<TState, TPath, TOp>, 'method'>;
 
 type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
 
 /**
  * Create a task
  */
-function of<TState = any, TOp extends Op = 'update'>({
+function of<TState = any, TOp extends TaskOp = '*'>({
 	path = '/',
 }: ActionTaskProps<TState, '/', TOp>): ActionTask<TState, '/', TOp>;
-function of<TState = any, TOp extends Op = 'update'>({
+function of<TState = any, TOp extends TaskOp = '*'>({
 	path = '/',
 }: MethodTaskProps<TState, '/', TOp>): MethodTask<TState, '/', TOp>;
 function of<TState = any, TPath extends Path = '/'>({
-	op = 'update',
-}: ActionTaskProps<TState, TPath, 'update'>): ActionTask<
-	TState,
-	TPath,
-	'update'
->;
+	op = '*',
+}: ActionTaskProps<TState, TPath, '*'>): ActionTask<TState, TPath, '*'>;
 function of<TState = any, TPath extends Path = '/'>({
-	op = 'update',
-}: MethodTaskProps<TState, TPath, 'update'>): MethodTask<
-	TState,
-	TPath,
-	'update'
->;
+	op = '*',
+}: MethodTaskProps<TState, TPath, '*'>): MethodTask<TState, TPath, '*'>;
 function of<TState = any>({
 	path = '/',
-	op = 'update',
-}: ActionTaskProps<TState, '/', 'update'>): ActionTask<TState, '/', 'update'>;
+	op = '*',
+}: ActionTaskProps<TState, '/', '*'>): ActionTask<TState, '/', '*'>;
 function of<TState = any>({
 	path = '/',
-	op = 'update',
-}: MethodTaskProps<TState, '/', 'update'>): MethodTask<TState, '/', 'update'>;
-function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
+	op = '*',
+}: MethodTaskProps<TState, '/', '*'>): MethodTask<TState, '/', '*'>;
+function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 	t: ActionTaskProps<TState, TPath, TOp>,
 ): ActionTask<TState, TPath, TOp>;
-function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
+function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 	t: MethodTaskProps<TState, TPath, TOp>,
 ): MethodTask<TState, TPath, TOp>;
-function of<TState = any, TPath extends Path = '/', TOp extends Op = 'update'>(
+function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
 	task:
 		| ActionTaskProps<TState, TPath, TOp>
 		| MethodTaskProps<TState, TPath, TOp>,
 ) {
-	const { path = '/', op = 'update', id = randomUUID() } = task;
+	const { path = '/', op = '*', id = randomUUID() } = task;
 
 	// Check that the path is valid
 	Path.assert(path);
@@ -365,30 +348,23 @@ function isEqual<TState = any>(
 /**
  * Identify if a task is applicable for a specific operation
  *
- * Applicability is determined according to the following table
- *
- *                |---------------------------|
- *                |   Operation: /a/b/c       |
- * |------------------------------------------|
- * |  Task: /a/b  | create | update | delete  |
- * | -----------------------------------------|
- * |  create      | yes    |   no   |   no    |
- * |  update      | yes    |   yes  |   yes   |
- * |  delete      | no     |   no   |   yes   |
+ * A task is applicable if the task operation is '*' or if the task operation
+ * is the same as the operation op, and if the task path matches the operation
+ * path
  */
 function isApplicable<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends Op = 'update',
+	TOp extends TaskOp = '*',
 >(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
-	if (t.op !== 'update' && t.op !== o.op) {
+	if (t.op !== '*' && t.op !== o.op) {
 		return false;
 	}
 
 	const taskParts = Path.elems(t.path);
 	const opParts = Path.elems(o.path);
 
-	if (taskParts.length > opParts.length) {
+	if (taskParts.length !== opParts.length) {
 		return false;
 	}
 

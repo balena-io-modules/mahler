@@ -7,18 +7,15 @@ describe('composer/planning', () => {
 	it('pulls the service image if it does not exist yet', () => {
 		const app = {
 			name: 'test',
-			services: {
-				main: {
-					image: 'alpine:latest',
-					command: ['sleep', 'infinity'],
-				},
-			},
+			services: {},
 			images: [],
 		};
 
 		const result = planner.find(app, {
 			services: {
 				main: {
+					image: 'alpine:latest',
+					command: ['sleep', 'infinity'],
 					status: 'running',
 				},
 			},

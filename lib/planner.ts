@@ -117,6 +117,11 @@ function findPlan<TState = any>({
 	for (const operation of ops) {
 		// Find the tasks that are applicable to the operations
 		const applicable = tasks.filter((t) => Task.isApplicable(t, operation));
+		trace({
+			depth: stats.depth,
+			operation,
+			status: 'looking for applicable tasks',
+		});
 		for (const task of applicable) {
 			stats.iterations++;
 
@@ -207,6 +212,8 @@ function findPlan<TState = any>({
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
+						// TODO: perhaps add something to the stats about avoided
+						// loops?
 						trace({
 							depth: stats.depth,
 							operation,
@@ -268,6 +275,14 @@ function findPlan<TState = any>({
 					return { ...res, plan: [action, ...res.plan] };
 				}
 			}
+		}
+
+		if (applicable.length === 0) {
+			trace({
+				depth: stats.depth,
+				operation,
+				status: 'no applicable task found',
+			});
 		}
 	}
 

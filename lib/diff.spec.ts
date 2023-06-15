@@ -78,9 +78,11 @@ describe('Diff', () => {
 					b: 'one',
 					c: { k: 'v' },
 				}),
-			).to.deep.equal([
+			).to.have.deep.members([
+				{ op: 'update', path: '/', value: { a: 2, b: 'one', c: {} } },
+				{ op: 'update', path: '/a', value: 2 },
+				{ op: 'update', path: '/c', value: {} },
 				{ op: 'delete', path: '/c/k' },
-				{ path: '/a', op: 'update', value: 2 },
 			]);
 
 			expect(
@@ -90,8 +92,10 @@ describe('Diff', () => {
 					c: { k: 'v' },
 				}),
 			).to.deep.equal([
+				{ op: 'update', path: '/', value: { a: 2, b: 'two', c: {} } },
+				{ op: 'update', path: '/a', value: 2 },
+				{ op: 'update', path: '/c', value: {} },
 				{ op: 'delete', path: '/c/k' },
-				{ path: '/a', op: 'update', value: 2 },
 			]);
 
 			expect(
@@ -100,7 +104,10 @@ describe('Diff', () => {
 					b: 'one',
 					c: {},
 				}),
-			).to.deep.equal([{ path: '/a', op: 'update', value: 2 }]);
+			).to.deep.equal([
+				{ op: 'update', path: '/', value: { a: 2, b: 'one', c: {} } },
+				{ op: 'update', path: '/a', value: 2 },
+			]);
 
 			expect(
 				diff({
@@ -109,6 +116,40 @@ describe('Diff', () => {
 					c: {},
 				}),
 			).to.deep.equal([]);
+		});
+
+		it('does not recurse into the object if a parent property does not exist', () => {
+			type S = { a: { [k: string]: { [k: string]: string } } };
+			const src: S = {
+				a: {},
+			};
+
+			const diff = Diff.of(src, { a: { b: { c: 'd' } } });
+			expect(
+				diff({
+					a: {},
+				}),
+			).to.have.deep.members([
+				{ op: 'update', path: '/', value: { a: { b: { c: 'd' } } } },
+				{ op: 'update', path: '/a', value: { b: { c: 'd' } } },
+				{ op: 'create', path: '/a/b', value: { c: 'd' } },
+			]);
+		});
+
+		it('it recursively adds a DELETE operation for the current state', () => {
+			type S = { a: { [k: string]: { [k: string]: { [k: string]: string } } } };
+			const src: S = {
+				a: {},
+			};
+
+			const diff = Diff.of(src, { a: { b: DELETED } });
+			expect(diff({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
+				{ op: 'update', path: '/', value: { a: {} } },
+				{ op: 'update', path: '/a', value: {} },
+				{ op: 'delete', path: '/a/b' },
+				{ op: 'delete', path: '/a/b/c' },
+				{ op: 'delete', path: '/a/b/c/d' },
+			]);
 		});
 	});
 });

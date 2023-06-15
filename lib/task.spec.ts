@@ -4,7 +4,7 @@ import { Operation } from './operation';
 
 describe('Task', () => {
 	describe('isApplicable', () => {
-		it('accepts matching substrings of the given path', () => {
+		it('accept matching paths', () => {
 			expect(
 				Task.isApplicable(Task.of({ path: '/a/b/c', effect: NoEffect }), {
 					op: 'delete',
@@ -19,24 +19,6 @@ describe('Task', () => {
 						path: '/a/b/c',
 					},
 				),
-			).to.be.true;
-			expect(
-				Task.isApplicable(Task.of({ path: '/a/:arg', method: () => [] }), {
-					op: 'delete',
-					path: '/a/b/c',
-				}),
-			).to.be.true;
-			expect(
-				Task.isApplicable(Task.of({ path: '/:arg', effect: NoEffect }), {
-					op: 'delete',
-					path: '/a/b/c',
-				}),
-			).to.be.true;
-			expect(
-				Task.isApplicable(Task.of({ path: '/a', effect: NoEffect }), {
-					op: 'delete',
-					path: '/a/b/c',
-				}),
 			).to.be.true;
 		});
 
