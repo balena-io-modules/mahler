@@ -52,12 +52,14 @@ type ContextOnEmptyPath<O, S, K, A extends {}> = K extends ''
 				target: S;
 				get(state: O): S;
 				set(state: O, value: S): O;
+				del(state: O): O;
 		  }
 		: Identity<
 				A & {
 					target: S;
 					get(state: O): S;
 					set(state: O, value: S): O;
+					del(state: O): O;
 				}
 		  >
 	: // If the key is an empty string, then the type is S

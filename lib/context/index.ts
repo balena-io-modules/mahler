@@ -27,7 +27,7 @@ export type Context<S, P extends Path> = Identity<
 
 // Redeclare the type for exporting
 export type ContextAsArgs<TState = any, TPath extends Path = '/'> = Identity<
-	Omit<Context<TState, TPath>, 'get' | 'set'>
+	Omit<Context<TState, TPath>, 'get' | 'set' | 'del'>
 >;
 
 function isArrayIndex(x: unknown): x is number {
@@ -78,14 +78,24 @@ function of<TState = any, TPath extends Path = '/'>(
 	// Get route parameters
 	const args = params(template, path);
 
+	// Save the last element of the path so we can delete it
+	const last = parts.pop();
+
 	// Create a lens for the path
 	// use any since, because of the generics, the types are impossible
 	// to get right. However, since we know that the path exists, we won't have
 	// any undefined values
-	const lens = parts.reduce(
+	const parent = parts.reduce(
 		(l: any, p) => (isArrayIndex(p) ? l.nth(+p) : l.prop(p)),
 		Optic.optic<TState>(),
 	);
+
+	const lens =
+		last != null
+			? isArrayIndex(last)
+				? parent.nth(+last)
+				: parent.prop(last)
+			: parent;
 
 	return {
 		...args,
@@ -95,6 +105,23 @@ function of<TState = any, TPath extends Path = '/'>(
 		},
 		set(s: TState, a: Context<TState, TPath>['target']) {
 			return Optic.set(lens)(a)(s);
+		},
+		del(s: TState): TState {
+			let ps: any = Optic.get(parent)(s);
+			if (last != null) {
+				// Remove the element from the parent
+				// state if it exists
+				if (isArrayIndex(last)) {
+					ps = ps.filter((_: any, i: number) => i !== +last);
+				} else {
+					const { [last]: _, ...rest } = ps;
+					ps = rest;
+				}
+
+				// Return the modified object as the new state
+				return Optic.set(parent)(ps)(s) as any;
+			}
+			return s;
 		},
 		// We are not going to bother validating types here
 	} as any;

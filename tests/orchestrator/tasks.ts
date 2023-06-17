@@ -305,53 +305,12 @@ export const removeService = Task.of({
 	condition: (device: Device, service) =>
 		service.get(device)?.containerId != null &&
 		service.get(device)?.status !== 'running',
-	effect: (device: Device, ctx) => {
-		const { [ctx.serviceName]: _, ...services } =
-			device.apps[ctx.appUuid].releases[ctx.releaseUuid].services;
-
-		// This is messy but it might be improved by performing state transformations.
-		// That is, somehow saying, all of these tasks apply to a subset of the state
-		// (e.g. a particular release), so implementation can be simplified.
-		return {
-			...device,
-			apps: {
-				...device.apps,
-				[ctx.appUuid]: {
-					...device.apps[ctx.appUuid],
-					releases: {
-						...device.apps[ctx.appUuid].releases,
-						[ctx.releaseUuid]: {
-							...device.apps[ctx.appUuid].releases[ctx.releaseUuid],
-							services,
-						},
-					},
-				},
-			},
-		};
-	},
+	effect: (device: Device, ctx) => ctx.del(device),
 	action: async (device: Device, ctx) => {
 		const container = docker.getContainer(ctx.get(device).containerId!);
 		await container.remove({ v: true });
 
-		const { [ctx.serviceName]: _, ...services } =
-			device.apps[ctx.appUuid].releases[ctx.releaseUuid].services;
-
-		return {
-			...device,
-			apps: {
-				...device.apps,
-				[ctx.appUuid]: {
-					...device.apps[ctx.appUuid],
-					releases: {
-						...device.apps[ctx.appUuid].releases,
-						[ctx.releaseUuid]: {
-							...device.apps[ctx.appUuid].releases[ctx.releaseUuid],
-							services,
-						},
-					},
-				},
-			},
-		};
+		return ctx.del(device);
 	},
 	description: ({ serviceName, appUuid, releaseUuid }) =>
 		`remove container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
@@ -363,20 +322,6 @@ export const removeRelease = Pure.of({
 	condition: (device: Device, ctx) =>
 		ctx.get(device) != null &&
 		Object.keys(ctx.get(device).services).length === 0,
-	effect: (device: Device, ctx) => {
-		const { [ctx.releaseUuid]: _, ...releases } =
-			device.apps[ctx.appUuid].releases;
-
-		return {
-			...device,
-			apps: {
-				...device.apps,
-				[ctx.appUuid]: {
-					...device.apps[ctx.appUuid],
-					releases,
-				},
-			},
-		};
-	},
+	effect: (device: Device, ctx) => ctx.del(device),
 	description: (ctx) => `remove release '${ctx.releaseUuid}'`,
 });

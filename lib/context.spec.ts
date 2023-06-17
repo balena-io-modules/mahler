@@ -104,5 +104,10 @@ describe('Context', () => {
 		expect(obj).to.deep.equal({
 			a: { b: { c: [{ e: 'zero' }, { e: 'two' }] }, d: 123 },
 		});
+
+		// Allows to delete the value
+		expect(c.del({ a: { b: { c: [{ e: 'zero' }] }, d: 123 } })).to.deep.equal({
+			a: { b: { c: [{}] }, d: 123 },
+		});
 	});
 });
