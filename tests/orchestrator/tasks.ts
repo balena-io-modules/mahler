@@ -20,12 +20,18 @@ function isEqualConfig(s1: Service, s2: Service) {
 
 const docker = new Docker();
 
-// Pull an image from the registry
+/**
+ * Pull an image from the registry, this task is applicable to
+ * the creation of a service, as pulling an image is only needed
+ * in that case.
+ */
 export const fetch = Task.of({
 	op: 'create',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	// Only pull the image if it's not already present
 	condition: (device: Device, ctx) =>
 		!device.images.some((img) => img.name === getImageName(ctx)),
+	// The effect of this task is to add the image to the device
 	effect: (device, ctx) => {
 		const { digest } = getRegistryAndName(ctx.target.image);
 		return {
@@ -109,6 +115,9 @@ export const fetch = Task.of({
 		`pull image '${ctx.target.image}' for service '${ctx.serviceName}' of app '${ctx.appUuid}'`,
 });
 
+// This task has no effect on the system, it only
+// creates the app in the state so tasks that affect
+// releases can be chosen.
 export const createApp = Constructor.of({
 	path: '/apps/:appUuid',
 	effect: (device: Device, ctx) =>
@@ -116,16 +125,17 @@ export const createApp = Constructor.of({
 	description: (ctx) => `prepare app '${ctx.target.name}'`,
 });
 
+// This task has no effect on the system, it only
+// creates the release in the state so tasks that affect
+// services can be chosen.
 export const createRelease = Constructor.of({
 	path: '/apps/:appUuid/releases/:releaseUuid',
 	effect: (device: Device, ctx) => ctx.set(device, { services: {} }),
 	description: (ctx) => `prepare release '${ctx.releaseUuid}'`,
 });
 
-/**
- * Task to install a service, i.e. create the container if
- * it does not exist yet
- */
+// This task installs a service, that is, it creates the container
+// if it does not exist yet
 export const installService = Task.of({
 	op: 'create',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
@@ -148,6 +158,8 @@ export const installService = Task.of({
 		// This is our way to update the internal agent state, we look for
 		// the service before we do anything, and if it exists, we update
 		// the state with the service metadata.
+		// Note that this will probably cause actions further on the plan to
+		// fail if the condition is that the container should have a `created` state.
 		const existing = await docker
 			.getContainer(containerName)
 			.inspect()
@@ -210,20 +222,28 @@ export const installService = Task.of({
 		`create container for service '${ctx.serviceName}' of app '${ctx.appUuid}' and release '${ctx.releaseUuid}'`,
 });
 
+// Start service task, this will start the container
+// if it is not running yet
 export const startService = Task.of({
-	op: 'update',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	// Because we are dealing with releases, this has a more
+	// complex condition than the composer example
 	condition: (device: Device, ctx) => {
 		const { releases } = device.apps[ctx.appUuid];
 
+		// The task can be applied if the following conditions are met:
 		return (
+			// The container has been created (the state has a containerId)
 			ctx.get(device)?.containerId != null &&
+			// The configuration of the existing container matches the target
 			isEqualConfig(ctx.get(device), ctx.target) &&
+			// The container is not running yet
 			ctx.get(device)?.status !== 'running' &&
+			// And if there is a service with the same name from other release, that
+			// service cannot be running
 			Object.keys(releases)
 				.filter((u) => u !== ctx.releaseUuid)
 				.every(
-					// There are no services from other release still running
 					(u) => releases[u].services[ctx.serviceName]?.status !== 'running',
 				)
 		);
@@ -256,6 +276,8 @@ export const startService = Task.of({
 });
 
 export const stopService = Task.of({
+	// Stop is applicable to a service delete or update
+	op: '*',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	condition: (device: Device, ctx) => {
 		const { releases } = device.apps[ctx.appUuid];
@@ -300,7 +322,7 @@ export const stopService = Task.of({
 });
 
 export const removeService = Task.of({
-	op: 'delete',
+	op: '*',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	condition: (device: Device, service) =>
 		service.get(device)?.containerId != null &&

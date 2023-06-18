@@ -197,7 +197,66 @@ describe('orchestrator/planning', () => {
 		}
 	});
 
-	it('updates a release by first installing the new services and the stopping the old services', () => {
+	it('recreates the service container if the configuration does not match', () => {
+		const device = {
+			name: 'test',
+			uuid: 'd0',
+			apps: {
+				a0: {
+					name: 'test-app',
+					releases: {
+						r0: {
+							services: {
+								main: {
+									image: 'alpine:latest',
+									command: ['sleep', 'infinity'],
+									status: 'running' as ServiceStatus,
+									containerId: 'c0',
+								},
+							},
+						},
+					},
+				},
+			},
+			keys: {},
+			images: [{ name: 'a0_main:r0' }],
+		};
+
+		const result = planner.find(device, {
+			name: 'test',
+			uuid: 'd0',
+			apps: {
+				a0: {
+					name: 'test-app',
+					releases: {
+						r0: {
+							services: {
+								main: {
+									command: ['sleep', '30'],
+									status: 'running',
+								},
+							},
+						},
+					},
+				},
+			},
+			keys: {},
+			images: [{ name: 'a0_main:r0' }],
+		});
+
+		if (result.success) {
+			expect(result.plan.map((a) => a.description)).to.deep.equal([
+				"stop container for service 'main' of app 'a0' and release 'r0'",
+				"remove container for service 'main' of app 'a0' and release 'r0'",
+				"create container for service 'main' of app 'a0' and release 'r0'",
+				"start container for service 'main' of app 'a0' and release 'r0'",
+			]);
+		} else {
+			expect.fail('Plan not found');
+		}
+	});
+
+	it('updates a release by first installing the new services and then stopping the old services', () => {
 		const device = {
 			name: 'test',
 			uuid: 'd0',
@@ -235,6 +294,11 @@ describe('orchestrator/planning', () => {
 									command: ['sleep', '30'],
 									status: 'running',
 								},
+								other: {
+									image: 'alpine:latest',
+									command: ['sleep', '30'],
+									status: 'running',
+								},
 							},
 						},
 					},
@@ -251,6 +315,9 @@ describe('orchestrator/planning', () => {
 				"remove container for service 'main' of app 'a0' and release 'r0'",
 				"remove release 'r0'",
 				"start container for service 'main' of app 'a0' and release 'r1'",
+				"pull image 'alpine:latest' for service 'other' of app 'a0'",
+				"create container for service 'other' of app 'a0' and release 'r1'",
+				"start container for service 'other' of app 'a0' and release 'r1'",
 			]);
 		} else {
 			expect.fail('Plan not found');
