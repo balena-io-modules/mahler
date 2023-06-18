@@ -1,20 +1,18 @@
 import { randomUUID, createHash } from 'crypto';
 
 import { Path } from './path';
-import { Context, ContextAsArgs } from './context';
-import { Op, Operation } from './operation';
+import { Context, ContextAsArgs, TaskOp } from './context';
+import { Operation } from './operation';
 import assert from './assert';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 export const NoAction = <T>(s: T) => Promise.resolve(s);
 export const NoEffect = <T>(s: T) => s;
 
-type TaskOp = Op | '*';
-
 interface TaskSpec<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > {
 	/**
 	 * A unique identifier for the task
@@ -24,7 +22,7 @@ interface TaskSpec<
 	/**
 	 * A descriptor for this task
 	 */
-	readonly description: string | ((c: Context<TState, TPath>) => string);
+	readonly description: string | ((c: Context<TState, TPath, TOp>) => string);
 
 	/**
 	 * The path that this task applies to
@@ -39,26 +37,26 @@ interface TaskSpec<
 	/**
 	 * A pre-condition that needs to be met before the task can be chosen
 	 */
-	condition(s: TState, c: Context<TState, TPath>): boolean;
+	condition(s: TState, c: Context<TState, TPath, TOp>): boolean;
 }
 
 // An action definition
 export interface ActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The effect on the state that the action
 	 * provides. The effect function can only be ran if the pre condition
 	 * is met.
 	 */
-	effect(s: TState, c: Context<TState, TPath>): TState;
+	effect(s: TState, c: Context<TState, TPath, TOp>): TState;
 
 	/**
 	 * The actual action the task performs
 	 */
-	action(s: TState, c: Context<TState, TPath>): Promise<TState>;
+	action(s: TState, c: Context<TState, TPath, TOp>): Promise<TState>;
 
 	/**
 	 * The task function grounds the task
@@ -70,20 +68,20 @@ export interface ActionTask<
 	 * ActionTask --- ground --> Action
 	 * MethodTask --- ground --> Method
 	 */
-	(ctx: ContextAsArgs<TState, TPath>): Action<TState>;
+	(ctx: ContextAsArgs<TState, TPath, TOp>): Action<TState>;
 }
 
 // A method definition
 export interface MethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the sequence is not applicable
 	 */
-	method(s: TState, c: Context<TState, TPath>): Array<Instruction<TState>>;
+	method(s: TState, c: Context<TState, TPath, TOp>): Array<Instruction<TState>>;
 
 	/**
 	 * The task function grounds the task
@@ -95,7 +93,7 @@ export interface MethodTask<
 	 * ActionTask --- ground --> Action
 	 * MethodTask --- ground --> Method
 	 */
-	(ctx: ContextAsArgs<TState, TPath>): Method<TState>;
+	(ctx: ContextAsArgs<TState, TPath, TOp>): Method<TState>;
 }
 
 interface Instance<TState> {
@@ -147,10 +145,10 @@ export type Instruction<TState = any> = Action<TState> | Method<TState>;
 function ground<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 >(
 	task: Task<TState, TPath, TOp>,
-	ctx: ContextAsArgs<TState, TPath>,
+	ctx: ContextAsArgs<TState, TPath, TOp>,
 ): Instruction<TState> {
 	const templateParts = Path.elems(task.path);
 
@@ -170,16 +168,26 @@ function ground<
 			})
 			.join('/');
 
-	const context = Context.of(task.path, `/${path}`, ctx.target);
+	const context = Context.of<TState, TPath, any>(
+		task.path,
+		`/${path}`,
+		(ctx as any).target,
+	);
 
 	const { id: taskId, description: taskDescription } = task;
-	const description =
+	const description: string =
 		typeof taskDescription === 'function'
 			? taskDescription(context)
 			: taskDescription;
 
 	const id = createHash('sha256')
-		.update(JSON.stringify({ id: taskId, path, target: ctx.target }))
+		.update(
+			JSON.stringify({
+				id: taskId,
+				path,
+				...((ctx as any).target && { target: (ctx as any).target }),
+			}),
+		)
 		.digest('hex');
 
 	if (isMethodTask(task)) {
@@ -206,7 +214,7 @@ function ground<
 function isMethodTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
 }
@@ -229,7 +237,7 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 function isActionTask<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
 	return (
 		(t as any).effect != null &&
@@ -259,64 +267,55 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
 type MethodTaskProps<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method'>> &
 	Pick<MethodTask<TState, TPath, TOp>, 'method'>;
 
 type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
 
 /**
  * Create a task
  */
-function of<TState = any, TOp extends TaskOp = '*'>({
-	path = '/',
-}: ActionTaskProps<TState, '/', TOp>): ActionTask<TState, '/', TOp>;
-function of<TState = any, TOp extends TaskOp = '*'>({
-	path = '/',
-}: MethodTaskProps<TState, '/', TOp>): MethodTask<TState, '/', TOp>;
-function of<TState = any, TPath extends Path = '/'>({
-	op = '*',
-}: ActionTaskProps<TState, TPath, '*'>): ActionTask<TState, TPath, '*'>;
-function of<TState = any, TPath extends Path = '/'>({
-	op = '*',
-}: MethodTaskProps<TState, TPath, '*'>): MethodTask<TState, TPath, '*'>;
-function of<TState = any>({
-	path = '/',
-	op = '*',
-}: ActionTaskProps<TState, '/', '*'>): ActionTask<TState, '/', '*'>;
-function of<TState = any>({
-	path = '/',
-	op = '*',
-}: MethodTaskProps<TState, '/', '*'>): MethodTask<TState, '/', '*'>;
-function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
-	t: ActionTaskProps<TState, TPath, TOp>,
-): ActionTask<TState, TPath, TOp>;
-function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
-	t: MethodTaskProps<TState, TPath, TOp>,
-): MethodTask<TState, TPath, TOp>;
-function of<TState = any, TPath extends Path = '/', TOp extends TaskOp = '*'>(
+/**
+ * Create a task
+ */
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+>(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+>(t: MethodTaskProps<TState, TPath, TOp>): MethodTask<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+>(
 	task:
 		| ActionTaskProps<TState, TPath, TOp>
 		| MethodTaskProps<TState, TPath, TOp>,
 ) {
-	const { path = '/', op = '*', id = randomUUID() } = task;
+	const { path = '/', op = 'update', id = randomUUID() } = task;
 
 	// Check that the path is valid
 	Path.assert(path);
 
 	const t = Object.assign(
-		(ctx: ContextAsArgs<TState, TPath>) => {
+		(ctx: ContextAsArgs<TState, TPath, TOp>) => {
 			return ground(t as any, ctx);
 		},
 		{
@@ -348,14 +347,13 @@ function isEqual<TState = any>(
 /**
  * Identify if a task is applicable for a specific operation
  *
- * A task is applicable if the task operation is '*' or if the task operation
- * is the same as the operation op, and if the task path matches the operation
+ * A task is applicable if the task operation as the operation op, and if the task path matches the operation
  * path
  */
 function isApplicable<
 	TState = any,
 	TPath extends Path = '/',
-	TOp extends TaskOp = '*',
+	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
 	if (t.op !== '*' && t.op !== o.op) {
 		return false;
@@ -415,7 +413,7 @@ type PureTaskProps<
  * in some way.
  */
 export const Pure = {
-	of: <TState = any, TPath extends Path = '/', TOp extends Op = 'update'>({
+	of: <TState = any, TPath extends Path = '/', TOp extends TaskOp = 'update'>({
 		effect,
 		...props
 	}: PureTaskProps<TState, TPath, TOp>) =>
@@ -436,7 +434,7 @@ export const NoOp = {
 		...props
 	}: Partial<
 		Pick<
-			ActionTaskProps<TState, TPath, '*'>,
+			ActionTaskProps<TState, TPath, 'update'>,
 			'path' | 'condition' | 'description'
 		>
 	>) =>

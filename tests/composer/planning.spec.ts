@@ -145,9 +145,9 @@ describe('composer/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"pull image 'alpine:3.14' for service 'main'",
 				"stopping container for service 'main'",
 				"removing container for service 'main'",
+				"pull image 'alpine:3.14' for service 'main'",
 				"installing container for service 'main'",
 				"starting container for service 'main'",
 			]);
@@ -181,8 +181,8 @@ describe('composer/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"pull image 'alpine:3.14' for service 'main'",
 				"removing container for service 'main'",
+				"pull image 'alpine:3.14' for service 'main'",
 				"installing container for service 'main'",
 				"starting container for service 'main'",
 			]);

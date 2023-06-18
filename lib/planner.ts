@@ -133,7 +133,7 @@ function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Context.of<TState>(
+			const ctx = Context.of<TState, any, any>(
 				task.path,
 				path,
 				Pointer.of(diff.target, path)!,
@@ -141,7 +141,7 @@ function findPlan<TState = any>({
 
 			const description =
 				typeof task.description === 'function'
-					? task.description(ctx)
+					? task.description(ctx as any)
 					: task.description;
 
 			// We check early if the action already exists on the path to
@@ -160,7 +160,7 @@ function findPlan<TState = any>({
 				task: description,
 				status: 'checking condition',
 			});
-			if (!task.condition(current, ctx)) {
+			if (!task.condition(current, ctx as any)) {
 				trace({
 					depth: stats.depth,
 					operation,

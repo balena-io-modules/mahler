@@ -17,6 +17,7 @@ function isEqualConfig(s1: Service, s2: Service) {
 const docker = new Docker();
 
 export const fetch = Task.of({
+	op: 'create',
 	path: '/services/:serviceName',
 	condition: (app: App, service) =>
 		!app.images.some((img) => img.name === service.target.image),

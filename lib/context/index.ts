@@ -2,7 +2,9 @@ import * as Optic from 'optics-ts';
 import assert from '../assert';
 import { Path } from '../path';
 
-import { ContextWithSlash, Identity } from './types';
+import { ContextWithSlash, Identity, TaskOp } from './types';
+
+export { TaskOp } from './types';
 
 /**
  * A Context type provides information about a desired change on a path
@@ -21,14 +23,16 @@ import { ContextWithSlash, Identity } from './types';
  *  set(s, get(s)) = s
  *  set(set(s, a), a) = set(s,a)
  */
-export type Context<S, P extends Path> = Identity<
-	ContextWithSlash<S, S, P, {}>
+export type Context<S, TPath extends Path, TOp extends TaskOp> = Identity<
+	ContextWithSlash<S, S, TPath, {}, TOp>
 >;
 
 // Redeclare the type for exporting
-export type ContextAsArgs<TState = any, TPath extends Path = '/'> = Identity<
-	Omit<Context<TState, TPath>, 'get' | 'set' | 'del'>
->;
+export type ContextAsArgs<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+> = Identity<Omit<Context<TState, TPath, TOp>, 'get' | 'set' | 'del' | 'op'>>;
 
 function isArrayIndex(x: unknown): x is number {
 	return (
@@ -68,11 +72,24 @@ function params(template: Path, path: Path) {
 	return args;
 }
 
-function of<TState = any, TPath extends Path = '/'>(
+function of<TState, TPath extends Path, TOp extends 'update' | 'create'>(
 	template: TPath,
 	path: Path,
-	target: Context<TState, TPath>['target'],
-): Context<TState, TPath> {
+	target: Context<TState, TPath, TOp>['target'],
+): Context<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends 'delete' | '*' = 'delete',
+>(template: TPath, path: Path): Context<TState, TPath, TOp>;
+function of<
+	TState,
+	TPath extends Path,
+	TOp extends TaskOp,
+	TTState = TOp extends 'update' | 'create'
+		? Context<TState, TPath, TOp>['target']
+		: never,
+>(template: TPath, path: Path, target?: TTState): Context<TState, TPath, TOp> {
 	const parts = Path.elems(path);
 
 	// Get route parameters
@@ -99,11 +116,11 @@ function of<TState = any, TPath extends Path = '/'>(
 
 	return {
 		...args,
-		target,
+		...(target && { target }),
 		get(s: TState) {
 			return Optic.get(lens)(s);
 		},
-		set(s: TState, a: Context<TState, TPath>['target']) {
+		set(s: TState, a: TTState) {
 			return Optic.set(lens)(a)(s);
 		},
 		del(s: TState): TState {

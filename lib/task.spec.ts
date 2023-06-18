@@ -6,10 +6,13 @@ describe('Task', () => {
 	describe('isApplicable', () => {
 		it('accept matching paths', () => {
 			expect(
-				Task.isApplicable(Task.of({ path: '/a/b/c', effect: NoEffect }), {
-					op: 'delete',
-					path: '/a/b/c',
-				}),
+				Task.isApplicable(
+					Task.of({ op: 'delete', path: '/a/b/c', effect: NoEffect }),
+					{
+						op: 'delete',
+						path: '/a/b/c',
+					},
+				),
 			).to.be.true;
 			expect(
 				Task.isApplicable(
