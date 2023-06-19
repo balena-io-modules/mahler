@@ -299,6 +299,101 @@ export const startService = Task.of({
 });
 
 /**
+ * Rename a service between releases if the image and service configuration has not changed
+ *
+ * Condition: the service exists (it has a container id), the container is not running, the container configuration
+ *            matches the target configuration, and source and target images are the same
+ * Effect: move the service from the source release to the target release
+ * Action: rename the container using the docker API
+ */
+export const migrateService = Task.of({
+	op: 'create',
+	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	condition: (device: Device, ctx) => {
+		const { releases } = device.apps[ctx.appUuid];
+		const [currentRelease] = Object.keys(releases).filter(
+			(u) => u !== ctx.releaseUuid,
+		);
+		const currentService = releases[currentRelease]?.services[ctx.serviceName];
+		return (
+			ctx.get(device) == null &&
+			currentService != null &&
+			isEqualConfig(currentService, ctx.target) &&
+			ctx.target.image === currentService.image
+		);
+	},
+	effect: (device: Device, ctx) => {
+		const { releases } = device.apps[ctx.appUuid];
+		const [currentRelease] = Object.keys(releases).filter(
+			(u) => u !== ctx.releaseUuid,
+		)!;
+
+		const { [ctx.serviceName]: service, ...currentServices } =
+			releases[currentRelease].services;
+
+		// Remove the service from the source release
+		// and move it to the target release
+		return ctx.set(
+			{
+				...device,
+				apps: {
+					...device.apps,
+					[ctx.appUuid]: {
+						...device.apps[ctx.appUuid],
+						releases: {
+							...device.apps[ctx.appUuid].releases,
+							[currentRelease]: {
+								...releases[currentRelease],
+								services: currentServices,
+							},
+						},
+					},
+				},
+			},
+			service,
+		);
+	},
+	action: async (device: Device, ctx) => {
+		const { releases } = device.apps[ctx.appUuid];
+		const [currentRelease] = Object.keys(releases).filter(
+			(u) => u !== ctx.releaseUuid,
+		)!;
+
+		const { [ctx.serviceName]: service, ...currentServices } =
+			releases[currentRelease].services;
+
+		// Rename the container
+		await docker.getContainer(service.containerId!).rename({
+			name: getContainerName(ctx),
+		});
+
+		// Remove the service from the source release
+		// and move it to the target release
+		return ctx.set(
+			{
+				...device,
+				apps: {
+					...device.apps,
+					[ctx.appUuid]: {
+						...device.apps[ctx.appUuid],
+						releases: {
+							...device.apps[ctx.appUuid].releases,
+							[currentRelease]: {
+								...releases[currentRelease],
+								services: currentServices,
+							},
+						},
+					},
+				},
+			},
+			service,
+		);
+	},
+	description: (ctx) =>
+		`migrate unchanged service '${ctx.serviceName}' of app '${ctx.appUuid} to release '${ctx.releaseUuid}' '`,
+});
+
+/**
  * Stop a service container
  *
  * This task is applicable to `update` operations, e.g when purposely stopping a service,
