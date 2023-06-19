@@ -1,4 +1,108 @@
 - commits:
+    - subject: Add some documentation for examples under tests/
+      hash: c24319e9d3d06fc2dd5e6379f729056032844723
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add release update to agent tests
+      hash: 7ce747fa3a38201393fa11b99885450e8de4d1e5
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Make Task context aware of the operation
+      hash: 115d61c90a6d6a0820d4e61f0ae1e63c5d86bb41
+      body: |
+        Tasks declared for a `delete` operation no longer receive a `target`
+        property, since it does not make sense with the way delete operation
+        works. This also makes it simpler to call delete tasks as less data
+        needs to be passed to the grounding function.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add `del()` function to context
+      hash: 579df5870471c3c932da1beacd6e987154da6276
+      body: |
+        This allows to remove the element referenced by the path.
+
+        It is useful for modifying the state of a deeply nested value.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add orchestrator example/integration tests
+      hash: 24dc1a524b7aaa8a6f6ddfb3c5ca3f095d126bfd
+      body: |
+        This will provide an example of release management using HTN
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Create utility tasks for operating on state
+      hash: 627cb8f11c54acbb2ec0356549a6ba3beb5fd3f2
+      body: |
+        This creates some utility tasks to perform some common operations in
+        the state of the system.
+
+        - A `NoOp` task can be used for debugging under some conditions
+        - A `Pure` task is a task that only performs transforms on the local
+          state without affecting the system (e.g. a cleanup)
+        - A `Constructor` task is used for initializing an element of the state
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve diff calculation to return all possible ops
+      hash: 3682d3c6e39f4c9b97fd287565ca609803af12fb
+      body: |
+        A change in a deep property of a state object implies
+        some operations on the object hierarchy, for instance a `delete` of a
+        key `/a/b/c/d`, implies an `update` operation on `/`, `/a`, `/a/b` and
+        `/a/b/c/d`, this means that any task defined for one of these paths is
+        applicable to the operation.
+
+        This change updates the `Diff` implementation so it generates all
+        possible combination of changes
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve Action/Method interfaces to be callable
+      hash: b005e933b5d1c079a2ef59e3ac330f43f326ecc2
+      body: |
+        This makes the interface more consistent with ActionTask/MethodTasks and
+        provides better usability for testing.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve task types for testing
+      hash: 1617fe2cf055eb516d71a6fb15d3c69e96061e0f
+      body: |
+        Task.of now returns the proper type (MethodTask or ActionTask) depending
+        on the input. This makes it easier to use these types as part of
+        testing. However, this comes with the tradeoff that tasks need to at
+        least defined an `effect` property or a `method` property to be type
+        checked correctly.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Split composer tests into multiple files
+      hash: e8dd4018394d67baf6bbbfb544d5ded4075aed65
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.9.0
+  title: ""
+  date: 2023-06-19T21:19:54.054Z
+- commits:
     - subject: Remove tests from build
       hash: 20ff3dbea6dc84d48289e3ad5f676d0f3e6d3f4a
       body: |
