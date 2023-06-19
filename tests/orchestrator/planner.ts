@@ -11,6 +11,7 @@ import {
 	stopService,
 	removeService,
 	removeRelease,
+	removeApp,
 } from './tasks';
 
 export const planner = Planner.of<Device>({
@@ -23,6 +24,7 @@ export const planner = Planner.of<Device>({
 		stopService,
 		removeService,
 		removeRelease,
+		removeApp,
 	],
 	opts: { trace: console.trace },
 });

@@ -183,15 +183,10 @@ describe('orchestrator/agent', () => {
 			.that.equals(true);
 
 		// Update to a new release
-		console.info('Uninstall release');
+		console.info('Uninstall app');
 		await agent.target({
 			apps: {
-				a0: {
-					name: 'test-app',
-					releases: {
-						r1: DELETED,
-					},
-				},
+				a0: DELETED,
 			},
 		});
 		expect(
@@ -199,7 +194,7 @@ describe('orchestrator/agent', () => {
 			'delete the release should succeed',
 		).to.deep.equal({ success: true });
 
-		expect(agent.state().apps.a0.releases).to.be.empty;
+		expect(agent.state().apps).to.be.empty;
 		await expect(docker.getContainer('r1_main').inspect()).to.be.rejected;
 	});
 });

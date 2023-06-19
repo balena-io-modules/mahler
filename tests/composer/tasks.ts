@@ -16,6 +16,15 @@ function isEqualConfig(s1: Service, s2: Service) {
 
 const docker = new Docker();
 
+/**
+ * Pull an image from the registry, this task is applicable to
+ * the creation of a service, as pulling an image is only needed
+ * in that case.
+ *
+ * Condition: the image is not already present in the device
+ * Effect: add the image to the list of images
+ * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
+ */
 export const fetch = Task.of({
 	op: 'create',
 	path: '/services/:serviceName',
@@ -58,6 +67,13 @@ export const fetch = Task.of({
 		`pull image '${service.target.image}' for service '${service.serviceName}'`,
 });
 
+/**
+ * Create a new service container from service data
+ *
+ * Condition: the service is not already present in the `services` object and the service image has already been downloaded
+ * Effect: add the service to the `services` object, with a `status` of `created`
+ * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
+ */
 export const install = Task.of({
 	op: 'create',
 	path: '/services/:name',
@@ -131,6 +147,13 @@ export const install = Task.of({
 	description: ({ name }) => `installing container for service '${name}'`,
 });
 
+/**
+ * Start a service container
+ *
+ * Condition: the service container has been created (it has a container id) and the container not running already.
+ * Effect: set the service status to `running`
+ * Action: start the container using the docker API
+ */
 export const start = Task.of({
 	path: '/services/:name',
 	condition: (app: App, service) =>
@@ -157,7 +180,15 @@ export const start = Task.of({
 	description: ({ name }) => `starting container for service '${name}'`,
 });
 
+/**
+ * Stop a service container
+ *
+ * Condition: the service exists (it has a container id), and the container is running.
+ * Effect: set the service status to `stopped`
+ * Action: stop the container using the docker API
+ */
 export const stop = Task.of({
+	op: '*',
 	path: '/services/:name',
 	condition: (app: App, service) =>
 		service.get(app)?.containerId != null &&
@@ -190,7 +221,15 @@ export const stop = Task.of({
 	description: ({ name }) => `stopping container for service '${name}'`,
 });
 
+/**
+ * Remove a service container
+ *
+ * Condition: the service exists (it has a container id), and the container is not running.
+ * Effect: remove the service from the app
+ * Action: remove the container using the docker API
+ */
 export const remove = Task.of({
+	op: '*',
 	path: '/services/:name',
 	condition: (app: App, service) =>
 		service.get(app)?.containerId != null &&

@@ -24,6 +24,10 @@ const docker = new Docker();
  * Pull an image from the registry, this task is applicable to
  * the creation of a service, as pulling an image is only needed
  * in that case.
+ *
+ * Condition: the image is not already present in the device
+ * Effect: add the image to the list of images
+ * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
  */
 export const fetch = Task.of({
 	op: 'create',
@@ -115,9 +119,13 @@ export const fetch = Task.of({
 		`pull image '${ctx.target.image}' for service '${ctx.serviceName}' of app '${ctx.appUuid}'`,
 });
 
-// This task has no effect on the system, it only
-// creates the app in the state so tasks that affect
-// releases can be chosen.
+/**
+ * Update the apps state with the new app data
+ *
+ * Condition: the app is not already present in the `apps` object
+ * Effect: add the app to the `apps` object, with an empty `releases` object
+ * Action: none, this does not have any effect on the system
+ */
 export const createApp = Constructor.of({
 	path: '/apps/:appUuid',
 	effect: (device: Device, ctx) =>
@@ -125,17 +133,26 @@ export const createApp = Constructor.of({
 	description: (ctx) => `prepare app '${ctx.target.name}'`,
 });
 
-// This task has no effect on the system, it only
-// creates the release in the state so tasks that affect
-// services can be chosen.
+/**
+ * Update the app state with the new release data
+ *
+ * Condition: the release is not already present in the `releases` object
+ * Effect: add the release to the `releases` object, with an empty `services` object
+ * Action: none, this does not have any effect on the system
+ */
 export const createRelease = Constructor.of({
 	path: '/apps/:appUuid/releases/:releaseUuid',
 	effect: (device: Device, ctx) => ctx.set(device, { services: {} }),
 	description: (ctx) => `prepare release '${ctx.releaseUuid}'`,
 });
 
-// This task installs a service, that is, it creates the container
-// if it does not exist yet
+/**
+ * Create a new service container from service data
+ *
+ * Condition: the service is not already present in the `services` object and the service image has already been downloaded
+ * Effect: add the service to the `services` object, with a `status` of `created`
+ * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
+ */
 export const installService = Task.of({
 	op: 'create',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
@@ -222,8 +239,14 @@ export const installService = Task.of({
 		`create container for service '${ctx.serviceName}' of app '${ctx.appUuid}' and release '${ctx.releaseUuid}'`,
 });
 
-// Start service task, this will start the container
-// if it is not running yet
+/**
+ * Start a service container
+ *
+ * Condition: the service container has been created (it has a container id), the container not running, the container configuration
+ *            matches the target configuration, and there is no other service with the same name from another release running
+ * Effect: set the service status to `running`
+ * Action: start the container using the docker API
+ */
 export const startService = Task.of({
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	// Because we are dealing with releases, this has a more
@@ -275,6 +298,18 @@ export const startService = Task.of({
 		`start container for service '${ctx.serviceName}' of app '${ctx.appUuid}' and release '${ctx.releaseUuid}'`,
 });
 
+/**
+ * Stop a service container
+ *
+ * This task is applicable to `update` operations, e.g when purposely stopping a service,
+ * and `delete` operations, e.g. when uninstalling a release
+ *
+ * Condition: the service exists (it has a container id), the container is running, and
+ *            if there are other services with the same name from other releases, their containers
+ *            have already been created
+ * Effect: set the service status to `stopped`
+ * Action: stop the container using the docker API
+ */
 export const stopService = Task.of({
 	// Stop is applicable to a service delete or update
 	op: '*',
@@ -321,6 +356,16 @@ export const stopService = Task.of({
 		`stop container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
 });
 
+/**
+ * Remove a service container
+ *
+ * This task is applicable to `update` operations, e.g. when recreating a container or `delete`
+ * operations, e.g. when removing a release
+ *
+ * Condition: the service exists (it has a container id), the container is not running
+ * Effect: remove the service from the device state
+ * Action: remove the container using the docker API
+ */
 export const removeService = Task.of({
 	op: '*',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
@@ -338,6 +383,15 @@ export const removeService = Task.of({
 		`remove container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
 });
 
+/**
+ * Remove a release
+ *
+ * This only removes the release from the state object and has no effect in the system
+ *
+ * Condition: the release has not been deleted yet and the release has no services
+ * Effect: remove the release from the device state
+ * Action: none
+ */
 export const removeRelease = Pure.of({
 	op: 'delete',
 	path: '/apps/:appUuid/releases/:releaseUuid',
@@ -346,4 +400,23 @@ export const removeRelease = Pure.of({
 		Object.keys(ctx.get(device).services).length === 0,
 	effect: (device: Device, ctx) => ctx.del(device),
 	description: (ctx) => `remove release '${ctx.releaseUuid}'`,
+});
+
+/**
+ * Remove an app
+ *
+ * This only removes the app from the state object and has no effect in the system
+ *
+ * Condition: the app has not been deleted yet and all releases have been uninstalled
+ * Effect: remove the app from the device state
+ * Action: none
+ */
+export const removeApp = Pure.of({
+	op: 'delete',
+	path: '/apps/:appUuid',
+	condition: (device: Device, ctx) =>
+		ctx.get(device) != null &&
+		Object.keys(ctx.get(device).releases).length === 0,
+	effect: (device: Device, ctx) => ctx.del(device),
+	description: (ctx) => `remove app '${ctx.appUuid}'`,
 });
