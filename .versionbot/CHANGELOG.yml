@@ -1,4 +1,18 @@
 - commits:
+    - subject: Add service migration task to orchestrator example
+      hash: c493fb9f1bee1d7cd50874442f1b55d1345fe943
+      body: |
+        This adds a new task to handle the case where a service has not changed
+        between the current and target release. In this case the orchestrator
+        should just rename the container and do nothing else
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.9.2
+  title: ""
+  date: 2023-06-19T23:02:50.035Z
+- commits:
     - subject: Add usage information to README files
       hash: fc4f1d0b184200bff9305a7f0cf5d7a8f971c45c
       body: ""
