@@ -70,7 +70,7 @@ function expandMethod<TState = any>(
 	// should we stop the operation entirely to avoid testing
 	// a plan that is not valid?
 	if (Method.is(instruction)) {
-		return instruction.expand(state).flatMap((i) => expandMethod(state, i));
+		return instruction(state).flatMap((i) => expandMethod(state, i));
 	}
 
 	return [instruction];
@@ -117,6 +117,11 @@ function findPlan<TState = any>({
 	for (const operation of ops) {
 		// Find the tasks that are applicable to the operations
 		const applicable = tasks.filter((t) => Task.isApplicable(t, operation));
+		trace({
+			depth: stats.depth,
+			operation,
+			status: 'looking for applicable tasks',
+		});
 		for (const task of applicable) {
 			stats.iterations++;
 
@@ -128,7 +133,7 @@ function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Context.of<TState>(
+			const ctx = Context.of<TState, any, any>(
 				task.path,
 				path,
 				Pointer.of(diff.target, path)!,
@@ -136,7 +141,7 @@ function findPlan<TState = any>({
 
 			const description =
 				typeof task.description === 'function'
-					? task.description(ctx)
+					? task.description(ctx as any)
 					: task.description;
 
 			// We check early if the action already exists on the path to
@@ -155,7 +160,7 @@ function findPlan<TState = any>({
 				task: description,
 				status: 'checking condition',
 			});
-			if (!task.condition(current, ctx)) {
+			if (!task.condition(current, ctx as any)) {
 				trace({
 					depth: stats.depth,
 					operation,
@@ -207,6 +212,8 @@ function findPlan<TState = any>({
 					// Prevent loops by avoiding adding the same instruction over
 					// and over to the plane
 					if (initial.find((a) => Action.equals(a, action))) {
+						// TODO: perhaps add something to the stats about avoided
+						// loops?
 						trace({
 							depth: stats.depth,
 							operation,
@@ -268,6 +275,14 @@ function findPlan<TState = any>({
 					return { ...res, plan: [action, ...res.plan] };
 				}
 			}
+		}
+
+		if (applicable.length === 0) {
+			trace({
+				depth: stats.depth,
+				operation,
+				status: 'no applicable task found',
+			});
 		}
 	}
 

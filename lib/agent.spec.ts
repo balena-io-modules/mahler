@@ -1,6 +1,6 @@
 import { expect, console } from '~/tests';
 import { Agent } from './agent';
-import { Task, NoOp } from './task';
+import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
 
 import { setTimeout } from 'timers/promises';
@@ -78,7 +78,7 @@ describe('Agent', () => {
 				...state,
 				roomTemp: target.roomTemp,
 			}),
-			action: NoOp,
+			action: NoAction,
 			description: 'wait for temperature to reach target',
 		});
 

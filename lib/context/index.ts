@@ -2,7 +2,9 @@ import * as Optic from 'optics-ts';
 import assert from '../assert';
 import { Path } from '../path';
 
-import { ContextWithSlash, Identity } from './types';
+import { ContextWithSlash, Identity, TaskOp } from './types';
+
+export { TaskOp } from './types';
 
 /**
  * A Context type provides information about a desired change on a path
@@ -21,14 +23,16 @@ import { ContextWithSlash, Identity } from './types';
  *  set(s, get(s)) = s
  *  set(set(s, a), a) = set(s,a)
  */
-export type Context<S, P extends Path> = Identity<
-	ContextWithSlash<S, S, P, {}>
+export type Context<S, TPath extends Path, TOp extends TaskOp> = Identity<
+	ContextWithSlash<S, S, TPath, {}, TOp>
 >;
 
 // Redeclare the type for exporting
-export type ContextAsArgs<TState = any, TPath extends Path = '/'> = Identity<
-	Omit<Context<TState, TPath>, 'get' | 'set'>
->;
+export type ContextAsArgs<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+> = Identity<Omit<Context<TState, TPath, TOp>, 'get' | 'set' | 'del' | 'op'>>;
 
 function isArrayIndex(x: unknown): x is number {
 	return (
@@ -68,33 +72,73 @@ function params(template: Path, path: Path) {
 	return args;
 }
 
-function of<TState = any, TPath extends Path = '/'>(
+function of<TState, TPath extends Path, TOp extends 'update' | 'create'>(
 	template: TPath,
 	path: Path,
-	target: Context<TState, TPath>['target'],
-): Context<TState, TPath> {
+	target: Context<TState, TPath, TOp>['target'],
+): Context<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends 'delete' | '*' = 'delete',
+>(template: TPath, path: Path): Context<TState, TPath, TOp>;
+function of<
+	TState,
+	TPath extends Path,
+	TOp extends TaskOp,
+	TTState = TOp extends 'update' | 'create'
+		? Context<TState, TPath, TOp>['target']
+		: never,
+>(template: TPath, path: Path, target?: TTState): Context<TState, TPath, TOp> {
 	const parts = Path.elems(path);
 
 	// Get route parameters
 	const args = params(template, path);
 
+	// Save the last element of the path so we can delete it
+	const last = parts.pop();
+
 	// Create a lens for the path
 	// use any since, because of the generics, the types are impossible
 	// to get right. However, since we know that the path exists, we won't have
 	// any undefined values
-	const lens = parts.reduce(
+	const parent = parts.reduce(
 		(l: any, p) => (isArrayIndex(p) ? l.nth(+p) : l.prop(p)),
 		Optic.optic<TState>(),
 	);
 
+	const lens =
+		last != null
+			? isArrayIndex(last)
+				? parent.nth(+last)
+				: parent.prop(last)
+			: parent;
+
 	return {
 		...args,
-		target,
+		...(target && { target }),
 		get(s: TState) {
 			return Optic.get(lens)(s);
 		},
-		set(s: TState, a: Context<TState, TPath>['target']) {
+		set(s: TState, a: TTState) {
 			return Optic.set(lens)(a)(s);
+		},
+		del(s: TState): TState {
+			let ps: any = Optic.get(parent)(s);
+			if (last != null) {
+				// Remove the element from the parent
+				// state if it exists
+				if (isArrayIndex(last)) {
+					ps = ps.filter((_: any, i: number) => i !== +last);
+				} else {
+					const { [last]: _, ...rest } = ps;
+					ps = rest;
+				}
+
+				// Return the modified object as the new state
+				return Optic.set(parent)(ps)(s) as any;
+			}
+			return s;
 		},
 		// We are not going to bother validating types here
 	} as any;

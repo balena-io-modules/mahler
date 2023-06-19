@@ -27,6 +27,7 @@ describe('Planner', () => {
 			};
 
 			const take = Task.of({
+				op: 'create',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) && s.hand == null,

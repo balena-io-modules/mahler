@@ -5,10 +5,11 @@ describe('Context', () => {
 	it('calculates a simple context', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 
-		const c = Context.of<State, '/a/b/:value'>('/a/b/:value', '/a/b/c', [
-			'one',
-			'two',
-		]);
+		const c = Context.of<State, '/a/b/:value', 'update'>(
+			'/a/b/:value',
+			'/a/b/c',
+			['one', 'two'],
+		);
 
 		expect(c).to.deep.include({
 			target: ['one', 'two'],
@@ -32,7 +33,7 @@ describe('Context', () => {
 	it('calculates a context on a dynamic object', () => {
 		type State = { objects: { [id: string]: { value: number } } };
 
-		const ctx = Context.of<State, '/objects/:id'>(
+		const ctx = Context.of<State, '/objects/:id', 'update'>(
 			'/objects/:id',
 			'/objects/second',
 			{ value: 123 },
@@ -53,7 +54,7 @@ describe('Context', () => {
 	it('calculates a context with arrays', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 
-		const c = Context.of<State, '/a/b/c/:pos'>(
+		const c = Context.of<State, '/a/b/c/:pos', 'update'>(
 			'/a/b/c/:pos',
 			'/a/b/c/0',
 			'one',
@@ -79,7 +80,7 @@ describe('Context', () => {
 	it('calculates a context nested in an array', () => {
 		type State = { a: { b: { c: Array<{ e: string }> }; d: number } };
 
-		const c = Context.of<State, '/a/b/c/:pos/e'>(
+		const c = Context.of<State, '/a/b/c/:pos/e', 'update'>(
 			'/a/b/c/:pos/e',
 			'/a/b/c/0/e',
 			'one',
@@ -103,6 +104,11 @@ describe('Context', () => {
 		// The original object has not changed
 		expect(obj).to.deep.equal({
 			a: { b: { c: [{ e: 'zero' }, { e: 'two' }] }, d: 123 },
+		});
+
+		// Allows to delete the value
+		expect(c.del({ a: { b: { c: [{ e: 'zero' }] }, d: 123 } })).to.deep.equal({
+			a: { b: { c: [{}] }, d: 123 },
 		});
 	});
 });

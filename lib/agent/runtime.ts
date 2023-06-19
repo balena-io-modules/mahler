@@ -102,15 +102,19 @@ export class Runtime<TState> {
 						return resolve({ success: true });
 					}
 
+					logger.debug(
+						'plan found, will execute the following actions',
+						actions.map((a) => a.description),
+					);
+
 					for (const action of actions) {
 						if (this.stopped) {
 							logger.warn('agent stop requested during plan execution');
 							throw new Cancelled();
 						}
 
-						logger.info(`${action.description}: checking condition`);
 						if (!action.condition(this.internal)) {
-							logger.info(`${action.description}: condition not met`);
+							logger.warn(`${action.description}: condition not met`);
 							break;
 						}
 
@@ -118,8 +122,8 @@ export class Runtime<TState> {
 						// coming from sensors?
 						// TODO: maybe we can have some sort of subscription mechanism
 						// to notify state changes?
-						logger.info(`${action.description}: running`);
-						this.internal = await action.run(this.internal).catch((e) => {
+						logger.info(`${action.description}: running ...`);
+						this.internal = await action(this.internal).catch((e) => {
 							throw new ActionRunFailed(action, e);
 						});
 						logger.info(`${action.description}: ready`);
