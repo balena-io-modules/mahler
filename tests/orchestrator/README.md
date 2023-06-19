@@ -4,6 +4,21 @@ These tests provide a simple example of how to implement a service orchestrator 
 
 The orchestrator can control the state of multiple apps in a device, an App should be running a single release at the time, and a release is composed by services. The orchestrator uses the Docker API to manage service state and perform updates to releases.
 
+## Usage
+
+To run the example, use the following
+
+```
+# Install dependencies
+npm install logging
+
+# Enable logging (options: trace,debug,info,warn,error)
+export DEBUG=mahler:error,mahler:warn,mahler:info
+
+# Run tests
+npm run test:integration -- -g "orchestrator/*"
+```
+
 ## Included files
 
 - [state.ts](./state.ts) type definitions used by tasks. In particular it defines the `Device` state which is the top level object that tasks, planner and agent interact with.
