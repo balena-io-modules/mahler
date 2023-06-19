@@ -419,4 +419,17 @@ await WifiConnect.target({
 
 ## More examples
 
-You can see more examples in the [planner unit tests](lib/planner.spec.ts), the [agent unit tests](lib/agent.spec.ts) or the integration tests in the `tests` folder.
+You can see more examples in the [planner unit tests](lib/planner.spec.ts), the [agent unit tests](lib/agent.spec.ts) or the [service composition](./tests/composer/) and [service orchestration](./tests/orchestrator/) tests under the [tests](./tests) folder.
+
+To run the examples, use the following
+
+```
+# Install dependencies
+npm install logging
+
+# Enable logging (options: trace,debug,info,warn,error)
+export DEBUG=mahler:error,mahler:warn,mahler:info
+
+# Run integration tests
+npm run test:integration
+```

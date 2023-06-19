@@ -5,6 +5,21 @@ These tests provide a simple example of how to implement a service composition a
 The composer uses the docker API to pull service images and create/destroy containers depending on the target given
 to the agent.
 
+## Usage
+
+To run the example, use the following
+
+```
+# Install dependencies
+npm install logging
+
+# Enable logging (options: trace,debug,info,warn,error)
+export DEBUG=mahler:error,mahler:warn,mahler:info
+
+# Run tests
+npm run test:integration -- -g "composer/*"
+```
+
 ## Included files
 
 - [state.ts](./state.ts) type definitions used by tasks. In particular it defines the `App` state which is the top level object that tasks, planner and agent interact with.
