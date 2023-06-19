@@ -1,4 +1,15 @@
 - commits:
+    - subject: Add usage information to README files
+      hash: fc4f1d0b184200bff9305a7f0cf5d7a8f971c45c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.9.1
+  title: ""
+  date: 2023-06-19T22:00:25.024Z
+- commits:
     - subject: Add some documentation for examples under tests/
       hash: c24319e9d3d06fc2dd5e6379f729056032844723
       body: ""
