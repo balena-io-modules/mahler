@@ -323,4 +323,70 @@ describe('orchestrator/planning', () => {
 			expect.fail('Plan not found');
 		}
 	});
+
+	it('migrates unchanged services between releases', () => {
+		const device = {
+			name: 'test',
+			uuid: 'd0',
+			apps: {
+				a0: {
+					name: 'test-app',
+					releases: {
+						r0: {
+							services: {
+								main: {
+									image: 'alpine:latest',
+									command: ['sleep', 'infinity'],
+									status: 'running' as ServiceStatus,
+									containerId: 'c0',
+								},
+							},
+						},
+					},
+				},
+			},
+			keys: {},
+			images: [{ name: 'a0_main:r0' }],
+		};
+
+		const result = planner.find(device, {
+			apps: {
+				a0: {
+					name: 'test-app',
+					releases: {
+						r0: DELETED,
+						r1: {
+							services: {
+								// main service has not changed
+								main: {
+									image: 'alpine:latest',
+									command: ['sleep', 'infinity'],
+									status: 'running',
+								},
+								other: {
+									image: 'alpine:latest',
+									command: ['sleep', '30'],
+									status: 'running',
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (result.success) {
+			expect(result.plan.map((a) => a.description)).to.deep.equal([
+				"prepare release 'r1'",
+				"pull image 'alpine:latest' for service 'main' of app 'a0'",
+				"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
+				"remove release 'r0'",
+				"pull image 'alpine:latest' for service 'other' of app 'a0'",
+				"create container for service 'other' of app 'a0' and release 'r1'",
+				"start container for service 'other' of app 'a0' and release 'r1'",
+			]);
+		} else {
+			expect.fail('Plan not found');
+		}
+	});
 });
