@@ -1,10 +1,10 @@
-import { Path } from './path';
-import { Pointer } from './pointer';
-import { Context } from './context';
-import { Task, Action, Instruction, Method } from './task';
-import { Target } from './target';
-import { Diff } from './diff';
-import { assert } from './assert';
+import { Path } from '../path';
+import { Pointer } from '../pointer';
+import { Context } from '../context';
+import { Task, Action, Instruction, Method } from '../task';
+import { Target } from '../target';
+import { Diff } from '../diff';
+import { assert } from '../assert';
 
 interface PlannerStats {
 	/**
