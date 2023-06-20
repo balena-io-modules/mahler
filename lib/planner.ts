@@ -45,23 +45,6 @@ export interface PlannerOpts {
 	trace: (...args: any[]) => void;
 }
 
-function extractPath(t: Path, p: Path) {
-	const tParts = Path.elems(t);
-	const pParts = Path.elems(p);
-
-	return (
-		'/' +
-		tParts
-			.map((e, i) => {
-				if (e.startsWith(':')) {
-					return pParts[i];
-				}
-				return e;
-			})
-			.join('/')
-	);
-}
-
 function expandMethod<TState = any>(
 	state: TState,
 	instruction: Instruction<TState>,
@@ -127,7 +110,7 @@ function findPlan<TState = any>({
 
 			// Extract the path from the task template and the
 			// operation
-			const path = extractPath(task.path, operation.path);
+			const path: Path = operation.path;
 
 			// Get the context expected by the task
 			// we get the target value for the context from the pointer
