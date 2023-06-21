@@ -14,7 +14,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -63,7 +63,7 @@ describe('orchestrator/planning', () => {
 			images: [],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -118,7 +118,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -162,7 +162,7 @@ describe('orchestrator/planning', () => {
 			images: [],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			name: 'test',
 			uuid: 'd0',
 			apps: {
@@ -222,7 +222,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			name: 'test',
 			uuid: 'd0',
 			apps: {
@@ -281,7 +281,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -349,7 +349,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		};
 
-		const result = planner.find(device, {
+		const result = planner.findPlan(device, {
 			apps: {
 				a0: {
 					name: 'test-app',

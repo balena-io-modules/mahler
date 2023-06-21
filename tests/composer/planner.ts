@@ -6,5 +6,5 @@ import { fetch, install, remove, start, stop } from './tasks';
 
 export const planner = Planner.of<App>({
 	tasks: [fetch, install, start, stop, remove],
-	opts: { trace: console.trace },
+	config: { trace: console.trace },
 });

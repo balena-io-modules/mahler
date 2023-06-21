@@ -87,7 +87,7 @@ export class Runtime<TState> {
 						tries,
 						status: 'finding plan to target',
 					});
-					const result = this.planner.find(this.internal, this.target);
+					const result = this.planner.findPlan(this.internal, this.target);
 					logger.debug('planning stats', JSON.stringify(result.stats));
 
 					if (!result.success) {

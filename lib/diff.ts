@@ -4,7 +4,7 @@ import { Path } from './path';
 import { Target, DELETED } from './target';
 
 /**
- * A diff is a function that allows to a list of pending operations and a
+ * A diff is a function that allows to find a list of pending operations to a
  * target.
  */
 export interface Diff<S> {

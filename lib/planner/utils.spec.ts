@@ -1,12 +1,13 @@
 import { expect } from '~/tests';
-import { Task, NoEffect } from './task';
-import { Operation } from './operation';
+import { isTaskApplicable } from './utils';
+import { Task, NoEffect } from '../task';
+import { Operation } from '../operation';
 
-describe('Task', () => {
-	describe('isApplicable', () => {
-		it('accept matching paths', () => {
+describe('planner/utils', () => {
+	describe('isTaskApplicable', () => {
+		it('accept matching paths between a Task and an Operation', () => {
 			expect(
-				Task.isApplicable(
+				isTaskApplicable(
 					Task.of({ op: 'delete', path: '/a/b/c', effect: NoEffect }),
 					{
 						op: 'delete',
@@ -15,7 +16,7 @@ describe('Task', () => {
 				),
 			).to.be.true;
 			expect(
-				Task.isApplicable(
+				isTaskApplicable(
 					Task.of({ op: 'delete', path: '/a/:arg/c', effect: NoEffect }),
 					{
 						op: 'delete',
@@ -27,7 +28,7 @@ describe('Task', () => {
 
 		it('returns false if the operation does not match', () => {
 			expect(
-				Task.isApplicable(
+				isTaskApplicable(
 					Task.of({ op: 'create', path: '/a/b/c', effect: NoEffect }),
 					{
 						op: 'delete',
@@ -36,7 +37,7 @@ describe('Task', () => {
 				),
 			).to.be.false;
 			expect(
-				Task.isApplicable(
+				isTaskApplicable(
 					Task.of({ op: 'delete', path: '/a/:arg/c', effect: NoEffect }),
 					Operation.of<{ a: { b: { c: string } } }, '/a/b/c'>({
 						op: 'create',
@@ -47,33 +48,33 @@ describe('Task', () => {
 			).to.be.false;
 		});
 
-		it('reject paths referencing a different part of the object', () => {
+		it('reject paths referencing a different part of the state object', () => {
 			expect(
-				Task.isApplicable(Task.of({ path: '/a/b/c', effect: NoEffect }), {
+				isTaskApplicable(Task.of({ path: '/a/b/c', effect: NoEffect }), {
 					op: 'delete',
 					path: '/a/b',
 				}),
 			).to.be.false;
 			expect(
-				Task.isApplicable(Task.of({ path: '/a/:arg/c', effect: NoEffect }), {
+				isTaskApplicable(Task.of({ path: '/a/:arg/c', effect: NoEffect }), {
 					op: 'delete',
 					path: '/d/b/c',
 				}),
 			).to.be.false;
 			expect(
-				Task.isApplicable(Task.of({ path: '/a/:arg', effect: NoEffect }), {
+				isTaskApplicable(Task.of({ path: '/a/:arg', effect: NoEffect }), {
 					op: 'delete',
 					path: '/a',
 				}),
 			).to.be.false;
 			expect(
-				Task.isApplicable(Task.of({ path: '/:arg', method: () => [] }), {
+				isTaskApplicable(Task.of({ path: '/:arg', method: () => [] }), {
 					op: 'delete',
 					path: '/',
 				}),
 			).to.be.false;
 			expect(
-				Task.isApplicable(Task.of({ path: '/a', effect: NoEffect }), {
+				isTaskApplicable(Task.of({ path: '/a', effect: NoEffect }), {
 					op: 'delete',
 					path: '/b/c',
 				}),

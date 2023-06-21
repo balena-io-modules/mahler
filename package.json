@@ -34,7 +34,7 @@
     "build": "npm run clean && tsc --project tsconfig.release.json",
     "lint": "balena-lint --typescript lib tests",
     "lint-fix": "balena-lint --typescript --fix lib tests",
-    "test:node": "mocha --reporter spec lib/**/*.spec.ts --config tests/.mocharc.js",
+    "test:node": "mocha --reporter spec lib/*.spec.ts lib/**/*.spec.ts --config tests/.mocharc.js",
     "test:integration": "mocha --reporter spec tests/**/*.spec.ts --config tests/.mocharc.js",
     "test": "npm run build && npm run lint && npm run test:node",
     "test:compose": "docker compose -f docker-compose.yml -f docker-compose.test.yml up --build --remove-orphans --exit-code-from=sut ; npm run compose:down",
