@@ -1,4 +1,32 @@
 - commits:
+    - subject: Add orchestrator test using redirect task
+      hash: ece0c364d628a28085f7891c5f03e68bef3d390f
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add support for redirect tasks
+      hash: 2046945f24eb2946e10ef55054724379a0ba7568
+      body: >
+        A redirect task allows to define one or more targets for the planner to
+        seek when
+
+        receiving a target. For instance, if the agent is a robot that
+
+        needs to get from A -> B but there is an obstacle in the path, then the
+
+        task could identify the obstacle and tell the planner to go from A -> C
+
+        and then from C -> B in order to reach the target.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.10.0
+  title: ""
+  date: 2023-06-22T21:43:21.578Z
+- commits:
     - subject: Refactor planner module
       hash: 80cc80867ba124954ae5756f4dfe14d38820c2ab
       body: |
