@@ -3,6 +3,7 @@ import { randomUUID, createHash } from 'crypto';
 import { Path } from './path';
 import { Context, ContextAsArgs, TaskOp } from './context';
 import { Operation } from './operation';
+import { Target } from './target';
 import assert from './assert';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
@@ -69,6 +70,42 @@ export interface ActionTask<
 	 * MethodTask --- ground --> Method
 	 */
 	(ctx: ContextAsArgs<TState, TPath, TOp>): Action<TState>;
+}
+
+/**
+ * A redirect task tells the planner to go to an alternative
+ * target before moving to the final target.
+ *
+ * For instance, if the agent is a robot that
+ * needs to get from A -> B but there is an obstacle in the path, then the
+ * task could identify the obstacle and tell the planner to go from A -> C
+ * and then from C -> B in order to reach the target.
+ */
+export interface RedirectTask<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+> extends TaskSpec<TState, TPath, TOp> {
+	/**
+	 * The actual action the task performs
+	 */
+	redirect(
+		s: TState,
+		c: Context<TState, TPath, TOp>,
+	): Target<TState> | Array<Target<TState>>;
+
+	/**
+	 * The task function grounds the task
+	 *
+	 * Grounding the task converts the specification into an instruction, that is,
+	 * something that can be evaluated by the planner. It does this by
+	 * contextualizing the task for a specific target.
+	 *
+	 * ActionTask --- ground --> Action
+	 * MethodTask --- ground --> Method
+	 * TargetTask --- ground --> Target
+	 */
+	(ctx: ContextAsArgs<TState, TPath, TOp>): Redirect<TState>;
 }
 
 // A method definition
@@ -140,7 +177,19 @@ export interface Method<TState = any> extends Instance<TState> {
 	(s: TState): Array<Instruction<TState>>;
 }
 
-export type Instruction<TState = any> = Action<TState> | Method<TState>;
+export interface Redirect<TState = any> extends Instance<TState> {
+	readonly _tag: 'redirect';
+	/**
+	 * The method to be called when the task is executed
+	 * if the method returns an empty list, this means the procedure is not applicable
+	 */
+	(s: TState): Target<TState> | Array<Target<TState>>;
+}
+
+export type Instruction<TState = any> =
+	| Action<TState>
+	| Method<TState>
+	| Redirect<TState>;
 
 function ground<
 	TState = any,
@@ -194,6 +243,15 @@ function ground<
 		return Object.assign((s: TState) => task.method(s, context), {
 			id,
 			_tag: 'method' as const,
+			description,
+			condition: (s: TState) => task.condition(s, context),
+		});
+	}
+
+	if (isRedirectTask(task)) {
+		return Object.assign((s: TState) => task.redirect(s, context), {
+			id,
+			_tag: 'redirect' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
 		});
@@ -262,13 +320,43 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 }
 
 /**
+ * Check if a task is a redirect
+ */
+function isRedirectTask<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+>(t: Task<TState, TPath, TOp>): t is RedirectTask<TState, TPath, TOp> {
+	return (
+		(t as any).redirect != null && typeof (t as any).redirect === 'function'
+	);
+}
+
+/**
+ * Check if an instruction is a method
+ */
+function isRedirect<TState = any>(
+	t: Instruction<TState>,
+): t is Redirect<TState> {
+	return (
+		(t as any).condition != null &&
+		typeof (t as any).condition === 'function' &&
+		typeof t === 'function' &&
+		(t as any)._tag === 'redirect'
+	);
+}
+
+/**
  * A task is base unit of knowledge of an autonomous agent.
  */
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
+> =
+	| ActionTask<TState, TPath, TOp>
+	| MethodTask<TState, TPath, TOp>
+	| RedirectTask<TState, TPath, TOp>;
 
 type MethodTaskProps<
 	TState = any,
@@ -283,6 +371,13 @@ type ActionTaskProps<
 	TOp extends TaskOp = 'update',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
+
+type RedirectTaskProps<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'target'>> &
+	Pick<RedirectTask<TState, TPath, TOp>, 'redirect'>;
 
 /**
  * Create a task
@@ -304,10 +399,16 @@ function of<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
+>(t: RedirectTaskProps<TState, TPath, TOp>): RedirectTask<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
 >(
 	task:
 		| ActionTaskProps<TState, TPath, TOp>
-		| MethodTaskProps<TState, TPath, TOp>,
+		| MethodTaskProps<TState, TPath, TOp>
+		| RedirectTaskProps<TState, TPath, TOp>,
 ) {
 	const { path = '/', op = 'update', id = randomUUID() } = task;
 
@@ -324,7 +425,8 @@ function of<
 			path,
 			op,
 			condition: () => true,
-			...(typeof (task as any).method === 'function'
+			...(typeof (task as any).method === 'function' ||
+			typeof (task as any).redirect === 'function'
 				? {}
 				: {
 						action: NotImplemented,
@@ -380,6 +482,7 @@ export const Task = {
 	of,
 	isMethod: isMethodTask,
 	isAction: isActionTask,
+	isRedirect: isRedirectTask,
 	isApplicable,
 };
 
@@ -390,6 +493,11 @@ export const Method = {
 
 export const Action = {
 	is: isAction,
+	equals: isEqual,
+};
+
+export const Redirect = {
+	is: isRedirect,
 	equals: isEqual,
 };
 

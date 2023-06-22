@@ -33,12 +33,12 @@ function of<TState = any>({
 		taskIds.add(t.id);
 	});
 
-	// Sort the tasks putting methods first
+	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
-		if (Task.isMethod(a) && Task.isAction(b)) {
+		if ((Task.isMethod(a) || Task.isRedirect(a)) && Task.isAction(b)) {
 			return -1;
 		}
-		if (Task.isAction(a) && Task.isMethod(b)) {
+		if (Task.isAction(a) && (Task.isMethod(b) || Task.isRedirect(b))) {
 			return 1;
 		}
 		return 0;
