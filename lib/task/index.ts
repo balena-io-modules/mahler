@@ -1,10 +1,10 @@
-import { randomUUID, createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
-import { Path } from './path';
-import { Context, ContextAsArgs, TaskOp } from './context';
-import { Operation } from './operation';
-import { Target } from './target';
-import assert from './assert';
+import assert from '../assert';
+import { Context, ContextAsArgs, TaskOp } from '../context';
+import { Operation } from '../operation';
+import { Path } from '../path';
+import { Target } from '../target';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 export const NoAction = <T>(s: T) => Promise.resolve(s);
