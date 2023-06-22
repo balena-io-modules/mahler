@@ -27,7 +27,6 @@ describe('Planner', () => {
 			};
 
 			const take = Task.of({
-				op: 'create',
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) && s.hand == null,
@@ -109,10 +108,10 @@ describe('Planner', () => {
 
 			const planner = Planner.of<State>({
 				tasks: [take, put, move],
-				opts: { trace: console.trace },
+				config: { trace: console.trace },
 			});
 
-			const result = planner.find(
+			const result = planner.findPlan(
 				{
 					blocks: { a: 'table', b: 'a', c: 'b' },
 				},
@@ -308,10 +307,10 @@ describe('Planner', () => {
 
 			const planner = Planner.of<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
-				opts: { trace: console.trace },
+				config: { trace: console.trace },
 			});
 
-			const result = planner.find(
+			const result = planner.findPlan(
 				{
 					blocks: { a: 'table', b: 'a', c: 'b' },
 				},

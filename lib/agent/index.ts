@@ -57,7 +57,7 @@ function of<TState>({
 	opts: userOpts = {},
 	planner = Planner.of({
 		tasks,
-		opts: { trace: userOpts.logger?.trace ?? NullLogger.trace },
+		config: { trace: userOpts.logger?.trace ?? NullLogger.trace },
 	}),
 }: {
 	initial: TState;

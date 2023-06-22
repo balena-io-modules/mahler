@@ -32,5 +32,5 @@ export const planner = Planner.of<Device>({
 		removeRelease,
 		removeApp,
 	],
-	opts: { trace: console.trace },
+	config: { trace: console.trace },
 });

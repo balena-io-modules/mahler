@@ -11,7 +11,7 @@ describe('composer/planning', () => {
 			images: [],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					image: 'alpine:latest',
@@ -39,7 +39,7 @@ describe('composer/planning', () => {
 			images: [{ name: 'alpine:latest', imageId: '123' }],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					status: 'running',
@@ -73,7 +73,7 @@ describe('composer/planning', () => {
 			images: [{ name: 'alpine:latest', imageId: '123' }],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					status: 'stopped',
@@ -97,7 +97,7 @@ describe('composer/planning', () => {
 			images: [],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					status: 'stopped',
@@ -134,7 +134,7 @@ describe('composer/planning', () => {
 			images: [{ name: 'alpine:3.13', imageId: '123' }],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					status: 'running',
@@ -170,7 +170,7 @@ describe('composer/planning', () => {
 			images: [{ name: 'alpine:3.13', imageId: '123' }],
 		};
 
-		const result = planner.find(app, {
+		const result = planner.findPlan(app, {
 			services: {
 				main: {
 					status: 'running',
@@ -206,7 +206,7 @@ it('knows to recreate service if config has changed', () => {
 		images: [{ name: 'alpine:3.13', imageId: '123' }],
 	};
 
-	const result = planner.find(app, {
+	const result = planner.findPlan(app, {
 		services: {
 			main: {
 				status: 'running',
