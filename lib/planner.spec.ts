@@ -249,7 +249,8 @@ describe('Planner', () => {
 					}
 					return [];
 				},
-				description: (location) => `put block ${location.block}`,
+				description: (location) =>
+					`put block ${location.block} on ${location.target}`,
 			});
 
 			const allClearBlocks = (blocks: State['blocks']) => {
@@ -301,8 +302,7 @@ describe('Planner', () => {
 					// The method is not applicable here
 					return [];
 				},
-				description:
-					'find a block that can be moved to the final location or to the table',
+				description: `find a block that can be moved to the final location or to the table`,
 			});
 
 			const planner = Planner.of<State>({
@@ -328,6 +328,121 @@ describe('Planner', () => {
 				]);
 			} else {
 				expect.fail('Plan not found');
+			}
+		});
+
+		it('block stacking problem: using sub-targets', () => {
+			type Table = 'table';
+			type Hand = 'hand';
+			type Block = 'a' | 'b' | 'c';
+			type Location = Block | Table | Hand;
+			type State = {
+				blocks: { [block in Block]: Location };
+				hand?: Block | null;
+			};
+
+			const isBlock = (x: Location): x is Block =>
+				x !== 'table' && x !== 'hand';
+
+			const isClear = (blocks: State['blocks'], location: Location) => {
+				if (isBlock(location) || location === 'hand') {
+					// No block is on top of the location
+					return Object.values(blocks).every((l) => l !== location);
+				}
+				// The table is always clear
+				return true;
+			};
+
+			const take = Task.of({
+				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					isClear(s.blocks, location.block) && s.hand == null,
+				effect: (s: State, location) => {
+					// Update the block
+					s = location.set(s, 'hand');
+					s.hand = location.block;
+					return s;
+				},
+				description: (location) => `take block ${location.block}`,
+			});
+
+			const put = Task.of({
+				path: '/blocks/:block',
+				condition: (s: State, location) =>
+					location.get(s) === 'hand' && isClear(s.blocks, location.target),
+				effect: (s: State, location) => {
+					// Update the block
+					s = location.set(s, location.target);
+					s.hand = null;
+					return s;
+				},
+				description: (location) =>
+					`put ${location.block} on ${location.target}`,
+			});
+
+			const allClearBlocks = (blocks: State['blocks']) => {
+				return Object.keys(blocks).filter((block) =>
+					isClear(blocks, block as Block),
+				) as Block[];
+			};
+
+			/**
+			 * This task implements the following block-stacking algorithm [1]:
+			 *
+			 * - If there's a clear block x that can be moved to a place where it won't
+			 *   need to be moved again, then return a todo list that includes goals to
+			 *   move it there, followed by mgoal (to achieve the remaining goals).
+			 *   Otherwise, if there's a clear block x that needs to be moved out of the
+			 *   way to make another block movable, then return a todo list that includes
+			 *   goals to move x to the table, followed by mgoal.
+			 * - Otherwise, no blocks need to be moved.
+			 *   [1] N. Gupta and D. S. Nau. On the complexity of blocks-world
+			 *   planning. Artificial Intelligence 56(2-3):223–254, 1992.
+			 *
+			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
+			 */
+			const move = Task.of({
+				path: '/blocks',
+				redirect: (s: State, blocks) => {
+					return {
+						blocks: allClearBlocks(s.blocks).reduce((target, b) => {
+							// The block is free and it can be moved to the final target (another block or the table)
+							if (isClear(s.blocks, blocks.target[b])) {
+								return { ...target, [b]: blocks.target[b] };
+							} else {
+								// The block cannot be moved to the final location so we move it
+								// to the table
+								return { ...target, [b]: 'table' };
+							}
+						}, blocks.target),
+					};
+				},
+				description:
+					'find blocks that can be moved to the final location or to the table',
+			});
+
+			const planner = Planner.of<State>({
+				tasks: [take, put, move],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan(
+				{
+					blocks: { a: 'table', b: 'a', c: 'b' },
+				},
+				{ blocks: { a: 'b', b: 'c', c: 'table' } },
+			);
+			if (result.success) {
+				expect(result.plan.map((a) => a.description)).to.deep.equal([
+					'take block c',
+					'put c on table',
+					'take block b',
+					'put b on c',
+					'take block a',
+					'put a on b',
+				]);
+			} else {
+				expect.fail('No plan found');
 			}
 		});
 
