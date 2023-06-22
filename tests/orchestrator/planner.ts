@@ -13,6 +13,7 @@ import {
 	removeService,
 	removeRelease,
 	removeApp,
+	updateApp,
 } from './tasks';
 
 export const planner = Planner.of<Device>({
@@ -31,6 +32,23 @@ export const planner = Planner.of<Device>({
 		removeService,
 		removeRelease,
 		removeApp,
+	],
+	config: { trace: console.trace },
+});
+
+export const plannerWithRedirect = Planner.of<Device>({
+	tasks: [
+		fetch,
+		createApp,
+		createRelease,
+		migrateService,
+		installService,
+		startService,
+		stopService,
+		removeService,
+		removeRelease,
+		removeApp,
+		updateApp,
 	],
 	config: { trace: console.trace },
 });
