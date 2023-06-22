@@ -1,4 +1,36 @@
 - commits:
+    - subject: Refactor planner module
+      hash: 80cc80867ba124954ae5756f4dfe14d38820c2ab
+      body: |
+        This splits up the `planner.ts` module into multiple files under
+        `lib/planner`, it also renames some methods, properties for better
+        readability.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Move lib/planner.ts to lib/planner/index.ts
+      hash: 304768ebbc4a2db57a75741c7c6af1e075e54443
+      body: |
+        This is the first step in refactoring the planner
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Remove extractPath utility function from planner
+      hash: 61ddf5da9ad4d743b40c4ef125789f831552d9c8
+      body: >
+        The function was leftover from before improving the [diff
+        calculation](https://github.com/balena-io-modules/mahler/commit/3682d3c6e39f4c9b97fd287565ca609803af12fb).
+        The function is no longer needed.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.9.3
+  title: ""
+  date: 2023-06-22T15:12:00.795Z
+- commits:
     - subject: Add service migration task to orchestrator example
       hash: c493fb9f1bee1d7cd50874442f1b55d1345fe943
       body: |
