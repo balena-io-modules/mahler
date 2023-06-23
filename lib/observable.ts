@@ -1,5 +1,3 @@
-import assert from './assert';
-
 export type Next<T> = (t: T) => void;
 
 export interface Observer<T> {
@@ -17,12 +15,6 @@ export interface Observable<T> {
 	 * Add a subscriber to the sensor
 	 */
 	subscribe(subscriber: Next<T> | Observer<T>): Subscribed;
-
-	/**
-	 * Wait for the observable to finish at most
-	 * timeout milliseconds.
-	 */
-	wait(timeout: number): Promise<void>;
 }
 
 export class ObservableHasNoSubscribers extends Error {
@@ -82,7 +74,6 @@ function of<T>(
 	const proxy = new ProxyObserver<T>();
 
 	let running = false;
-	let result = Promise.resolve();
 	return {
 		subscribe(next: Next<T> | Observer<T>) {
 			let subscriber: Observer<T>;
@@ -99,7 +90,7 @@ function of<T>(
 
 			// Now that we have subscribers we start the observable
 			if (!running) {
-				result = Promise.resolve(observer(proxy))
+				Promise.resolve(observer(proxy))
 					.catch((e) => {
 						if (e instanceof ObservableHasNoSubscribers) {
 							return;
@@ -119,19 +110,6 @@ function of<T>(
 			return {
 				unsubscribe: () => proxy.remove(subscriber),
 			};
-		},
-
-		wait(timeout: number) {
-			assert(timeout > 0);
-			return new Promise<void>(async (resolve, reject) => {
-				const timer = setTimeout(() => {
-					reject(new ObservableTimeout());
-				}, timeout);
-
-				await result;
-				clearTimeout(timer);
-				resolve();
-			});
 		},
 	};
 }
