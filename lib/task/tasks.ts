@@ -117,7 +117,10 @@ export interface MethodTask<
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the sequence is not applicable
 	 */
-	method(s: TState, c: Context<TState, TPath, TOp>): Array<Instruction<TState>>;
+	method(
+		s: TState,
+		c: Context<TState, TPath, TOp>,
+	): Instruction<TState> | Array<Instruction<TState>>;
 
 	/**
 	 * The task function grounds the task
