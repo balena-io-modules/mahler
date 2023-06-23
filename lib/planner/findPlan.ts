@@ -72,7 +72,8 @@ function tryMethod<TState = any>(
 		return { success: false, stats };
 	}
 
-	const instructions = method(state);
+	const output = method(state);
+	const instructions = Array.isArray(output) ? output : [output];
 	if (instructions.length === 0) {
 		return { success: false, stats };
 	}

@@ -35,8 +35,8 @@ describe('orchestrator/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"prepare app 'test-app'",
-				"prepare release 'r0'",
+				"initialize '/apps/a0'",
+				"initialize release 'r0' for app 'a0'",
 				"create container for service 'main' of app 'a0' and release 'r0'",
 				"start container for service 'main' of app 'a0' and release 'r0'",
 			]);
@@ -308,7 +308,7 @@ describe('orchestrator/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"prepare release 'r1'",
+				"initialize release 'r1' for app 'a0'",
 				"pull image 'alpine:latest' for service 'main' of app 'a0'",
 				"create container for service 'main' of app 'a0' and release 'r1'",
 				"stop container for service 'main' of app 'a0' and release 'r0'",
@@ -377,7 +377,7 @@ describe('orchestrator/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"prepare release 'r1'",
+				"initialize release 'r1' for app 'a0'",
 				"pull image 'alpine:latest' for service 'main' of app 'a0'",
 				"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
 				"remove release 'r0'",
@@ -443,7 +443,7 @@ describe('orchestrator/planning', () => {
 
 		if (result.success) {
 			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"prepare release 'r1'",
+				"initialize release 'r1' for app 'a0'",
 				// First create the new services and migrate those already running
 				"pull image 'alpine:latest' for service 'main' of app 'a0'",
 				"migrate unchanged service 'main' of app 'a0 to release 'r1' '",

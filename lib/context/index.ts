@@ -23,8 +23,8 @@ export { TaskOp } from './types';
  *  set(s, get(s)) = s
  *  set(set(s, a), a) = set(s,a)
  */
-export type Context<S, TPath extends Path, TOp extends TaskOp> = Identity<
-	ContextWithSlash<S, S, TPath, {}, TOp>
+export type Context<TState, TPath extends Path, TOp extends TaskOp> = Identity<
+	ContextWithSlash<TState, TPath, TOp, TState, {}>
 >;
 
 // Redeclare the type for exporting
@@ -32,7 +32,9 @@ export type ContextAsArgs<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Identity<Omit<Context<TState, TPath, TOp>, 'get' | 'set' | 'del' | 'op'>>;
+> = Identity<
+	Omit<Context<TState, TPath, TOp>, 'get' | 'set' | 'del' | 'op' | 'path'>
+>;
 
 function isArrayIndex(x: unknown): x is number {
 	return (
@@ -116,6 +118,7 @@ function of<
 
 	return {
 		...args,
+		path,
 		...(target && { target }),
 		get(s: TState) {
 			return Optic.get(lens)(s);

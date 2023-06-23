@@ -1,10 +1,10 @@
 import * as Docker from 'dockerode';
 import * as tar from 'tar-stream';
 
+import { DELETED, Disposer, Initializer, Target, Task } from '~/lib';
 import { console } from '~/tests';
-import { Task, Constructor, Pure, DELETED, Target } from '~/lib';
-import { Device, Service, ServiceStatus } from './state';
-import { getImageName, getRegistryAndName, getContainerName } from './utils';
+import { App, Device, Service, ServiceStatus } from './state';
+import { getContainerName, getImageName, getRegistryAndName } from './utils';
 
 interface StatusError extends Error {
 	statusCode: number;
@@ -120,30 +120,35 @@ export const fetch = Task.of({
 });
 
 /**
- * Update the apps state with the new app data
+ * Initialize an app
  *
- * Condition: the app is not already present in the `apps` object
- * Effect: add the app to the `apps` object, with an empty `releases` object
- * Action: none, this does not have any effect on the system
+ * This task uses the Initializer task helper that already checks that the object is not already present.
+ *
+ * This task has no actual effect on the system, it only creates the object in the state.
  */
-export const createApp = Constructor.of({
+export const createApp = Initializer.of({
 	path: '/apps/:appUuid',
-	effect: (device: Device, ctx) =>
-		ctx.set(device, { name: ctx.target.name, releases: {} }),
-	description: (ctx) => `prepare app '${ctx.target.name}'`,
+	// Return an empty app
+	create: (app: App) => ({ name: app.name, releases: {} }),
+	// Without a description the initializer will default to "initialize '/apps/a0'"
 });
 
 /**
- * Update the app state with the new release data
+ * Initialize release
  *
- * Condition: the release is not already present in the `releases` object
- * Effect: add the release to the `releases` object, with an empty `services` object
- * Action: none, this does not have any effect on the system
+ * This task uses the Initializer task helper that already checks that the object is not already present.
+ *
+ * This task has no actual effect on the system, it only creates the object in the state.
  */
-export const createRelease = Constructor.of({
+export const createRelease = Initializer.of({
 	path: '/apps/:appUuid/releases/:releaseUuid',
-	effect: (device: Device, ctx) => ctx.set(device, { services: {} }),
-	description: (ctx) => `prepare release '${ctx.releaseUuid}'`,
+	// Return an empty release
+	create: () => ({ services: {} }),
+	// Without a function definition that defines what the parent 'State'
+	// object is, the compiler cannot infer the type of `ctx` so we just use
+	// any here
+	description: (ctx: any) =>
+		`initialize release '${ctx.releaseUuid}' for app '${ctx.appUuid}'`,
 });
 
 /**
@@ -483,17 +488,16 @@ export const removeService = Task.of({
  *
  * This only removes the release from the state object and has no effect in the system
  *
+ * This task uses the Disposer task helper that already performs some checks and does the actual
+ * removal of the property from the state object. For that reason no `effect` is defined
+ *
  * Condition: the release has not been deleted yet and the release has no services
- * Effect: remove the release from the device state
- * Action: none
+ * Effect: cleanup the release from the device state
  */
-export const removeRelease = Pure.of({
-	op: 'delete',
+export const removeRelease = Disposer.of({
 	path: '/apps/:appUuid/releases/:releaseUuid',
 	condition: (device: Device, ctx) =>
-		ctx.get(device) != null &&
 		Object.keys(ctx.get(device).services).length === 0,
-	effect: (device: Device, ctx) => ctx.del(device),
 	description: (ctx) => `remove release '${ctx.releaseUuid}'`,
 });
 
@@ -502,17 +506,16 @@ export const removeRelease = Pure.of({
  *
  * This only removes the app from the state object and has no effect in the system
  *
+ * This task uses the Disposer task helper that already performs some checks and does the actual
+ * removal of the property from the state object. For that reason no `effect` is defined
+ *
  * Condition: the app has not been deleted yet and all releases have been uninstalled
  * Effect: remove the app from the device state
- * Action: none
  */
-export const removeApp = Pure.of({
-	op: 'delete',
+export const removeApp = Disposer.of({
 	path: '/apps/:appUuid',
 	condition: (device: Device, ctx) =>
-		ctx.get(device) != null &&
 		Object.keys(ctx.get(device).releases).length === 0,
-	effect: (device: Device, ctx) => ctx.del(device),
 	description: (ctx) => `remove app '${ctx.appUuid}'`,
 });
 

@@ -1,14 +1,14 @@
-import { randomUUID, createHash } from 'crypto';
+import { randomUUID } from 'crypto';
 
-import { Path } from './path';
-import { Context, ContextAsArgs, TaskOp } from './context';
-import { Operation } from './operation';
-import { Target } from './target';
-import assert from './assert';
+import assert from '../assert';
+import { Context, ContextAsArgs, TaskOp } from '../context';
+import { Path } from '../path';
+import { Target } from '../target';
+
+import { Action, Instruction, Method, Redirect } from './instructions';
+import { createInstructionId } from './utils';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
-export const NoAction = <T>(s: T) => Promise.resolve(s);
-export const NoEffect = <T>(s: T) => s;
 
 interface TaskSpec<
 	TState = any,
@@ -118,7 +118,10 @@ export interface MethodTask<
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the sequence is not applicable
 	 */
-	method(s: TState, c: Context<TState, TPath, TOp>): Array<Instruction<TState>>;
+	method(
+		s: TState,
+		c: Context<TState, TPath, TOp>,
+	): Instruction<TState> | Array<Instruction<TState>>;
 
 	/**
 	 * The task function grounds the task
@@ -132,64 +135,6 @@ export interface MethodTask<
 	 */
 	(ctx: ContextAsArgs<TState, TPath, TOp>): Method<TState>;
 }
-
-interface Instance<TState> {
-	/**
-	 * The instance id
-	 */
-	readonly id: string;
-
-	/**
-	 * THe instanced description for this instance
-	 */
-	readonly description: string;
-
-	/**
-	 * A pre-condition that needs to be met before the instance can be used
-	 */
-	condition(s: TState): boolean;
-}
-
-/** An action task that has been applied to a specific context */
-export interface Action<TState = any> extends Instance<TState> {
-	readonly _tag: 'action';
-
-	/**
-	 * The effect on the state that the action
-	 * provides. If the effect returns none, then the task is not applicable
-	 * on the current state
-	 */
-	effect(s: TState): TState;
-
-	/**
-	 * Run the action
-	 */
-	(s: TState): Promise<TState>;
-}
-
-/** A method task that has been applied to a specific context */
-export interface Method<TState = any> extends Instance<TState> {
-	readonly _tag: 'method';
-	/**
-	 * The method to be called when the task is executed
-	 * if the method returns an empty list, this means the procedure is not applicable
-	 */
-	(s: TState): Array<Instruction<TState>>;
-}
-
-export interface Redirect<TState = any> extends Instance<TState> {
-	readonly _tag: 'redirect';
-	/**
-	 * The method to be called when the task is executed
-	 * if the method returns an empty list, this means the procedure is not applicable
-	 */
-	(s: TState): Target<TState> | Array<Target<TState>>;
-}
-
-export type Instruction<TState = any> =
-	| Action<TState>
-	| Method<TState>
-	| Redirect<TState>;
 
 function ground<
 	TState = any,
@@ -219,7 +164,7 @@ function ground<
 
 	const context = Context.of<TState, TPath, any>(
 		task.path,
-		`/${path}`,
+		`${path}`,
 		(ctx as any).target,
 	);
 
@@ -229,15 +174,7 @@ function ground<
 			? taskDescription(context)
 			: taskDescription;
 
-	const id = createHash('sha256')
-		.update(
-			JSON.stringify({
-				id: taskId,
-				path,
-				...((ctx as any).target && { target: (ctx as any).target }),
-			}),
-		)
-		.digest('hex');
+	const id = createInstructionId(taskId, path, (ctx as any).target);
 
 	if (isMethodTask(task)) {
 		return Object.assign((s: TState) => task.method(s, context), {
@@ -278,18 +215,6 @@ function isMethodTask<
 }
 
 /**
- * Check if an instruction is a method
- */
-function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
-	return (
-		(t as any).condition != null &&
-		typeof (t as any).condition === 'function' &&
-		typeof t === 'function' &&
-		(t as any)._tag === 'method'
-	);
-}
-
-/**
  * Check if a task or an instruction is an action
  */
 function isActionTask<
@@ -302,20 +227,6 @@ function isActionTask<
 		typeof (t as any).effect === 'function' &&
 		(t as any).action != null &&
 		typeof (t as any).action === 'function'
-	);
-}
-
-/**
- * Check if an instruction is an action
- */
-function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
-	return (
-		(t as any).condition != null &&
-		typeof (t as any).condition === 'function' &&
-		(t as any).effect != null &&
-		typeof (t as any).effect === 'function' &&
-		typeof t === 'function' &&
-		(t as any)._tag === 'action'
 	);
 }
 
@@ -333,20 +244,6 @@ function isRedirectTask<
 }
 
 /**
- * Check if an instruction is a method
- */
-function isRedirect<TState = any>(
-	t: Instruction<TState>,
-): t is Redirect<TState> {
-	return (
-		(t as any).condition != null &&
-		typeof (t as any).condition === 'function' &&
-		typeof t === 'function' &&
-		(t as any)._tag === 'redirect'
-	);
-}
-
-/**
  * A task is base unit of knowledge of an autonomous agent.
  */
 export type Task<
@@ -358,30 +255,27 @@ export type Task<
 	| MethodTask<TState, TPath, TOp>
 	| RedirectTask<TState, TPath, TOp>;
 
-type MethodTaskProps<
+export type MethodTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method'>> &
 	Pick<MethodTask<TState, TPath, TOp>, 'method'>;
 
-type ActionTaskProps<
+export type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
 
-type RedirectTaskProps<
+export type RedirectTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'target'>> &
+> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'redirect'>> &
 	Pick<RedirectTask<TState, TPath, TOp>, 'redirect'>;
 
-/**
- * Create a task
- */
 /**
  * Create a task
  */
@@ -415,13 +309,21 @@ function of<
 	// Check that the path is valid
 	Path.assert(path);
 
+	const prefix =
+		typeof (task as any).method === 'function'
+			? '[method] '
+			: typeof (task as any).redirect === 'function'
+			? '[redirect] '
+			: '';
+
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath, TOp>) => {
 			return ground(t as any, ctx);
 		},
 		{
 			id,
-			description: id,
+			description: (ctx: Context<TState, TPath, TOp>) =>
+				`${prefix}${op === '*' ? 'process' : op} ${ctx.path}`,
 			path,
 			op,
 			condition: () => true,
@@ -439,134 +341,9 @@ function of<
 	return t;
 }
 
-function isEqual<TState = any>(
-	i1: Instruction<TState>,
-	i2: Instruction<TState>,
-): boolean {
-	return i1.id === i2.id;
-}
-
-/**
- * Identify if a task is applicable for a specific operation
- *
- * A task is applicable if the task operation as the operation op, and if the task path matches the operation
- * path
- */
-function isApplicable<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
->(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
-	if (t.op !== '*' && t.op !== o.op) {
-		return false;
-	}
-
-	const taskParts = Path.elems(t.path);
-	const opParts = Path.elems(o.path);
-
-	if (taskParts.length !== opParts.length) {
-		return false;
-	}
-
-	for (const tElem of taskParts) {
-		const oElem = opParts.shift();
-		if (!tElem.startsWith(':') && tElem !== oElem) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 export const Task = {
 	of,
 	isMethod: isMethodTask,
 	isAction: isActionTask,
 	isRedirect: isRedirectTask,
-	isApplicable,
 };
-
-export const Method = {
-	is: isMethod,
-	equals: isEqual,
-};
-
-export const Action = {
-	is: isAction,
-	equals: isEqual,
-};
-
-export const Redirect = {
-	is: isRedirect,
-	equals: isEqual,
-};
-
-export const Instruction = {
-	equals: isEqual,
-};
-
-// A pure task does not have an `action` property
-// and requires that `op` is defined
-type PureTaskProps<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
-> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'action' | 'op'>> &
-	Pick<ActionTask<TState, TPath, TOp>, 'effect' | 'op'>;
-
-/**
- * A pure task is a task that has no side effects,
- * that is, it does not interact with the underlying system being
- * controlled, it only transforms the internal state of the agent/planner
- * in some way.
- */
-export const Pure = {
-	of: <TState = any, TPath extends Path = '/', TOp extends TaskOp = 'update'>({
-		effect,
-		...props
-	}: PureTaskProps<TState, TPath, TOp>) =>
-		Task.of({
-			effect,
-			...props,
-			action: (s, c) => Promise.resolve(effect(s, c)),
-		}),
-};
-
-/**
- * A noop task is a task that does not change the state, it can
- * be added to the plan under some condition for debugging purposes
- */
-export const NoOp = {
-	of: <TState = any, TPath extends Path = '/'>({
-		description = 'NoOp',
-		...props
-	}: Partial<
-		Pick<
-			ActionTaskProps<TState, TPath, 'update'>,
-			'path' | 'condition' | 'description'
-		>
-	>) =>
-		Task.of({
-			description,
-			...props,
-			effect: NoEffect,
-			action: NoAction,
-		}),
-};
-
-/**
- * A constructor task is a pure task that is used to initialize
- * the value of a property in the internal state of the system.
- * It is useful in the case of nested properties, where creating the
- * parent property has no effects on the system but is necessary in order
- * for a task for the creation of the child property to be picked up.
- */
-export const Constructor = {
-	of: <TState = any, TPath extends Path = '/'>(
-		props: Omit<PureTaskProps<TState, TPath, 'create'>, 'op'>,
-	) =>
-		// Only execute the task if the property does not exist
-		Pure.of({ op: 'create', condition: (s, c) => c.get(s) == null, ...props }),
-};
-
-export default Task;
