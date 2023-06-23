@@ -1,7 +1,10 @@
-import { TaskOp } from '../context';
+import { Context, TaskOp } from '../context';
+
 import { Path } from '../path';
 
+import { Action } from './instructions';
 import { ActionTask, Task } from './tasks';
+import { createInstructionId } from './utils';
 
 export const NoAction = <T>(s: T) => Promise.resolve(s);
 export const NoEffect = <T>(s: T) => s;
@@ -49,3 +52,23 @@ export const Constructor = {
 		// Only execute the task if the property does not exist
 		Pure.of({ op: 'create', condition: (s, c) => c.get(s) == null, ...props }),
 };
+
+/**
+ * A NoOp task is a task that does not change the state, it can
+ * be added to the plan under some condition for debugging purposes
+ */
+export function NoOp<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = '*',
+>(ctx: Context<TState, TPath, TOp>): Action<TState> {
+	const id = createInstructionId('no-op', ctx.path, (ctx as any).target);
+
+	return Object.assign((s: TState) => Promise.resolve(s), {
+		_tag: 'action' as const,
+		id, // This needs to depend on context
+		description: 'no-op',
+		condition: () => true,
+		effect: (s: TState) => s,
+	});
+}

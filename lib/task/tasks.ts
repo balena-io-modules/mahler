@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
@@ -6,6 +6,7 @@ import { Path } from '../path';
 import { Target } from '../target';
 
 import { Action, Instruction, Method, Redirect } from './instructions';
+import { createInstructionId } from './utils';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 
@@ -173,15 +174,7 @@ function ground<
 			? taskDescription(context)
 			: taskDescription;
 
-	const id = createHash('sha256')
-		.update(
-			JSON.stringify({
-				id: taskId,
-				path,
-				...((ctx as any).target && { target: (ctx as any).target }),
-			}),
-		)
-		.digest('hex');
+	const id = createInstructionId(taskId, path, (ctx as any).target);
 
 	if (isMethodTask(task)) {
 		return Object.assign((s: TState) => task.method(s, context), {
