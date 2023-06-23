@@ -1,4 +1,66 @@
 - commits:
+    - subject: Improve 'Initializer' helper task
+      hash: aa5fc245a8e07e8abbdba3e3c41e96b34fd50d70
+      body: |
+        Renames the 'Constructor' task to 'Initializer' and improves the
+        interface to make it more intuitive what the task does.
+
+        This also adds a `Disposer` helper task that allows cleaning up the
+        state to remove properties that are no longer needed.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Create NoOp helper
+      hash: 0d6922cd4f7f170d11112be12c79167a1003c9dc
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Allow returning single task from method
+      hash: 5ecf86575fc95b4c9a1a568c44abb360b53b1f08
+      body: |
+        Method tasks can now return a single tasks or an array.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve default description for tasks
+      hash: 04b2927412e97bff70f5b2d97326bfae8d4b8176
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add `path` property to Context type
+      hash: 76fe6b0243267a7f3393e067a52d0535b47172a9
+      body: |
+        This also improves readability for the `Context` type.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Refactor task module
+      hash: 14e99ad3cf05bdd5abe49485d7f265fe123a3a1f
+      body: |
+        Split the previous `task.ts` into multiple files for better readability
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Move task.ts to task/index.ts
+      hash: 834c0ef74ebd6435bc2b05b2af4fceff3afbde53
+      body: |
+        First step to break up task
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.11.0
+  title: ""
+  date: 2023-06-23T16:53:19.301Z
+- commits:
     - subject: Add orchestrator test using redirect task
       hash: ece0c364d628a28085f7891c5f03e68bef3d390f
       body: ""
