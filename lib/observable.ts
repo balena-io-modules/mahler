@@ -13,15 +13,13 @@ export interface Subscribed {
 }
 
 export interface Observable<T> {
-	(subscriber: Observer<T>): void | Promise<void>;
-
 	/**
 	 * Add a subscriber to the sensor
 	 */
 	subscribe(subscriber: Next<T> | Observer<T>): Subscribed;
 
 	/**
-	 * Wait for the sensor to finish at most
+	 * Wait for the observable to finish at most
 	 * timeout milliseconds.
 	 */
 	wait(timeout: number): Promise<void>;
@@ -43,8 +41,8 @@ class ProxyObserver<T> implements Observer<T> {
 	private subscribers: Array<Observer<T>> = [];
 
 	next(t: T) {
-		// We throw to force the sensor to stop
-		// the sensor may still catch this error, but that's
+		// We throw to force the observable function to stop
+		// the function may still catch this error, but that's
 		// on the user
 		if (this.subscribers.length === 0) {
 			throw new ObservableHasNoSubscribers();
@@ -79,13 +77,13 @@ class ProxyObserver<T> implements Observer<T> {
 }
 
 function of<T>(
-	observer: (subscriber: Observer<T>) => void | Promise<void>,
+	observer: (observer: Observer<T>) => void | Promise<void>,
 ): Observable<T> {
 	const proxy = new ProxyObserver<T>();
 
 	let running = false;
 	let result = Promise.resolve();
-	return Object.assign(observer.bind({}), {
+	return {
 		subscribe(next: Next<T> | Observer<T>) {
 			let subscriber: Observer<T>;
 			if (typeof next === 'function') {
@@ -99,7 +97,7 @@ function of<T>(
 			}
 			proxy.add(subscriber);
 
-			// Now that we have subscribers we start the sensor
+			// Now that we have subscribers we start the observable
 			if (!running) {
 				result = Promise.resolve(observer(proxy))
 					.catch((e) => {
@@ -107,11 +105,11 @@ function of<T>(
 							return;
 						}
 
-						// Notify subscriber of uncaught errors on the sensor
+						// Notify subscriber of uncaught errors on the observable
 						proxy.error(e);
 					})
 					.finally(() => {
-						// Notify the proxy of the sensor completion
+						// Notify the proxy of the observable completion
 						proxy.complete();
 						running = false;
 					});
@@ -135,7 +133,7 @@ function of<T>(
 				resolve();
 			});
 		},
-	});
+	};
 }
 
 export const Observable = {
