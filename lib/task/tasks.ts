@@ -160,7 +160,7 @@ function ground<
 
 	const context = Context.of<TState, TPath, any>(
 		task.path,
-		`/${path}`,
+		`${path}`,
 		(ctx as any).target,
 	);
 

@@ -12,140 +12,190 @@ export type Identity<T> = T extends object
 
 // A context to evaluate paths starting with a slash
 export type ContextWithSlash<
-	O,
-	S,
+	TState,
 	TPath extends Path,
-	TProps extends {},
 	TOp extends TaskOp,
-> = TPath extends `/${infer R}`
-	? ContextWithoutSlash<O, S, R, TProps, TOp> // If the path starts with a slash, evaluate the remaining part of the path
+	TChildState,
+	TProps extends {},
+> = TPath extends `/${infer TTail}`
+	? ContextWithoutSlash<TState, TPath, TOp, TChildState, TTail, TProps> // If the path starts with a slash, evaluate the remaining part of the path
 	: never; // Otherwise, the path is invalid
 
 // A context to evaluate paths that start without a slash, e.g. `key1/key2` or `key`
 type ContextWithoutSlash<
-	O,
-	S,
+	TState,
 	TPath extends Path,
-	TProps extends {},
 	TOp extends TaskOp,
-> = TPath extends `${infer H}/${infer T}`
-	? ContextOnCompoundPathWithParameter<O, S, H, T, TProps, TOp> // If the path is compound, evaluate it recursively
-	: ContextOnSinglePathWithParameter<O, S, TPath, TProps, TOp>; // Otherwise extract the type from the single path if possible
+	TChildState,
+	TSubPath extends Path,
+	TProps extends {},
+> = TSubPath extends `${infer THead}/${infer TTail}`
+	? ContextOnCompoundPathWithParameter<
+			TState,
+			TPath,
+			TOp,
+			TChildState,
+			THead,
+			TTail,
+			TProps
+	  > // If the path is compound, evaluate it recursively
+	: ContextOnSinglePathWithParameter<
+			TState,
+			TPath,
+			TOp,
+			TChildState,
+			TSubPath,
+			TProps
+	  >; // Otherwise extract the type from the single path if possible
 
 // The context for an operation on a single path, e.g. `:param` or `key`
 type ContextOnSinglePathWithParameter<
-	O,
-	S,
-	K extends string,
-	TProps extends {},
+	TState,
+	TPath extends Path,
 	TOp extends TaskOp,
-> = K extends `:${infer Arg}`
-	? S extends Array<infer _>
-		? ContextOnSinglePath<O, S, number, TProps & { [key in Arg]: number }, TOp>
-		: ContextOnSinglePath<
-				O,
-				S,
-				keyof S,
-				TProps & { [key in Arg]: keyof S },
-				TOp
+	TChildState,
+	TParam extends string,
+	TProps extends {},
+> = TParam extends `:${infer Arg}`
+	? TChildState extends Array<infer _>
+		? ContextOnSinglePath<
+				TState,
+				TPath,
+				TOp,
+				TChildState,
+				number,
+				TProps & { [key in Arg]: number }
 		  >
-	: ContextOnSinglePath<O, S, K, TProps, TOp>;
+		: ContextOnSinglePath<
+				TState,
+				TPath,
+				TOp,
+				TChildState,
+				keyof TChildState,
+				TProps & { [key in Arg]: keyof TChildState }
+		  >
+	: ContextOnSinglePath<TState, TPath, TOp, TChildState, TParam, TProps>;
 
 // A context on a single path, e.g. 'key'. In this case, the path is either a valid key for the object
 // or else it has to be an empty path '' in order to be valid
 type ContextOnSinglePath<
-	O,
-	S,
-	K,
-	TProps extends {},
+	TState,
+	TPath extends Path,
 	TOp extends TaskOp,
-> = K extends keyof S // If the key is a valid key on the object of type S
-	? ContextOnEmptyPath<O, S[K], '', TProps, TOp> // Then evaluate the empty path
-	: ContextOnEmptyPath<O, S, K, TProps, TOp>; // Otherwise, check if the path is already empty
+	TChildState,
+	TKey,
+	TProps extends {},
+> = TKey extends keyof TChildState // If the key is a valid key on the object of type S
+	? ContextOnEmptyPath<TState, TPath, TOp, TChildState[TKey], '', TProps> // Then evaluate the empty path
+	: ContextOnEmptyPath<TState, TPath, TOp, TChildState, TKey, TProps>; // Otherwise, check if the path is already empty
 
 // The type of a change for an empty path, where the key is an empty string
 type ContextOnEmptyPath<
-	O,
-	S,
-	K,
-	TProps extends {},
+	TState,
+	TPath extends Path,
 	TOp extends TaskOp,
-> = K extends ''
-	? keyof TProps extends never // If A has no keys, then this will hold true. In that case, do not add params
+	TChildState,
+	TTail,
+	TProps extends {},
+> = TTail extends ''
+	? // If the key is an empty string, then the type is S
+	  keyof TProps extends never // If A has no keys, then this will hold true. In that case, do not add params
 		? TOp extends '*' | 'delete'
 			? {
-					get(state: O): S;
-					set(state: O, value: S): O;
-					del(state: O): O;
+					path: TPath;
+					get(state: TState): TChildState;
+					set(state: TState, value: TChildState): TState;
+					del(state: TState): TState;
 			  }
 			: {
-					target: S;
-					get(state: O): S;
-					set(state: O, value: S): O;
-					del(state: O): O;
+					path: TPath;
+					target: TChildState;
+					get(state: TState): TChildState;
+					set(state: TState, value: TChildState): TState;
+					del(state: TState): TState;
 			  }
 		: TOp extends '*' | 'delete'
 		? Identity<
 				TProps & {
-					get(state: O): S;
-					set(state: O, value: S): O;
-					del(state: O): O;
+					path: TPath;
+					get(state: TState): TChildState;
+					set(state: TState, value: TChildState): TState;
+					del(state: TState): TState;
 				}
 		  >
 		: Identity<
 				TProps & {
-					target: S;
-					get(state: O): S;
-					set(state: O, value: S): O;
-					del(state: O): O;
+					path: TPath;
+					target: TChildState;
+					get(state: TState): TChildState;
+					set(state: TState, value: TChildState): TState;
+					del(state: TState): TState;
 				}
 		  >
-	: // If the key is an empty string, then the type is S
-	  never; // Otherwise, the type is invalid
+	: never; // If the key is not empty, the type is invalid
 
 // Utility type to check if the key is a parameter
 type ContextOnCompoundPathWithParameter<
-	O,
-	S,
-	H extends string,
+	TState,
 	TPath extends Path,
-	TProps extends {},
 	TOp extends TaskOp,
-> = H extends `:${infer Arg}` // Check if the key is a route parameters first
-	? S extends Array<infer U> // Immediately check if the object is an array, in which case continue the evaluation o the tail
-		? ContextWithoutSlash<O, U, TPath, TProps & { [K in Arg]: number }, TOp>
-		: ContextOnCompoundPath<
-				O,
-				S,
-				keyof S,
+	TChildState,
+	THead extends string,
+	TTail extends Path,
+	TProps extends {},
+> = THead extends `:${infer Arg}` // Check if the key is a route parameters first
+	? TChildState extends Array<infer U> // Immediately check if the object is an array, in which case continue the evaluation o the tail
+		? ContextWithoutSlash<
+				TState,
 				TPath,
-				TProps & { [K in Arg]: keyof S },
-				TOp
+				TOp,
+				U,
+				TTail,
+				TProps & { [K in Arg]: number }
+		  >
+		: ContextOnCompoundPath<
+				TState,
+				TPath,
+				TOp,
+				TChildState,
+				keyof TChildState,
+				TTail,
+				TProps & { [K in Arg]: keyof TChildState }
 		  > // This is a compound path with a parameter. Add the key and continue evaluating
-	: ContextOnCompoundPath<O, S, H, TPath, TProps, TOp>;
+	: ContextOnCompoundPath<
+			TState,
+			TPath,
+			TOp,
+			TChildState,
+			THead,
+			TTail,
+			TProps
+	  >;
 
 // A compound path without parameters
 type ContextOnCompoundPath<
-	O,
-	S,
-	H,
+	TState,
 	TPath extends Path,
-	TProps extends {},
 	TOp extends TaskOp,
-> = H extends keyof S
-	? ContextWithoutSlash<O, S[H], TPath, TProps, TOp>
-	: ContextOnArray<O, S, H, TPath, TProps, TOp>; // If H is not a key of the object, it may be that is a number, so check if S is an array
+	TChildState,
+	THead,
+	TTail extends Path,
+	TProps extends {},
+> = THead extends keyof TChildState
+	? ContextWithoutSlash<TState, TPath, TOp, TChildState[THead], TTail, TProps>
+	: ContextOnArray<TState, TPath, TOp, TChildState, THead, TTail, TProps>; // If H is not a key of the object, it may be that is a number, so check if S is an array
 
 // The type of a context on a path referencing an array, where the first part of the path is a valid index on the array
 type ContextOnArray<
-	O,
-	S,
-	H,
+	TState,
 	TPath extends Path,
-	TProps extends {},
 	TOp extends TaskOp,
-> = S extends Array<infer U> // If the object of type S is an array
-	? H extends `${infer _ extends number}` // and the key is a number
-		? ContextWithoutSlash<O, U, TPath, TProps, TOp>
+	TChildState,
+	THead,
+	TTail extends Path,
+	TProps extends {},
+> = TChildState extends Array<infer U> // If the object of type S is an array
+	? THead extends `${infer _ extends number}` // and the key is a number
+		? ContextWithoutSlash<TState, TPath, TOp, U, TTail, TProps>
 		: never
 	: never;
