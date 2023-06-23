@@ -283,9 +283,6 @@ export type RedirectTaskProps<
 /**
  * Create a task
  */
-/**
- * Create a task
- */
 function of<
 	TState = any,
 	TPath extends Path = '/',
@@ -316,13 +313,21 @@ function of<
 	// Check that the path is valid
 	Path.assert(path);
 
+	const prefix =
+		typeof (task as any).method === 'function'
+			? '[method] '
+			: typeof (task as any).redirect === 'function'
+			? '[redirect] '
+			: '';
+
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath, TOp>) => {
 			return ground(t as any, ctx);
 		},
 		{
 			id,
-			description: id,
+			description: (ctx: Context<TState, TPath, TOp>) =>
+				`${prefix}${op === '*' ? 'process' : op} ${ctx.path}`,
 			path,
 			op,
 			condition: () => true,
