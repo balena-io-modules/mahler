@@ -6,7 +6,7 @@ export interface Observer<T> {
 	complete(): void;
 }
 
-export interface Subscribed {
+export interface Subscription {
 	unsubscribe(): void;
 }
 
@@ -14,64 +14,66 @@ export interface Observable<T> {
 	/**
 	 * Add a subscriber to the sensor
 	 */
-	subscribe(subscriber: Next<T> | Observer<T>): Subscribed;
+	subscribe(subscriber: Next<T> | Observer<T>): Subscription;
 }
 
-export class ObservableHasNoSubscribers extends Error {
-	constructor() {
-		super('No subscribers for the observable');
-	}
-}
-
-export class ObservableTimeout extends Error {
-	constructor() {
-		super('The wait for the observable timed out');
-	}
-}
-
-class ProxyObserver<T> implements Observer<T> {
+/**
+ * A Subject is a special type of observable tha allows values to be
+ * multicasted to many observers.
+ *
+ * We use the name Subject as is the terminology used by rxjs
+ * https://rxjs.dev/guide/subject
+ */
+export class Subject<T> implements Observer<T>, Observable<T> {
 	private subscribers: Array<Observer<T>> = [];
 
-	next(t: T) {
-		// We throw to force the observable function to stop
-		// the function may still catch this error, but that's
-		// on the user
-		if (this.subscribers.length === 0) {
-			throw new ObservableHasNoSubscribers();
-		}
-		this.subscribers.forEach((s) => s.next(t));
-	}
-
-	error(e: Error) {
-		if (this.subscribers.length === 0) {
-			throw new ObservableHasNoSubscribers();
-		}
-		this.subscribers.forEach((s) => s.error(e));
-	}
-
-	complete() {
-		this.subscribers.forEach((s) => s.complete());
+	// Removes all subscribers
+	private cleanup() {
 		while (this.subscribers.length > 0) {
 			this.subscribers.pop();
 		}
 	}
 
-	add(s: Observer<T>) {
-		this.subscribers.push(s);
+	next(t: T) {
+		this.subscribers.forEach((s) => s.next(t));
 	}
 
-	remove(s: Observer<T>) {
-		const index = this.subscribers.indexOf(s);
-		if (index !== -1) {
-			this.subscribers.splice(index, 1);
-		}
+	error(e: Error) {
+		this.subscribers.forEach((s) => s.error(e));
+
+		// We assume the observable operation terminates
+		// after an error
+		this.cleanup();
+	}
+
+	complete() {
+		this.subscribers.forEach((s) => s.complete());
+
+		// We assume the observable operation terminates
+		// after complete is called
+		this.cleanup();
+	}
+
+	subscribe(s: Observer<T>): Subscription {
+		this.subscribers.push(s);
+
+		const subject = this;
+
+		return {
+			unsubscribe() {
+				const index = subject.subscribers.indexOf(s);
+				if (index !== -1) {
+					subject.subscribers.splice(index, 1);
+				}
+			},
+		};
 	}
 }
 
 function of<T>(
-	observer: (observer: Observer<T>) => void | Promise<void>,
+	observable: (observer: Observer<T>) => void | Promise<void>,
 ): Observable<T> {
-	const proxy = new ProxyObserver<T>();
+	const subject = new Subject<T>();
 
 	let running = false;
 	return {
@@ -86,30 +88,27 @@ function of<T>(
 			} else {
 				subscriber = next;
 			}
-			proxy.add(subscriber);
+			const subscription = subject.subscribe(subscriber);
 
 			// Now that we have subscribers we start the observable
 			if (!running) {
-				Promise.resolve(observer(proxy))
+				Promise.resolve(observable(subject))
+					.then(() => {
+						// Notify the proxy of the observable completion
+						subject.complete();
+					})
 					.catch((e) => {
-						if (e instanceof ObservableHasNoSubscribers) {
-							return;
-						}
-
 						// Notify subscriber of uncaught errors on the observable
-						proxy.error(e);
+						subject.error(e);
 					})
 					.finally(() => {
-						// Notify the proxy of the observable completion
-						proxy.complete();
+						// The observable will restart when a new subscriber is added
 						running = false;
 					});
 				running = true;
 			}
 
-			return {
-				unsubscribe: () => proxy.remove(subscriber),
-			};
+			return subscription;
 		},
 	};
 }

@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import { Planner } from '../planner';
-import { Sensor, Subscribed } from '../sensor';
+import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
 
@@ -39,7 +39,7 @@ export class Runtime<TState> {
 
 	private running = false;
 	private stopped = false;
-	private subscribed: Subscribed[] = [];
+	private subscribed: Subscription[] = [];
 
 	constructor(
 		private internal: TState,
