@@ -8,9 +8,12 @@ import { setTimeout } from 'timers/promises';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.of({ initial: {}, opts: { logger: console } });
-			agent.start({});
-			await expect(agent.result()).to.eventually.deep.equal({ success: true });
+			const agent = Agent.of({ initial: 0, opts: { logger: console } });
+			await agent.seek(0);
+			await expect(agent.wait()).to.eventually.deep.equal({
+				success: true,
+				state: 0,
+			});
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
@@ -18,8 +21,8 @@ describe('Agent', () => {
 				initial: {},
 				opts: { minWaitMs: 10, logger: console },
 			});
-			agent.start({ never: true });
-			await expect(agent.result(1000)).to.be.rejected;
+			await agent.seek({ never: true });
+			await expect(agent.wait(1000)).to.be.rejected;
 			await agent.stop();
 		});
 
@@ -28,8 +31,8 @@ describe('Agent', () => {
 				initial: {},
 				opts: { minWaitMs: 10, maxRetries: 2, logger: console },
 			});
-			agent.start({ never: true });
-			await expect(agent.result(1000)).to.be.fulfilled;
+			await agent.seek({ never: true });
+			await expect(agent.wait(1000)).to.be.fulfilled;
 		});
 	});
 
@@ -109,9 +112,11 @@ describe('Agent', () => {
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
 			});
-			agent.start({ roomTemp: 20 });
-			await expect(agent.result(1000)).to.be.fulfilled;
-			expect(agent.state().roomTemp).equal(20);
+			await agent.seek({ roomTemp: 20 });
+			await expect(agent.wait(1000)).to.eventually.deep.equal({
+				success: true,
+				state: { roomTemp: 20, resistorOn: true },
+			});
 			agent.stop();
 		});
 
@@ -122,9 +127,11 @@ describe('Agent', () => {
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
 			});
-			agent.start({ roomTemp: 20 });
-			await expect(agent.result(1000)).to.be.fulfilled;
-			expect(agent.state().roomTemp).to.equal(20);
+			await agent.seek({ roomTemp: 20 });
+			await expect(agent.wait(1000)).to.eventually.deep.equal({
+				success: true,
+				state: { roomTemp: 20, resistorOn: false },
+			}).fulfilled;
 			agent.stop();
 		});
 	});

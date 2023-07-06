@@ -12,7 +12,7 @@ import {
 	Cancelled,
 	UnknownError,
 	Timeout,
-	AgentResult,
+	Result,
 	AgentOpts,
 } from './types';
 
@@ -32,7 +32,7 @@ class PlanNotFound extends Error {
 }
 
 export class Runtime<TState> {
-	private promise: Promise<AgentResult> = Promise.resolve({
+	private promise: Promise<Result<TState>> = Promise.resolve({
 		success: false,
 		error: new NotStarted(),
 	});
@@ -73,7 +73,7 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		this.promise = new Promise<AgentResult>(async (resolve) => {
+		this.promise = new Promise<Result<TState>>(async (resolve) => {
 			this.running = true;
 
 			let tries = 0;
@@ -99,7 +99,7 @@ export class Runtime<TState> {
 					if (actions.length === 0) {
 						logger.debug('plan empty, nothing else to do');
 						// Only when the plan is empty we can consider the goal reached
-						return resolve({ success: true });
+						return resolve({ success: true, state: this.internal });
 					}
 
 					logger.debug(
@@ -164,12 +164,12 @@ export class Runtime<TState> {
 			}
 
 			if (found) {
-				resolve({ success: true });
+				resolve({ success: true, state: this.internal });
 			} else {
 				return resolve({ success: false, error: new Stopped() });
 			}
 		})
-			.catch((e) => ({ success: false, error: e }))
+			.catch((e) => ({ success: false as const, error: e }))
 			.finally(() => {
 				this.running = false;
 				this.stopped = false;
@@ -184,7 +184,7 @@ export class Runtime<TState> {
 		this.subscribed.forEach((s) => s.unsubscribe());
 	}
 
-	async wait(timeout = 0): Promise<AgentResult> {
+	async wait(timeout = 0): Promise<Result<TState>> {
 		if (timeout === 0) {
 			return this.promise;
 		}

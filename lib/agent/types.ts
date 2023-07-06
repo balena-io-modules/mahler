@@ -1,6 +1,8 @@
 import { Logger } from '../logger';
 
-export type AgentResult = { success: true } | { success: false; error: Error };
+export type Result<T> =
+	| { success: true; state: T }
+	| { success: false; error: Error };
 
 export interface AgentOpts {
 	/**

@@ -38,7 +38,7 @@ describe('composer/agent', () => {
 			opts: { minWaitMs: 1000, logger: console },
 		});
 
-		agent.start({
+		await agent.seek({
 			services: {
 				main: {
 					status: 'running',
@@ -48,10 +48,9 @@ describe('composer/agent', () => {
 			},
 		});
 
-		expect(
-			await agent.result(),
-			'starting a single container should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'starting a single container should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 
 		const service = agent.state().services.main;
 		expect(service).to.not.be.undefined;
@@ -65,7 +64,7 @@ describe('composer/agent', () => {
 			.that.equals(true);
 
 		// Update the target
-		await agent.target({
+		await agent.seek({
 			services: {
 				main: {
 					status: 'stopped',
@@ -73,10 +72,9 @@ describe('composer/agent', () => {
 			},
 		});
 
-		expect(
-			await agent.result(),
-			'stopping the container should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'stopping the container should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 		expect(
 			(await docker.getContainer(service.containerId!).inspect()).State,
 			'container is stopped after the plan is executed',
@@ -84,7 +82,7 @@ describe('composer/agent', () => {
 			.to.have.property('Running')
 			.that.equals(false);
 
-		await agent.target({
+		await agent.seek({
 			services: {
 				main: {
 					status: 'running',
@@ -92,10 +90,9 @@ describe('composer/agent', () => {
 				},
 			},
 		});
-		expect(
-			await agent.result(),
-			'modifying the service image should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'modifying the service image should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 
 		const newService = agent.state().services.main;
 		expect(newService).to.not.be.undefined;

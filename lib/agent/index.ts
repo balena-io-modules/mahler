@@ -5,15 +5,41 @@ import { Planner } from '../planner';
 import { Sensor } from '../sensor';
 import { NullLogger } from '../logger';
 import { Runtime } from './runtime';
-import { AgentResult, AgentOpts, NotStarted } from './types';
+import { Result, AgentOpts, NotStarted } from './types';
 
 export * from './types';
 
 export interface Agent<TState = any> {
-	start(t: Target<TState>): void;
-	target(t: Target<TState>): Promise<void>;
-	result(timeout?: number): Promise<AgentResult>;
+	/**
+	 * Tells the agent to seek a new target.
+	 *
+	 * The method doesn't wait for a result. If there is no execution
+	 * in progress, the method will return immediately.
+	 *
+	 * If the agent is already seeking a plan, this will cancel
+	 * the current execution and wait for it to be stopped
+	 * before starting a new run.
+	 */
+	seek(t: Target<TState>): Promise<void>;
+
+	/**
+	 * Wait for the agent to reach the given target or
+	 * terminate due to an error.
+	 */
+	wait(timeout?: number): Promise<Result<TState>>;
+
+	/**
+	 * Get the last known state of the agent.
+	 *
+	 * Note that if the agent is in the middle of executing an action, this
+	 * value may not be up to date with the actual state of the
+	 * system.
+	 */
 	state(): TState;
+
+	/**
+	 * Stop any running execution
+	 */
 	stop(): Promise<void>;
 }
 
@@ -86,12 +112,7 @@ function of<TState>({
 	let runtime: Runtime<TState> | null = null;
 
 	return {
-		start(target) {
-			assert(runtime == null, 'Agent already started');
-			runtime = new Runtime(state, target, planner, sensors, opts);
-			runtime.start();
-		},
-		async target(target) {
+		async seek(target) {
 			if (runtime != null) {
 				await runtime.stop();
 				state = runtime.state();
@@ -105,7 +126,7 @@ function of<TState>({
 				return runtime.stop();
 			}
 		},
-		async result(timeout: number = 0) {
+		async wait(timeout: number = 0) {
 			assert(timeout >= 0);
 			if (runtime == null) {
 				return { success: false, error: new NotStarted() };

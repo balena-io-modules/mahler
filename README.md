@@ -165,7 +165,11 @@ With that we can start the Heater controller with a specified target.
 
 ```typescript
 // Set the heater target temperature to 23 degrees
-Heater.start({ roomTemp: 23 });
+// Note that `await` here doesn't wait for a result but is necessary as seek returns a `Promise<void>`. More on this later.
+await Heater.seek({ roomTemp: 23 });
+
+// To wait for the result we can use `wait()`
+await Heater.wait();
 ```
 
 The above instruction will start the agent and have it run forever (because of the `follow: true`). The Heater will continue monitoring the room temperature and turning the resistor ON or OFF as the temperature goes outside the expected value.
@@ -391,7 +395,7 @@ system is connected, this will add the networks to the internal database, perfor
 the first network that is available.
 
 ```typescript
-WifiConnect.start({
+await WifiConnect.seek({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
@@ -406,7 +410,7 @@ will cause the agent to re-calculate the plan to include the `addNetwork` task. 
 will stop the plan runner (and wait for the stop) before restarting it with the new target
 
 ```typescript
-await WifiConnect.target({
+await WifiConnect.seek({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
