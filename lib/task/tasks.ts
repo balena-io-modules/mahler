@@ -259,21 +259,21 @@ export type MethodTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method'>> &
+> = Partial<Omit<MethodTask<TState, TPath, TOp>, 'method' | 'id'>> &
 	Pick<MethodTask<TState, TPath, TOp>, 'method'>;
 
 export type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect'>> &
+> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
 
 export type RedirectTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'redirect'>> &
+> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'redirect' | 'id'>> &
 	Pick<RedirectTask<TState, TPath, TOp>, 'redirect'>;
 
 /**
@@ -304,7 +304,8 @@ function of<
 		| MethodTaskProps<TState, TPath, TOp>
 		| RedirectTaskProps<TState, TPath, TOp>,
 ) {
-	const { path = '/', op = 'update', id = randomUUID() } = task;
+	const id: string = randomUUID();
+	const { path = '/', op = 'update' } = task;
 
 	// Check that the path is valid
 	Path.assert(path);
@@ -327,13 +328,12 @@ function of<
 			path,
 			op,
 			condition: () => true,
-			...(typeof (task as any).method === 'function' ||
-			typeof (task as any).redirect === 'function'
-				? {}
-				: {
+			...(typeof (task as any).effect === 'function'
+				? {
 						action: NotImplemented,
 						effect: (s: TState) => s,
-				  }),
+				  }
+				: {}),
 			...task,
 		},
 	);

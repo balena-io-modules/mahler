@@ -1,9 +1,8 @@
+import { Diff } from '../diff';
 import { Target } from '../target';
 import { Task } from '../task';
-import { PlanningResult, PlannerConfig } from './types';
-import { Diff } from '../diff';
-import { assert } from '../assert';
 import { findPlan } from './findPlan';
+import { PlannerConfig, PlanningResult } from './types';
 
 export * from './types';
 
@@ -23,16 +22,6 @@ function of<TState = any>({
 	tasks?: Array<Task<TState, any, any>>;
 	config?: Partial<PlannerConfig>;
 }): Planner<TState> {
-	const taskIds = new Set<string>();
-	tasks.forEach((t) => {
-		assert(
-			!taskIds.has(t.id),
-			`Found duplicate task ID '${t.id}'. Task IDs must be unique`,
-		);
-
-		taskIds.add(t.id);
-	});
-
 	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
 		if ((Task.isMethod(a) || Task.isRedirect(a)) && Task.isAction(b)) {
