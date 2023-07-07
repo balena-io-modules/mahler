@@ -54,7 +54,17 @@ export class Subject<T> implements Observer<T>, Observable<T> {
 		this.cleanup();
 	}
 
-	subscribe(s: Observer<T>): Subscription {
+	subscribe(next: Observer<T> | Next<T>): Subscription {
+		let s: Observer<T>;
+		if (typeof next === 'function') {
+			s = {
+				next,
+				error: () => void 0,
+				complete: () => void 0,
+			};
+		} else {
+			s = next;
+		}
 		this.subscribers.push(s);
 
 		const subject = this;
@@ -78,17 +88,7 @@ function of<T>(
 	let running = false;
 	return {
 		subscribe(next: Next<T> | Observer<T>) {
-			let subscriber: Observer<T>;
-			if (typeof next === 'function') {
-				subscriber = {
-					next,
-					error: () => void 0,
-					complete: () => void 0,
-				};
-			} else {
-				subscriber = next;
-			}
-			const subscription = subject.subscribe(subscriber);
+			const subscription = subject.subscribe(next);
 
 			// Now that we have subscribers we start the observable
 			if (!running) {

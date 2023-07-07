@@ -1,18 +1,20 @@
 import { setTimeout as delay } from 'timers/promises';
 
+import { Observer } from '../observable';
 import { Planner } from '../planner';
 import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
+import { equals } from '../json';
 
 import {
-	NotStarted,
-	Stopped,
-	Failure,
-	UnknownError,
-	Timeout,
-	Result,
 	AgentOpts,
+	Failure,
+	NotStarted,
+	Result,
+	Stopped,
+	Timeout,
+	UnknownError,
 } from './types';
 
 /**
@@ -53,6 +55,7 @@ export class Runtime<TState> {
 	private subscribed: Subscription[] = [];
 
 	constructor(
+		private readonly observer: Observer<TState>,
 		public state: TState,
 		private readonly target: Target<TState>,
 		private readonly planner: Planner<TState>,
@@ -68,6 +71,9 @@ export class Runtime<TState> {
 				if (opts.follow) {
 					// Trigger a re-plan to see if the state is still on target
 					this.start();
+				} else {
+					// Notify the observer of the new state
+					this.observer.next(this.state);
 				}
 			}),
 		);
@@ -106,7 +112,14 @@ export class Runtime<TState> {
 			// QUESTION: do we need to handle concurrency to deal with state changes
 			// coming from sensors?
 			logger.info(`${action.description}: running ...`);
-			this.state = await this.runAction(action);
+			const state = await this.runAction(action);
+			if (!equals(this.state, state)) {
+				this.state = state;
+
+				// Notify observer of the new state only if there
+				// are changes
+				this.observer.next(this.state);
+			}
 			logger.info(`${action.description}: success`);
 		}
 	}
@@ -123,6 +136,9 @@ export class Runtime<TState> {
 
 			let tries = 0;
 			let found = false;
+
+			// Send the initial state to the observer
+			this.observer.next(this.state);
 			while (!this.stopped) {
 				try {
 					logger.debug('finding a plan to the target');

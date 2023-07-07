@@ -134,5 +134,31 @@ describe('Agent', () => {
 			}).fulfilled;
 			agent.stop();
 		});
+
+		it('it should allow observers to subcribe to the agent state', async () => {
+			const agent = Agent.of({
+				initial: { roomTemp: 18, resistorOn: false },
+				tasks: [turnOn, turnOff, wait],
+				sensors: [termometer],
+				opts: { minWaitMs: 10, logger: console },
+			});
+
+			const states: Heater[] = [];
+			// Subscribe to the agent
+			agent.subscribe((s) => states.push(s));
+
+			await agent.seek({ roomTemp: 20 });
+			await expect(agent.wait(1000)).to.be.fulfilled;
+
+			// The observable should return all the state changes
+			expect(states).to.deep.equal([
+				{ roomTemp: 18, resistorOn: false },
+				{ roomTemp: 18, resistorOn: true },
+				{ roomTemp: 19, resistorOn: true },
+				{ roomTemp: 20, resistorOn: true },
+			]);
+
+			agent.stop();
+		});
 	});
 });

@@ -1,15 +1,16 @@
 import assert from '../assert';
-import { Task } from '../task';
-import { Target } from '../target';
+import { NullLogger } from '../logger';
+import { Observable, Subject } from '../observable';
 import { Planner } from '../planner';
 import { Sensor } from '../sensor';
-import { NullLogger } from '../logger';
+import { Target } from '../target';
+import { Task } from '../task';
 import { Runtime } from './runtime';
-import { Result, AgentOpts, NotStarted } from './types';
+import { AgentOpts, NotStarted, Result } from './types';
 
 export * from './types';
 
-export interface Agent<TState = any> {
+export interface Agent<TState = any> extends Observable<TState> {
 	/**
 	 * Tells the agent to seek a new target.
 	 *
@@ -110,6 +111,7 @@ function of<TState>({
 	assert(opts.minWaitMs > 0, 'opts.minWaitMs must be greater than 0');
 
 	let runtime: Runtime<TState> | null = null;
+	const subject: Subject<TState> = new Subject();
 
 	return {
 		async seek(target) {
@@ -118,13 +120,17 @@ function of<TState>({
 				state = runtime.state;
 			}
 
-			runtime = new Runtime(state, target, planner, sensors, opts);
+			runtime = new Runtime(subject, state, target, planner, sensors, opts);
 			runtime.start();
 		},
 		async stop() {
 			if (runtime != null) {
 				return runtime.stop();
 			}
+
+			// We notify subscribers of completion only
+			// when stop is called
+			subject.complete();
 		},
 		async wait(timeout: number = 0) {
 			assert(timeout >= 0);
@@ -139,6 +145,9 @@ function of<TState>({
 				return state;
 			}
 			return runtime.state;
+		},
+		subscribe(next) {
+			return subject.subscribe(next);
 		},
 	};
 }
