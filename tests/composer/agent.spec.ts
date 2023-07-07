@@ -38,7 +38,7 @@ describe('composer/agent', () => {
 			opts: { minWaitMs: 1000, logger: console },
 		});
 
-		await agent.seek({
+		agent.seek({
 			services: {
 				main: {
 					status: 'running',
@@ -64,7 +64,7 @@ describe('composer/agent', () => {
 			.that.equals(true);
 
 		// Update the target
-		await agent.seek({
+		agent.seek({
 			services: {
 				main: {
 					status: 'stopped',
@@ -82,7 +82,7 @@ describe('composer/agent', () => {
 			.to.have.property('Running')
 			.that.equals(false);
 
-		await agent.seek({
+		agent.seek({
 			services: {
 				main: {
 					status: 'running',

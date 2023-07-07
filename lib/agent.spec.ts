@@ -9,7 +9,7 @@ describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
 			const agent = Agent.of({ initial: 0, opts: { logger: console } });
-			await agent.seek(0);
+			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
 				state: 0,
@@ -21,7 +21,7 @@ describe('Agent', () => {
 				initial: {},
 				opts: { minWaitMs: 10, logger: console },
 			});
-			await agent.seek({ never: true });
+			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
 			await agent.stop();
 		});
@@ -31,7 +31,7 @@ describe('Agent', () => {
 				initial: {},
 				opts: { minWaitMs: 10, maxRetries: 2, logger: console },
 			});
-			await agent.seek({ never: true });
+			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
 		});
 	});
@@ -112,7 +112,7 @@ describe('Agent', () => {
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
 			});
-			await agent.seek({ roomTemp: 20 });
+			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
 				success: true,
 				state: { roomTemp: 20, resistorOn: true },
@@ -127,7 +127,7 @@ describe('Agent', () => {
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
 			});
-			await agent.seek({ roomTemp: 20 });
+			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
 				success: true,
 				state: { roomTemp: 20, resistorOn: false },
@@ -147,7 +147,7 @@ describe('Agent', () => {
 			// Subscribe to the agent
 			agent.subscribe((s) => states.push(s));
 
-			await agent.seek({ roomTemp: 20 });
+			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.be.fulfilled;
 
 			// The observable should return all the state changes

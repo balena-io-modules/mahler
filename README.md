@@ -164,11 +164,14 @@ const Heater = Agent.of({
 With that we can start the Heater controller with a specified target.
 
 ```typescript
-// Set the heater target temperature to 23 degrees
-// Note that `await` here doesn't wait for a result but is necessary as seek returns a `Promise<void>`. More on this later.
-await Heater.seek({ roomTemp: 23 });
+// We can subscribe to temperature changes that are happening as the agent
+// is running
+Heater.subscribe((s) => console.log('Temperature is: ', s.roomTemp));
 
-// To wait for the result we can use `wait()`
+// Set the heater target temperature to 23 degrees
+Heater.seek({ roomTemp: 23 });
+
+// Wait for the heater to reach the target
 await Heater.wait();
 ```
 
@@ -395,7 +398,7 @@ system is connected, this will add the networks to the internal database, perfor
 the first network that is available.
 
 ```typescript
-await WifiConnect.seek({
+WifiConnect.seek({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },
@@ -406,11 +409,11 @@ await WifiConnect.seek({
 ```
 
 We can modify the target after the agent has started. In this case we are adding a new network, which
-will cause the agent to re-calculate the plan to include the `addNetwork` task. We need to await it as this
-will stop the plan runner (and wait for the stop) before restarting it with the new target
+will cause the agent to re-calculate the plan to include the `addNetwork` task. Internally, this will stop
+the currently running agent execution and trigger a search for a new target.
 
 ```typescript
-await WifiConnect.seek({
+WifiConnect.seek({
 	connected: true,
 	knownNetworks: {
 		home1: { ssid: 'My Home', psk: '' },

@@ -44,7 +44,7 @@ describe('orchestrator/agent', () => {
 			opts: { minWaitMs: 1000, logger: console },
 		});
 
-		await agent.seek({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -86,7 +86,7 @@ describe('orchestrator/agent', () => {
 
 		// Update the target
 		console.info('Stopping container');
-		await agent.seek({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -114,7 +114,7 @@ describe('orchestrator/agent', () => {
 			.that.equals(false);
 
 		console.info('Restarting container');
-		await agent.seek({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -142,7 +142,7 @@ describe('orchestrator/agent', () => {
 
 		// Update to a new release
 		console.info('Update to a new release');
-		await agent.seek({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -180,7 +180,7 @@ describe('orchestrator/agent', () => {
 
 		// Update to a new release
 		console.info('Uninstall app');
-		await agent.seek({
+		agent.seek({
 			apps: {
 				a0: DELETED,
 			},

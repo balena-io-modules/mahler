@@ -21,7 +21,7 @@ export interface Agent<TState = any> extends Observable<TState> {
 	 * the current execution and wait for it to be stopped
 	 * before starting a new run.
 	 */
-	seek(t: Target<TState>): Promise<void>;
+	seek(t: Target<TState>): void;
 
 	/**
 	 * Wait for the agent to reach the given target or
@@ -110,20 +110,40 @@ function of<TState>({
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.minWaitMs > 0, 'opts.minWaitMs must be greater than 0');
 
-	let runtime: Runtime<TState> | null = null;
 	const subject: Subject<TState> = new Subject();
 
-	return {
-		async seek(target) {
-			if (runtime != null) {
-				await runtime.stop();
-				state = runtime.state;
-			}
+	// Subscribe to runtime changes to keep
+	// the local copy of state up-to-date
+	subject.subscribe((s) => {
+		state = s;
+	});
 
-			runtime = new Runtime(subject, state, target, planner, sensors, opts);
-			runtime.start();
+	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
+
+	return {
+		seek(target) {
+			// We don't want seek to be an asynchronous call, so we
+			// wrap the runtime in a promise. This way, we can ensure
+			// that operations are always working on the right runtime,
+			// when the target changes or the agent is stopped
+			setupRuntime = setupRuntime.then((runtime) => {
+				// Flatten the promise chain to avoid memory leaks
+				setupRuntime = new Promise(async (resolve) => {
+					if (runtime != null) {
+						await runtime.stop();
+						state = runtime.state;
+					}
+
+					runtime = new Runtime(subject, state, target, planner, sensors, opts);
+					runtime.start();
+
+					resolve(runtime);
+				});
+				return setupRuntime;
+			});
 		},
 		async stop() {
+			const runtime = await setupRuntime;
 			if (runtime != null) {
 				return runtime.stop();
 			}
@@ -131,9 +151,13 @@ function of<TState>({
 			// We notify subscribers of completion only
 			// when stop is called
 			subject.complete();
+
+			// Reset the runtime
+			setupRuntime = Promise.resolve(null);
 		},
 		async wait(timeout: number = 0) {
 			assert(timeout >= 0);
+			const runtime = await setupRuntime;
 			if (runtime == null) {
 				return { success: false, error: new NotStarted() };
 			}
@@ -141,10 +165,7 @@ function of<TState>({
 			return runtime.wait(timeout);
 		},
 		state() {
-			if (runtime == null) {
-				return state;
-			}
-			return runtime.state;
+			return state;
 		},
 		subscribe(next) {
 			return subject.subscribe(next);

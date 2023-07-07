@@ -209,6 +209,8 @@ export class Runtime<TState> {
 			// The only way to get here is if the runtime was stopped
 			return resolve({ success: false, error: new Stopped() });
 		})
+			// QUESTION: if we get here this is pretty bad, should we notify
+			// subscribers of an error?
 			.catch((e) => ({ success: false as const, error: e }))
 			.finally(() => {
 				this.running = false;
