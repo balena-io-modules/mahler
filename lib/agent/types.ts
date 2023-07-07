@@ -39,38 +39,30 @@ export interface AgentOpts {
 
 export class NotStarted extends Error {
 	constructor() {
-		super('Agent runtime has not been started yet');
+		super('Agent has not been started yet');
 	}
 }
 
 export class Stopped extends Error {
 	constructor() {
-		super('Agent runtime was stopped before a plan could be found');
-	}
-}
-
-export class Cancelled extends Error {
-	constructor() {
-		super('Agent runtime was stopped before plan could be fully executed');
+		super('Agent was stopped before a plan could be found');
 	}
 }
 
 export class Failure extends Error {
 	constructor(tries: number) {
-		super('Agent runtime failed to find a plan after ' + tries + ' attempts');
+		super('Agent failed to find a plan after ' + tries + ' attempts');
 	}
 }
 
 export class Timeout extends Error {
 	constructor(timeout: number) {
-		super(
-			`Agent runtime timed out after ${timeout} ms before it could return a result`,
-		);
+		super(`Agent timed out after ${timeout}(ms) while waiting for a result`);
 	}
 }
 
 export class UnknownError extends Error {
 	constructor(cause: unknown) {
-		super('Unknown error: ' + cause, { cause });
+		super('Agent stopped due to unknown error: ' + cause, { cause });
 	}
 }

@@ -115,7 +115,7 @@ function of<TState>({
 		async seek(target) {
 			if (runtime != null) {
 				await runtime.stop();
-				state = runtime.state();
+				state = runtime.state;
 			}
 
 			runtime = new Runtime(state, target, planner, sensors, opts);
@@ -138,7 +138,7 @@ function of<TState>({
 			if (runtime == null) {
 				return state;
 			}
-			return runtime.state();
+			return runtime.state;
 		},
 	};
 }
