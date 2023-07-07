@@ -1,5 +1,3 @@
-import { Target } from '../target';
-
 interface Instance<TState> {
 	/**
 	 * The instance id
@@ -44,19 +42,7 @@ export interface Method<TState = any> extends Instance<TState> {
 	(s: TState): Instruction<TState> | Array<Instruction<TState>>;
 }
 
-export interface Redirect<TState = any> extends Instance<TState> {
-	readonly _tag: 'redirect';
-	/**
-	 * The method to be called when the task is executed
-	 * if the method returns an empty list, this means the procedure is not applicable
-	 */
-	(s: TState): Target<TState> | Array<Target<TState>>;
-}
-
-export type Instruction<TState = any> =
-	| Action<TState>
-	| Method<TState>
-	| Redirect<TState>;
+export type Instruction<TState = any> = Action<TState> | Method<TState>;
 
 /**
  * Check if an instruction is a method
@@ -84,20 +70,6 @@ function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	);
 }
 
-/**
- * Check if an instruction is a method
- */
-function isRedirect<TState = any>(
-	t: Instruction<TState>,
-): t is Redirect<TState> {
-	return (
-		(t as any).condition != null &&
-		typeof (t as any).condition === 'function' &&
-		typeof t === 'function' &&
-		(t as any)._tag === 'redirect'
-	);
-}
-
 function isEqual<TState = any>(
 	i1: Instruction<TState>,
 	i2: Instruction<TState>,
@@ -112,11 +84,6 @@ export const Method = {
 
 export const Action = {
 	is: isAction,
-	equals: isEqual,
-};
-
-export const Redirect = {
-	is: isRedirect,
 	equals: isEqual,
 };
 

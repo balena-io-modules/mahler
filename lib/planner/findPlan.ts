@@ -3,7 +3,7 @@ import { Path } from '../path';
 import { Operation } from '../operation';
 import { Pointer } from '../pointer';
 import { Context } from '../context';
-import { Action, Method, Instruction, Task, Redirect } from '../task';
+import { Action, Method, Instruction, Task } from '../task';
 import { PlannerConfig, PlanningResult, PlanningStats } from './types';
 import { isTaskApplicable } from './utils';
 
@@ -16,7 +16,7 @@ interface PlanningState<TState = any> {
 	trace?: PlannerConfig['trace'];
 	initialPlan?: Array<Action<TState>>;
 	stats?: PlanningStats;
-	callStack?: Array<Method<TState> | Redirect<TState>>;
+	callStack?: Array<Method<TState>>;
 }
 
 function tryAction<TState = any>(
@@ -101,60 +101,6 @@ function tryMethod<TState = any>(
 	return { success: true, state, plan, stats };
 }
 
-function tryRedirect<TState = any>(
-	redirect: Redirect<TState>,
-	{
-		current: state,
-		trace = () => {
-			/* noop */
-		},
-		depth = 0,
-		stats = { iterations: 0, maxDepth: 0, time: 0 },
-		callStack = [],
-		initialPlan = [],
-		...pState
-	}: PlanningState<TState>,
-): PlanningResult<TState> {
-	if (callStack.find((r) => Redirect.equals(r, redirect))) {
-		trace({
-			depth,
-			redirect: redirect.description,
-			operation: pState.operation,
-			error:
-				'recursion detected, redirection already in stack for the same target',
-		});
-		// We do not trace an error here as this should be fairly common
-		return { success: false, stats };
-	}
-
-	const output = redirect(state);
-	const targets = Array.isArray(output) ? output : [output];
-
-	const plan: Array<Action<TState>> = [];
-	for (const target of targets) {
-		const res = findPlan({
-			...pState,
-			current: state,
-			depth: depth + 1,
-			diff: Diff.of(state, target),
-			initialPlan: [...initialPlan, ...plan],
-			trace,
-			stats,
-			callStack: [...callStack, redirect],
-		});
-
-		if (!res.success) {
-			return res;
-		}
-
-		plan.push(...res.plan);
-		state = res.state;
-		stats = res.stats;
-	}
-
-	return { success: true, state, plan, stats };
-}
-
 function tryInstruction<TState = any>(
 	instruction: Instruction<TState>,
 	{
@@ -187,12 +133,6 @@ function tryInstruction<TState = any>(
 	let res: PlanningResult<TState>;
 	if (Method.is(instruction)) {
 		res = tryMethod(instruction, { ...state, trace, stats });
-	} else if (Redirect.is(instruction)) {
-		res = tryRedirect(instruction, {
-			...state,
-			trace,
-			stats,
-		});
 	} else {
 		res = tryAction(instruction, { ...state, trace, stats });
 	}
