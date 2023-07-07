@@ -44,7 +44,7 @@ describe('orchestrator/agent', () => {
 			opts: { minWaitMs: 1000, logger: console },
 		});
 
-		agent.start({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -63,10 +63,9 @@ describe('orchestrator/agent', () => {
 			},
 		});
 
-		expect(
-			await agent.result(),
-			'starting a single container should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'starting a single container should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 
 		const device = agent.state();
 		expect(device.apps.a0).to.not.be.undefined;
@@ -87,7 +86,7 @@ describe('orchestrator/agent', () => {
 
 		// Update the target
 		console.info('Stopping container');
-		await agent.target({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -104,10 +103,9 @@ describe('orchestrator/agent', () => {
 			},
 		});
 
-		expect(
-			await agent.result(),
-			'stopping the container should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'stopping the container should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 		expect(
 			(await docker.getContainer(service.containerId!).inspect()).State,
 			'container is stopped after the plan is executed',
@@ -116,7 +114,7 @@ describe('orchestrator/agent', () => {
 			.that.equals(false);
 
 		console.info('Restarting container');
-		await agent.target({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -132,10 +130,9 @@ describe('orchestrator/agent', () => {
 				},
 			},
 		});
-		expect(
-			await agent.result(),
-			'starting the container should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'starting the container should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 		expect(
 			(await docker.getContainer(service.containerId!).inspect()).State,
 			'container is running after the plan is executed',
@@ -145,7 +142,7 @@ describe('orchestrator/agent', () => {
 
 		// Update to a new release
 		console.info('Update to a new release');
-		await agent.target({
+		agent.seek({
 			apps: {
 				a0: {
 					name: 'test-app',
@@ -164,10 +161,9 @@ describe('orchestrator/agent', () => {
 				},
 			},
 		});
-		expect(
-			await agent.result(),
-			'updating to a new release should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'updating to a new release should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 
 		const newDevice = agent.state();
 		const newService = newDevice.apps.a0.releases.r1.services.main;
@@ -184,15 +180,14 @@ describe('orchestrator/agent', () => {
 
 		// Update to a new release
 		console.info('Uninstall app');
-		await agent.target({
+		agent.seek({
 			apps: {
 				a0: DELETED,
 			},
 		});
-		expect(
-			await agent.result(),
-			'delete the release should succeed',
-		).to.deep.equal({ success: true });
+		expect(await agent.wait(), 'delete the release should succeed')
+			.to.have.property('success')
+			.that.equals(true);
 
 		expect(agent.state().apps).to.be.empty;
 		await expect(docker.getContainer('r1_main').inspect()).to.be.rejected;

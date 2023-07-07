@@ -1,19 +1,46 @@
 import assert from '../assert';
-import { Task } from '../task';
-import { Target } from '../target';
+import { NullLogger } from '../logger';
+import { Observable, Subject } from '../observable';
 import { Planner } from '../planner';
 import { Sensor } from '../sensor';
-import { NullLogger } from '../logger';
+import { Target } from '../target';
+import { Task } from '../task';
 import { Runtime } from './runtime';
-import { AgentResult, AgentOpts, NotStarted } from './types';
+import { AgentOpts, NotStarted, Result } from './types';
 
 export * from './types';
 
-export interface Agent<TState = any> {
-	start(t: Target<TState>): void;
-	target(t: Target<TState>): Promise<void>;
-	result(timeout?: number): Promise<AgentResult>;
+export interface Agent<TState = any> extends Observable<TState> {
+	/**
+	 * Tells the agent to seek a new target.
+	 *
+	 * The method doesn't wait for a result. If there is no execution
+	 * in progress, the method will return immediately.
+	 *
+	 * If the agent is already seeking a plan, this will cancel
+	 * the current execution and wait for it to be stopped
+	 * before starting a new run.
+	 */
+	seek(t: Target<TState>): void;
+
+	/**
+	 * Wait for the agent to reach the given target or
+	 * terminate due to an error.
+	 */
+	wait(timeout?: number): Promise<Result<TState>>;
+
+	/**
+	 * Get the last known state of the agent.
+	 *
+	 * Note that if the agent is in the middle of executing an action, this
+	 * value may not be up to date with the actual state of the
+	 * system.
+	 */
 	state(): TState;
+
+	/**
+	 * Stop any running execution
+	 */
 	stop(): Promise<void>;
 }
 
@@ -83,30 +110,54 @@ function of<TState>({
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.minWaitMs > 0, 'opts.minWaitMs must be greater than 0');
 
-	let runtime: Runtime<TState> | null = null;
+	const subject: Subject<TState> = new Subject();
+
+	// Subscribe to runtime changes to keep
+	// the local copy of state up-to-date
+	subject.subscribe((s) => {
+		state = s;
+	});
+
+	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
 
 	return {
-		start(target) {
-			assert(runtime == null, 'Agent already started');
-			runtime = new Runtime(state, target, planner, sensors, opts);
-			runtime.start();
-		},
-		async target(target) {
-			if (runtime != null) {
-				await runtime.stop();
-				state = runtime.state();
-			}
+		seek(target) {
+			// We don't want seek to be an asynchronous call, so we
+			// wrap the runtime in a promise. This way, we can ensure
+			// that operations are always working on the right runtime,
+			// when the target changes or the agent is stopped
+			setupRuntime = setupRuntime.then((runtime) => {
+				// Flatten the promise chain to avoid memory leaks
+				setupRuntime = new Promise(async (resolve) => {
+					if (runtime != null) {
+						await runtime.stop();
+						state = runtime.state;
+					}
 
-			runtime = new Runtime(state, target, planner, sensors, opts);
-			runtime.start();
+					runtime = new Runtime(subject, state, target, planner, sensors, opts);
+					runtime.start();
+
+					resolve(runtime);
+				});
+				return setupRuntime;
+			});
 		},
 		async stop() {
+			const runtime = await setupRuntime;
 			if (runtime != null) {
 				return runtime.stop();
 			}
+
+			// We notify subscribers of completion only
+			// when stop is called
+			subject.complete();
+
+			// Reset the runtime
+			setupRuntime = Promise.resolve(null);
 		},
-		async result(timeout: number = 0) {
+		async wait(timeout: number = 0) {
 			assert(timeout >= 0);
+			const runtime = await setupRuntime;
 			if (runtime == null) {
 				return { success: false, error: new NotStarted() };
 			}
@@ -114,10 +165,10 @@ function of<TState>({
 			return runtime.wait(timeout);
 		},
 		state() {
-			if (runtime == null) {
-				return state;
-			}
-			return runtime.state();
+			return state;
+		},
+		subscribe(next) {
+			return subject.subscribe(next);
 		},
 	};
 }

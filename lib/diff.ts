@@ -2,6 +2,7 @@ import { Operation } from './operation';
 import { Pointer } from './pointer';
 import { Path } from './path';
 import { Target, DELETED } from './target';
+import { equals } from './json';
 
 /**
  * A diff is a function that allows to find a list of pending operations to a
@@ -40,34 +41,6 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	}
 
 	return t as S;
-}
-
-function isObject(value: unknown): value is object {
-	return typeof value === 'object' && value !== null;
-}
-
-/**
- * Calculates deep equality between javascript
- * objects
- */
-function equals<T>(value: T, other: T): boolean {
-	if (isObject(value) && isObject(other)) {
-		const [vProps, oProps] = [value, other].map(
-			(a) => Object.getOwnPropertyNames(a) as Array<keyof T>,
-		);
-		if (vProps.length !== oProps.length) {
-			// If the property lists are different lengths we don't need
-			// to check any further
-			return false;
-		}
-
-		// Otherwise this comparison will catch it. This works even
-		// for arrays as getOwnPropertyNames returns the list of indexes
-		// for each array
-		return vProps.every((key) => equals(value[key], other[key]));
-	}
-
-	return value === other;
 }
 
 function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
