@@ -1,4 +1,76 @@
 - commits:
+    - subject: Remove the need for async `seek()` method in Agent
+      hash: f05b7d1cb1cb59fc1622241085495ee602909a7e
+      body: |
+        This makes the API simpler an more intuitive.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Make Agent into an Observable
+      hash: bd8eebe9aa7bfd5e76872fffb55da1446593dea2
+      body: |
+        This allows other services to be notified of changes in the state.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Refactor agent runtime
+      hash: 84fa0251aa9c675ff718b46931e62eda7c980802
+      body: |
+        Organize and cleanup code
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Simplify the Agent interface
+      hash: 706c75ea4d3632f32c935e1583a993702afa6f85
+      body: |
+        This removes the `start` and `target` methods and replaces them with
+        a `seek`, that will cancel any running executions before starting the
+        search for a new plan.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Simplify observable implementation
+      hash: 6fd81f905ea6bda168206cec57ea3ebe0158245b
+      body: |
+        The implementation is now more consistent with typical observable
+        definitions.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Move `equals` json helper outside of diff
+      hash: c0f130c29071a398dbe84e5dd39eaba3d2f4c040
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Remove the `wait` function from observable
+      hash: eedd1de0310352a34246cdd8d39bc2476f930124
+      body: |
+        Although it might be nice to have in some cases, it  is not really
+        used by the agent and it makes Observable definition more complex
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Remove callable syntax from Observable
+      hash: cc9900852d3edfe390ae5d6397a3bb192b2cb0e7
+      body: |
+        It really is not necessary and it really just makes creating observables
+        from classes much harder
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.12.0
+  title: ""
+  date: 2023-07-07T23:03:23.133Z
+- commits:
     - subject: Improve 'Initializer' helper task
       hash: aa5fc245a8e07e8abbdba3e3c41e96b34fd50d70
       body: |
