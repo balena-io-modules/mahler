@@ -1,7 +1,7 @@
 import { expect } from '~/tests';
 
 import { ServiceStatus } from './state';
-import { planner, plannerWithRedirect } from './planner';
+import { planner } from './planner';
 import { DELETED } from 'lib/target';
 
 describe('orchestrator/planning', () => {
@@ -383,75 +383,6 @@ describe('orchestrator/planning', () => {
 				"remove release 'r0'",
 				"pull image 'alpine:latest' for service 'other' of app 'a0'",
 				"create container for service 'other' of app 'a0' and release 'r1'",
-				"start container for service 'other' of app 'a0' and release 'r1'",
-			]);
-		} else {
-			expect.fail('Plan not found');
-		}
-	});
-
-	it('when using redirect, it installs and migrates before removing the current release', () => {
-		const device = {
-			name: 'test',
-			uuid: 'd0',
-			apps: {
-				a0: {
-					name: 'test-app',
-					releases: {
-						r0: {
-							services: {
-								main: {
-									image: 'alpine:latest',
-									command: ['sleep', 'infinity'],
-									status: 'running' as ServiceStatus,
-									containerId: 'c0',
-								},
-							},
-						},
-					},
-				},
-			},
-			keys: {},
-			images: [{ name: 'a0_main:r0' }],
-		};
-
-		const result = plannerWithRedirect.findPlan(device, {
-			apps: {
-				a0: {
-					name: 'test-app',
-					releases: {
-						r0: DELETED,
-						r1: {
-							services: {
-								// main service has not changed
-								main: {
-									image: 'alpine:latest',
-									command: ['sleep', 'infinity'],
-									status: 'running',
-								},
-								other: {
-									image: 'alpine:latest',
-									command: ['sleep', '30'],
-									status: 'running',
-								},
-							},
-						},
-					},
-				},
-			},
-		});
-
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"initialize release 'r1' for app 'a0'",
-				// First create the new services and migrate those already running
-				"pull image 'alpine:latest' for service 'main' of app 'a0'",
-				"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
-				"pull image 'alpine:latest' for service 'other' of app 'a0'",
-				"create container for service 'other' of app 'a0' and release 'r1'",
-				// Then remove the release
-				"remove release 'r0'",
-				// Finally start the target containers
 				"start container for service 'other' of app 'a0' and release 'r1'",
 			]);
 		} else {

@@ -3,9 +3,8 @@ import { randomUUID } from 'crypto';
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
 import { Path } from '../path';
-import { Target } from '../target';
 
-import { Action, Instruction, Method, Redirect } from './instructions';
+import { Action, Instruction, Method } from './instructions';
 import { createInstructionId } from './utils';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
@@ -16,7 +15,8 @@ interface TaskSpec<
 	TOp extends TaskOp = 'update',
 > {
 	/**
-	 * A unique identifier for the task
+	 * A unique identifier for the task. This is automatically generated
+	 * when constructing he task.
 	 */
 	readonly id: string;
 
@@ -70,42 +70,6 @@ export interface ActionTask<
 	 * MethodTask --- ground --> Method
 	 */
 	(ctx: ContextAsArgs<TState, TPath, TOp>): Action<TState>;
-}
-
-/**
- * A redirect task tells the planner to go to an alternative
- * target before moving to the final target.
- *
- * For instance, if the agent is a robot that
- * needs to get from A -> B but there is an obstacle in the path, then the
- * task could identify the obstacle and tell the planner to go from A -> C
- * and then from C -> B in order to reach the target.
- */
-export interface RedirectTask<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
-> extends TaskSpec<TState, TPath, TOp> {
-	/**
-	 * The actual action the task performs
-	 */
-	redirect(
-		s: TState,
-		c: Context<TState, TPath, TOp>,
-	): Target<TState> | Array<Target<TState>>;
-
-	/**
-	 * The task function grounds the task
-	 *
-	 * Grounding the task converts the specification into an instruction, that is,
-	 * something that can be evaluated by the planner. It does this by
-	 * contextualizing the task for a specific target.
-	 *
-	 * ActionTask --- ground --> Action
-	 * MethodTask --- ground --> Method
-	 * TargetTask --- ground --> Target
-	 */
-	(ctx: ContextAsArgs<TState, TPath, TOp>): Redirect<TState>;
 }
 
 // A method definition
@@ -185,15 +149,6 @@ function ground<
 		});
 	}
 
-	if (isRedirectTask(task)) {
-		return Object.assign((s: TState) => task.redirect(s, context), {
-			id,
-			_tag: 'redirect' as const,
-			description,
-			condition: (s: TState) => task.condition(s, context),
-		});
-	}
-
 	return Object.assign((s: TState) => task.action(s, context), {
 		id,
 		_tag: 'action' as const,
@@ -231,29 +186,13 @@ function isActionTask<
 }
 
 /**
- * Check if a task is a redirect
- */
-function isRedirectTask<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
->(t: Task<TState, TPath, TOp>): t is RedirectTask<TState, TPath, TOp> {
-	return (
-		(t as any).redirect != null && typeof (t as any).redirect === 'function'
-	);
-}
-
-/**
  * A task is base unit of knowledge of an autonomous agent.
  */
 export type Task<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> =
-	| ActionTask<TState, TPath, TOp>
-	| MethodTask<TState, TPath, TOp>
-	| RedirectTask<TState, TPath, TOp>;
+> = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
 export type MethodTaskProps<
 	TState = any,
@@ -268,13 +207,6 @@ export type ActionTaskProps<
 	TOp extends TaskOp = 'update',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> &
 	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
-
-export type RedirectTaskProps<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
-> = Partial<Omit<RedirectTask<TState, TPath, TOp>, 'redirect' | 'id'>> &
-	Pick<RedirectTask<TState, TPath, TOp>, 'redirect'>;
 
 /**
  * Create a task
@@ -293,16 +225,10 @@ function of<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
->(t: RedirectTaskProps<TState, TPath, TOp>): RedirectTask<TState, TPath, TOp>;
-function of<
-	TState = any,
-	TPath extends Path = '/',
-	TOp extends TaskOp = 'update',
 >(
 	task:
 		| ActionTaskProps<TState, TPath, TOp>
-		| MethodTaskProps<TState, TPath, TOp>
-		| RedirectTaskProps<TState, TPath, TOp>,
+		| MethodTaskProps<TState, TPath, TOp>,
 ) {
 	const id: string = randomUUID();
 	const { path = '/', op = 'update' } = task;
@@ -310,12 +236,7 @@ function of<
 	// Check that the path is valid
 	Path.assert(path);
 
-	const prefix =
-		typeof (task as any).method === 'function'
-			? '[method] '
-			: typeof (task as any).redirect === 'function'
-			? '[redirect] '
-			: '';
+	const prefix = typeof (task as any).method === 'function' ? '[method] ' : '';
 
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath, TOp>) => {
@@ -345,5 +266,4 @@ export const Task = {
 	of,
 	isMethod: isMethodTask,
 	isAction: isActionTask,
-	isRedirect: isRedirectTask,
 };
