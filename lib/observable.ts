@@ -113,6 +113,15 @@ function of<T>(
 	};
 }
 
+function is<T = any>(x: unknown): x is Observable<T> {
+	return (
+		x != null &&
+		(x as any).subscribe != null &&
+		typeof (x as any).subscribe === 'function'
+	);
+}
+
 export const Observable = {
 	of,
+	is,
 };
