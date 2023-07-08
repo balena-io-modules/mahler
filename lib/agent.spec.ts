@@ -39,11 +39,9 @@ describe('Agent', () => {
 		it('it allows to subscribe to the agent state', async () => {
 			const inc = Task.of({
 				condition: (state: number, { target }) => state < target,
-				// TODO: we need to fix the planner, the effect here really should return the next
-				// state instead of the target state here, however the planner only allows
-				// to insert instance of a task in the plan
-				effect: (_: number, { target }) => target,
+				effect: (state: number) => state + 1,
 				action: async (state: number) => state + 1,
+				description: 'increment',
 			});
 			const agent = Agent.of({
 				initial: 0,

@@ -1,10 +1,11 @@
-import { Diff } from '../diff';
-import { Path } from '../path';
-import { Operation } from '../operation';
-import { Pointer } from '../pointer';
 import { Context } from '../context';
-import { Action, Method, Instruction, Task } from '../task';
-import { PlannerConfig, PlanningResult, PlanningStats } from './types';
+import { Diff } from '../diff';
+import { equals } from '../json';
+import { Operation } from '../operation';
+import { Path } from '../path';
+import { Pointer } from '../pointer';
+import { Action, Instruction, Method, Task } from '../task';
+import { PlannerConfig, PlanningStats } from './types';
 import { isTaskApplicable } from './utils';
 
 interface PlanningState<TState = any> {
@@ -14,10 +15,43 @@ interface PlanningState<TState = any> {
 	depth?: number;
 	operation?: Operation<TState, any>;
 	trace?: PlannerConfig['trace'];
-	initialPlan?: Array<Action<TState>>;
+	initialPlan?: Array<[TState, Action<TState>]>;
 	stats?: PlanningStats;
 	callStack?: Array<Method<TState>>;
 }
+
+export type PlanningSuccess<TState> = {
+	/**
+	 * Planning was successful
+	 */
+	success: true;
+	/**
+	 * The plan to get from the current state to the target state
+	 */
+	plan: Array<[TState, Action<TState>]>;
+	/**
+	 * The expected state after applying the plan
+	 */
+	state: TState;
+	/**
+	 * Stats about the planning process
+	 */
+	stats: PlanningStats;
+};
+
+export type PlanningFailure = {
+	/**
+	 * Planning was not successful
+	 */
+	success: false;
+
+	/**
+	 * Stats about the planning process
+	 */
+	stats: PlanningStats;
+};
+
+type PlanningResult<TState> = PlanningSuccess<TState> | PlanningFailure;
 
 function tryAction<TState = any>(
 	action: Action<TState>,
@@ -33,7 +67,9 @@ function tryAction<TState = any>(
 	}: PlanningState<TState>,
 ): PlanningResult<TState> {
 	// Detect loops in the plan
-	if (initialPlan.find((a) => Action.equals(a, action))) {
+	if (
+		initialPlan.find(([s, a]) => Action.equals(a, action) && equals(s, current))
+	) {
 		trace({
 			depth,
 			operation,
@@ -44,7 +80,7 @@ function tryAction<TState = any>(
 	}
 	const state = action.effect(current);
 
-	return { success: true, state, plan: [action], stats };
+	return { success: true, state, plan: [[current, action]], stats };
 }
 
 function tryMethod<TState = any>(
@@ -78,7 +114,7 @@ function tryMethod<TState = any>(
 		return { success: false, stats };
 	}
 
-	const plan: Array<Action<TState>> = [];
+	const plan: Array<[TState, Action<TState>]> = [];
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
@@ -170,7 +206,7 @@ export function findPlan<TState = any>({
 		trace({
 			depth,
 			state: current,
-			plan: initialPlan.map((a) => a.description),
+			plan: initialPlan.map(([_, a]) => a.description),
 			stats: { maxDepth, iterations: stats.iterations },
 			status: 'plan found',
 		});
@@ -187,7 +223,7 @@ export function findPlan<TState = any>({
 		state: current,
 		target: diff.target,
 		pending: ops,
-		plan: initialPlan.map((a) => a.description),
+		plan: initialPlan.map(([_, a]) => a.description),
 		status: 'finding plan',
 	});
 
