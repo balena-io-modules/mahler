@@ -1,4 +1,31 @@
 - commits:
+    - subject: Remove RedirectTask
+      hash: 2ac6052b4003dbb44d63d60d6a1b2c9e5e60aaf3
+      body: |
+        While a redirect task is not a bad concept, it is really not necessary
+        as creatively made methods will achieve the same thing without too much
+        code overhead. Redirect tasks also get in the way of some planned
+        improvements like parallel tasks and task lensing as I anticipate they
+        will only make implementation harder.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Remove `id` from valid task creation arguments
+      hash: 8a63a8ca14ff2a0aba513b65d1f0c21747c0fdd7
+      body: |
+        There is no real benefit on allowing users to set task ids and it adds
+        the risk of messing with planning.
+
+        Removing also makes it unnecessary to check for duplicates.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.13.0
+  title: ""
+  date: 2023-07-08T00:00:23.401Z
+- commits:
     - subject: Remove the need for async `seek()` method in Agent
       hash: f05b7d1cb1cb59fc1622241085495ee602909a7e
       body: |
