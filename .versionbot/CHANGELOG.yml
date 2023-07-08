@@ -1,4 +1,18 @@
 - commits:
+    - subject: Allow action tasks to return an Observable
+      hash: 19f6a437a037db1a3ae4fd9617bb11c2bc514bb8
+      body: |
+        This allow long running tasks (e.g. downloading a large file) to report
+        intermediate progress of the operation (e.g. download progress) that the
+        agent can report to its subscribers.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.13.1
+  title: ""
+  date: 2023-07-08T00:53:50.187Z
+- commits:
     - subject: Remove RedirectTask
       hash: 2ac6052b4003dbb44d63d60d6a1b2c9e5e60aaf3
       body: |
