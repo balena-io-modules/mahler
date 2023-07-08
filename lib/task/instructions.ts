@@ -1,3 +1,5 @@
+import { Observable } from '../observable';
+
 interface Instance<TState> {
 	/**
 	 * The instance id
@@ -29,7 +31,7 @@ export interface Action<TState = any> extends Instance<TState> {
 	/**
 	 * Run the action
 	 */
-	(s: TState): Promise<TState>;
+	(s: TState): Promise<TState> | Observable<TState>;
 }
 
 /** A method task that has been applied to a specific context */

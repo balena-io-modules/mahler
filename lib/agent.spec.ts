@@ -2,6 +2,7 @@ import { expect, console } from '~/tests';
 import { Agent } from './agent';
 import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
+import { Observable } from './observable';
 
 import { setTimeout } from 'timers/promises';
 
@@ -34,6 +35,70 @@ describe('Agent', () => {
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
 		});
+
+		it('it allows to subscribe to the agent state', async () => {
+			const inc = Task.of({
+				condition: (state: number, { target }) => state < target,
+				// TODO: we need to fix the planner, the effect here really should return the next
+				// state instead of the target state here, however the planner only allows
+				// to insert instance of a task in the plan
+				effect: (_: number, { target }) => target,
+				action: async (state: number) => state + 1,
+			});
+			const agent = Agent.of({
+				initial: 0,
+				opts: { logger: console, minWaitMs: 10 },
+				tasks: [inc],
+			});
+
+			// Subscribe to the count
+			const count: number[] = [];
+			agent.subscribe((s) => count.push(s));
+
+			agent.seek(10);
+
+			await expect(agent.wait()).to.eventually.deep.equal({
+				success: true,
+				state: 10,
+			});
+
+			// Intermediate states returned by the observable should be emitted by the agent
+			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		});
+
+		it('it allows to use observables as actions', async () => {
+			const counter = Task.of({
+				condition: (state: number, { target }) => state < target,
+				effect: (_: number, { target }) => target,
+				action: (state: number, { target }) =>
+					Observable.of(async (s) => {
+						while (state < target) {
+							state = state + 1;
+							s.next(state);
+							await setTimeout(10);
+						}
+					}),
+			});
+			const agent = Agent.of({
+				initial: 0,
+				opts: { logger: console },
+				tasks: [counter],
+			});
+
+			// Subscribe to the count
+			const count: number[] = [];
+			agent.subscribe((s) => count.push(s));
+
+			agent.seek(10);
+
+			await expect(agent.wait()).to.eventually.deep.equal({
+				success: true,
+				state: 10,
+			});
+
+			// Intermediate states returned by the observable should be emitted by the agent
+			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		});
 	});
 
 	describe('heater', () => {
@@ -43,7 +108,7 @@ describe('Agent', () => {
 				state.roomTemp < target.roomTemp && !state.resistorOn,
 			effect: (state: Heater, { target }) => ({
 				...state,
-				// Turning the resistor om does not change the temperature
+				// Turning the resistor on does not change the temperature
 				// immediately, but the effect is that the temperature eventually
 				// will reach that point
 				roomTemp: target.roomTemp,

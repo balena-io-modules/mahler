@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
+import { Observable } from '../observable';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
@@ -55,9 +56,15 @@ export interface ActionTask<
 	effect(s: TState, c: Context<TState, TPath, TOp>): TState;
 
 	/**
-	 * The actual action the task performs
+	 * The actual action the task performs. The action may return an Observable
+	 * or a Promise. If the action returns an Observable,
+	 * the planner will wait for the observable to complete before continuing, but
+	 * use any state updates to communicate about state changes to its observers.
 	 */
-	action(s: TState, c: Context<TState, TPath, TOp>): Promise<TState>;
+	action(
+		s: TState,
+		c: Context<TState, TPath, TOp>,
+	): Promise<TState> | Observable<TState>;
 
 	/**
 	 * The task function grounds the task

@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import { Observer } from '../observable';
+import { Observer, Observable } from '../observable';
 import { Planner } from '../planner';
 import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
@@ -92,7 +92,29 @@ export class Runtime<TState> {
 
 	private async runAction(action: Action) {
 		try {
-			return await action(this.state);
+			const res = action(this.state);
+			if (Observable.is<TState>(res)) {
+				const runtime = this;
+				// If the action result is an observable, then
+				// we need to subscribe to it and update the internal
+				// state as the observable emits new values
+				return new Promise((resolve, reject) => {
+					res.subscribe({
+						next(s) {
+							runtime.state = s;
+							runtime.observer.next(s);
+						},
+						complete() {
+							resolve(runtime.state);
+						},
+						error(e) {
+							reject(e);
+						},
+					});
+				});
+			} else {
+				return await res;
+			}
 		} catch (e) {
 			throw new ActionRunFailed(action, e);
 		}
