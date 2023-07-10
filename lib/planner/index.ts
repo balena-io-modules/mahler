@@ -1,10 +1,14 @@
 import { Diff } from '../diff';
 import { Target } from '../target';
-import { Task } from '../task';
-import { findPlan } from './findPlan';
-import { PlannerConfig, PlanningResult } from './types';
+import { Action, Task } from '../task';
+import { PlanningFailure, PlanningSuccess, findPlan } from './findPlan';
+import { PlannerConfig } from './types';
 
 export * from './types';
+
+export type PlanningResult<TState> =
+	| (Omit<PlanningSuccess<TState>, 'plan'> & { plan: Array<Action<TState>> })
+	| PlanningFailure;
 
 export interface Planner<TState = any> {
 	/**
@@ -43,6 +47,9 @@ function of<TState = any>({
 				trace: config.trace,
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
+			if (res.success) {
+				return { ...res, plan: res.plan.map(([_, a]) => a) };
+			}
 			return res;
 		},
 	};
