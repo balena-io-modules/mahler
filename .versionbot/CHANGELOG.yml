@@ -1,4 +1,19 @@
 - commits:
+    - subject: Improve planner loop detection
+      hash: 5f718cc040000e07c0b27906ed8d7e5931a7298d
+      body: |
+        The planner would skip any action that was already added to the plan,
+        however this would prevent repeat actions that modify the state
+        incrementally. The planner now skips an action if it has been used
+        before for the same state.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.13.2
+  title: ""
+  date: 2023-07-10T03:04:57.456Z
+- commits:
     - subject: Allow action tasks to return an Observable
       hash: 19f6a437a037db1a3ae4fd9617bb11c2bc514bb8
       body: |
