@@ -6,7 +6,6 @@ import { Observable } from '../observable';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
-import { createInstructionId } from './utils';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 
@@ -139,13 +138,11 @@ function ground<
 		(ctx as any).target,
 	);
 
-	const { id: taskId, description: taskDescription } = task;
+	const { id, description: taskDescription } = task;
 	const description: string =
 		typeof taskDescription === 'function'
 			? taskDescription(context)
 			: taskDescription;
-
-	const id = createInstructionId(taskId, path, (ctx as any).target);
 
 	if (isMethodTask(task)) {
 		return Object.assign((s: TState) => task.method(s, context), {

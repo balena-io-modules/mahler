@@ -4,7 +4,6 @@ import { Path } from '../path';
 
 import { Action } from './instructions';
 import { ActionTask, Task } from './tasks';
-import { createInstructionId } from './utils';
 
 export const NoAction = <T>(s: T) => Promise.resolve(s);
 export const NoEffect = <T>(s: T) => s;
@@ -121,7 +120,7 @@ export function NoOp<
 	TPath extends Path = '/',
 	TOp extends TaskOp = '*',
 >(ctx: Context<TState, TPath, TOp>): Action<TState> {
-	const id = createInstructionId('no-op', ctx.path, (ctx as any).target);
+	const id = 'noop';
 
 	return Object.assign((s: TState) => Promise.resolve(s), {
 		_tag: 'action' as const,

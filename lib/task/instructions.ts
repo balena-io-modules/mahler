@@ -4,7 +4,7 @@ import { TaskOp, Context } from '../context';
 
 interface Instance<TState, TPath extends Path, TOp extends TaskOp> {
 	/**
-	 * The instance id
+	 * The identifier for the task
 	 */
 	readonly id: string;
 
@@ -104,7 +104,7 @@ function isEqual<TState = any>(
 	i1: Instruction<TState>,
 	i2: Instruction<TState>,
 ): boolean {
-	return i1.id === i2.id;
+	return i1.id === i2.id && i1.path === i2.path && i1.target === i2.target;
 }
 
 export const Method = {
