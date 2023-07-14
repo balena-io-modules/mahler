@@ -138,7 +138,7 @@ function tryMethod<TState = any>(
 }
 
 function tryInstruction<TState = any>(
-	instruction: Instruction<TState>,
+	instruction: Instruction<TState, any, any>,
 	{
 		trace = () => {
 			/* noop */

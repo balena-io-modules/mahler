@@ -2,7 +2,8 @@ import { expect } from '~/tests';
 
 import { ServiceStatus } from './state';
 import { planner } from './planner';
-import { DELETED } from 'lib/target';
+import { DELETED } from 'mahler';
+import { plan } from 'mahler/testing';
 
 describe('orchestrator/planning', () => {
 	it('updates the app/release state if it has not been set', () => {
@@ -34,12 +35,18 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"initialize '/apps/a0'",
-				"initialize release 'r0' for app 'a0'",
-				"create container for service 'main' of app 'a0' and release 'r0'",
-				"start container for service 'main' of app 'a0' and release 'r0'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action("initialize '/apps/a0'")
+					.action("initialize release 'r0' for app 'a0'")
+					.action(
+						"create container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -83,11 +90,17 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"pull image 'alpine:latest' for service 'main' of app 'a0'",
-				"create container for service 'main' of app 'a0' and release 'r0'",
-				"start container for service 'main' of app 'a0' and release 'r0'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+					.action(
+						"create container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -136,9 +149,13 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"start container for service 'main' of app 'a0' and release 'r0'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -186,12 +203,20 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"pull image 'alpine:latest' for service 'main' of app 'a0'",
-				"create container for service 'main' of app 'a0' and release 'r0'",
-				"start container for service 'main' of app 'a0' and release 'r0'",
-				"stop container for service 'main' of app 'a0' and release 'r0'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+					.action(
+						"create container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"stop container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -245,12 +270,22 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"stop container for service 'main' of app 'a0' and release 'r0'",
-				"remove container for service 'main' of app 'a0' and release 'r0'",
-				"create container for service 'main' of app 'a0' and release 'r0'",
-				"start container for service 'main' of app 'a0' and release 'r0'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action(
+						"stop container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"remove container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"create container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -307,18 +342,32 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"initialize release 'r1' for app 'a0'",
-				"pull image 'alpine:latest' for service 'main' of app 'a0'",
-				"create container for service 'main' of app 'a0' and release 'r1'",
-				"stop container for service 'main' of app 'a0' and release 'r0'",
-				"remove container for service 'main' of app 'a0' and release 'r0'",
-				"remove release 'r0'",
-				"start container for service 'main' of app 'a0' and release 'r1'",
-				"pull image 'alpine:latest' for service 'other' of app 'a0'",
-				"create container for service 'other' of app 'a0' and release 'r1'",
-				"start container for service 'other' of app 'a0' and release 'r1'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action("initialize release 'r1' for app 'a0'")
+					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+					.action(
+						"create container for service 'main' of app 'a0' and release 'r1'",
+					)
+					.action(
+						"stop container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action(
+						"remove container for service 'main' of app 'a0' and release 'r0'",
+					)
+					.action("remove release 'r0'")
+					.action(
+						"start container for service 'main' of app 'a0' and release 'r1'",
+					)
+					.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+					.action(
+						"create container for service 'other' of app 'a0' and release 'r1'",
+					)
+					.action(
+						"start container for service 'other' of app 'a0' and release 'r1'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}
@@ -376,15 +425,23 @@ describe('orchestrator/planning', () => {
 		});
 
 		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal([
-				"initialize release 'r1' for app 'a0'",
-				"pull image 'alpine:latest' for service 'main' of app 'a0'",
-				"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
-				"remove release 'r0'",
-				"pull image 'alpine:latest' for service 'other' of app 'a0'",
-				"create container for service 'other' of app 'a0' and release 'r1'",
-				"start container for service 'other' of app 'a0' and release 'r1'",
-			]);
+			expect(result.plan.map((a) => a.description)).to.deep.equal(
+				plan()
+					.action("initialize release 'r1' for app 'a0'")
+					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+					.action(
+						"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
+					)
+					.action("remove release 'r0'")
+					.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+					.action(
+						"create container for service 'other' of app 'a0' and release 'r1'",
+					)
+					.action(
+						"start container for service 'other' of app 'a0' and release 'r1'",
+					)
+					.end(),
+			);
 		} else {
 			expect.fail('Plan not found');
 		}

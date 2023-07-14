@@ -1,6 +1,7 @@
 import { expect, console } from '~/tests';
 import { Planner } from './planner';
 import { Task } from './task';
+import { plan } from './testing';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -118,14 +119,16 @@ describe('Planner', () => {
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
 			if (result.success) {
-				expect(result.plan.map((a) => a.description)).to.deep.equal([
-					'take block c',
-					'put c on table',
-					'take block b',
-					'put b on c',
-					'take block a',
-					'put a on b',
-				]);
+				expect(result.plan.map((a) => a.description)).to.deep.equal(
+					plan()
+						.action('take block c')
+						.action('put c on table')
+						.action('take block b')
+						.action('put b on c')
+						.action('take block a')
+						.action('put a on b')
+						.end(),
+				);
 			} else {
 				expect.fail('No plan found');
 			}
@@ -318,14 +321,16 @@ describe('Planner', () => {
 			);
 
 			if (result.success) {
-				expect(result.plan.map((action) => action.description)).to.deep.equal([
-					'unstack block c',
-					'put down block c',
-					'unstack block b',
-					'stack block b on top of block c',
-					'pickup block a',
-					'stack block a on top of block b',
-				]);
+				expect(result.plan.map((action) => action.description)).to.deep.equal(
+					plan()
+						.action('unstack block c')
+						.action('put down block c')
+						.action('unstack block b')
+						.action('stack block b on top of block c')
+						.action('pickup block a')
+						.action('stack block a on top of block b')
+						.end(),
+				);
 			} else {
 				expect.fail('Plan not found');
 			}

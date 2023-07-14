@@ -4,6 +4,10 @@
   "description": "A automated task composer and HTN based planner for building autonomous system agents",
   "homepage": "https://github.com/balena-io-modules/mahler#readme",
   "main": "build/index.js",
+  "exports": {
+    ".": "./build/index.js",
+    "./testing": "./build/testing/index.js"
+  },
   "types": "build/index.d.ts",
   "keywords": [
     "balena",
