@@ -1,4 +1,4 @@
-import { expect } from '~/tests';
+import { expect } from '~/test-utils';
 import { isTaskApplicable } from './utils';
 import { Task, NoEffect } from '../task';
 import { Operation } from '../operation';

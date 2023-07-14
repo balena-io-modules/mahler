@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { Task } from '~/lib';
+import { Task } from 'mahler';
 import { App, Service, ServiceStatus } from './state';
 
 interface StatusError extends Error {

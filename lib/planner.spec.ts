@@ -1,4 +1,4 @@
-import { expect, console } from '~/tests';
+import { expect, console } from '~/test-utils';
 import { Planner } from './planner';
 import { Task } from './task';
 import { plan } from './testing';

@@ -1,4 +1,4 @@
-import { expect } from '~/tests';
+import { expect } from '~/test-utils';
 
 import { planner } from './planner';
 import { ServiceStatus } from './state';

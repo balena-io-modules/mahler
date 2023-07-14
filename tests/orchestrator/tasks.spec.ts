@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { expect } from '~/tests';
+import { expect } from '~/test-utils';
 
 import { Device } from './state';
 import { fetch, installService, startService } from './tasks';

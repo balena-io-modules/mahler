@@ -1,5 +1,5 @@
-import { Planner } from '~/lib';
-import { console } from '~/tests';
+import { Planner } from 'mahler';
+import { console } from '~/test-utils';
 
 import { App } from './state';
 import { fetch, install, remove, start, stop } from './tasks';

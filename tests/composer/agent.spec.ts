@@ -1,7 +1,7 @@
 import * as Docker from 'dockerode';
-import { console, expect } from '~/tests';
+import { console, expect } from '~/test-utils';
 
-import { Agent } from '~/lib';
+import { Agent } from 'mahler';
 import { planner } from './planner';
 import { App } from './state';
 

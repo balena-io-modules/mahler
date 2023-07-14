@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { expect } from '~/tests';
+import { expect } from '~/test-utils';
 
 import { Image } from './state';
 import { fetch } from './tasks';
