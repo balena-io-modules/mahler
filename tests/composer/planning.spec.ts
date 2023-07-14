@@ -2,7 +2,7 @@ import { expect } from '~/test-utils';
 
 import { planner } from './planner';
 import { ServiceStatus } from './state';
-import { plan } from 'mahler/testing';
+import { plan, serialize } from 'mahler/testing';
 
 describe('composer/planning', () => {
 	it('pulls the service image if it does not exist yet', () => {
@@ -22,17 +22,13 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("pull image 'alpine:latest' for service 'main'")
-					.action("installing container for service 'main'")
-					.action("starting container for service 'main'")
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("pull image 'alpine:latest' for service 'main'")
+				.action("installing container for service 'main'")
+				.action("starting container for service 'main'")
+				.end(),
+		);
 	});
 
 	it('skips pull if it image already exists', () => {
@@ -52,16 +48,12 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("installing container for service 'main'")
-					.action("starting container for service 'main'")
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("installing container for service 'main'")
+				.action("starting container for service 'main'")
+				.end(),
+		);
 	});
 
 	it('stops running service if target state is "stopped"', () => {
@@ -86,13 +78,9 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan().action("stopping container for service 'main'").end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan().action("stopping container for service 'main'").end(),
+		);
 	});
 
 	it('installs and stops service if service does not exist and target state is "stopped"', () => {
@@ -113,18 +101,14 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("pull image 'alpine:latest' for service 'main'")
-					.action("installing container for service 'main'")
-					.action("starting container for service 'main'")
-					.action("stopping container for service 'main'")
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("pull image 'alpine:latest' for service 'main'")
+				.action("installing container for service 'main'")
+				.action("starting container for service 'main'")
+				.action("stopping container for service 'main'")
+				.end(),
+		);
 	});
 
 	it('knows to recreate the service if the image changes', () => {
@@ -150,19 +134,15 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("stopping container for service 'main'")
-					.action("removing container for service 'main'")
-					.action("pull image 'alpine:3.14' for service 'main'")
-					.action("installing container for service 'main'")
-					.action("starting container for service 'main'")
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("stopping container for service 'main'")
+				.action("removing container for service 'main'")
+				.action("pull image 'alpine:3.14' for service 'main'")
+				.action("installing container for service 'main'")
+				.action("starting container for service 'main'")
+				.end(),
+		);
 	});
 
 	it('knows to recreate the service if the image changes and the service is stopped', () => {
@@ -188,18 +168,14 @@ describe('composer/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("removing container for service 'main'")
-					.action("pull image 'alpine:3.14' for service 'main'")
-					.action("installing container for service 'main'")
-					.action("starting container for service 'main'")
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("removing container for service 'main'")
+				.action("pull image 'alpine:3.14' for service 'main'")
+				.action("installing container for service 'main'")
+				.action("starting container for service 'main'")
+				.end(),
+		);
 	});
 });
 
@@ -226,16 +202,12 @@ it('knows to recreate service if config has changed', () => {
 		},
 	});
 
-	if (result.success) {
-		expect(result.plan.map((a) => a.description)).to.deep.equal(
-			plan()
-				.action("stopping container for service 'main'")
-				.action("removing container for service 'main'")
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
-				.end(),
-		);
-	} else {
-		expect.fail('Plan not found');
-	}
+	expect(serialize(result)).to.deep.equal(
+		plan()
+			.action("stopping container for service 'main'")
+			.action("removing container for service 'main'")
+			.action("installing container for service 'main'")
+			.action("starting container for service 'main'")
+			.end(),
+	);
 });

@@ -1,7 +1,7 @@
 import { expect, console } from '~/test-utils';
 import { Planner } from './planner';
 import { Task } from './task';
-import { plan } from './testing';
+import { plan, serialize } from './testing';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -43,7 +43,9 @@ describe('Planner', () => {
 			const put = Task.of({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
-					location.get(s) === 'hand' && isClear(s.blocks, location.target),
+					location.get(s) === 'hand' &&
+					location.target !== location.block &&
+					isClear(s.blocks, location.target),
 				effect: (s: State, location) => {
 					// Update the block
 					s = location.set(s, location.target);
@@ -118,20 +120,16 @@ describe('Planner', () => {
 				},
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
-			if (result.success) {
-				expect(result.plan.map((a) => a.description)).to.deep.equal(
-					plan()
-						.action('take block c')
-						.action('put c on table')
-						.action('take block b')
-						.action('put b on c')
-						.action('take block a')
-						.action('put a on b')
-						.end(),
-				);
-			} else {
-				expect.fail('No plan found');
-			}
+			expect(serialize(result)).to.deep.equal(
+				plan()
+					.action('take block c')
+					.action('put c on table')
+					.action('take block b')
+					.action('put b on c')
+					.action('take block a')
+					.action('put a on b')
+					.end(),
+			);
 		});
 
 		it('block stacking problem: fancy version', () => {
@@ -320,20 +318,16 @@ describe('Planner', () => {
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
 
-			if (result.success) {
-				expect(result.plan.map((action) => action.description)).to.deep.equal(
-					plan()
-						.action('unstack block c')
-						.action('put down block c')
-						.action('unstack block b')
-						.action('stack block b on top of block c')
-						.action('pickup block a')
-						.action('stack block a on top of block b')
-						.end(),
-				);
-			} else {
-				expect.fail('Plan not found');
-			}
+			expect(serialize(result)).to.deep.equal(
+				plan()
+					.action('unstack block c')
+					.action('put down block c')
+					.action('unstack block b')
+					.action('stack block b on top of block c')
+					.action('pickup block a')
+					.action('stack block a on top of block b')
+					.end(),
+			);
 		});
 
 		it.skip('simple travel problem', async () => {

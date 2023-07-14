@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import { Observer, Observable } from '../observable';
-import { Planner } from '../planner';
+import { Planner, Node } from '../planner';
 import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
@@ -120,9 +120,11 @@ export class Runtime<TState> {
 		}
 	}
 
-	private async runPlan(actions: Action[]) {
+	private async runPlan(node: Node<TState> | null) {
 		const { logger } = this.opts;
-		for (const action of actions) {
+		while (node != null) {
+			const { action } = node;
+
 			if (this.stopped) {
 				throw new Cancelled();
 			}
@@ -143,6 +145,9 @@ export class Runtime<TState> {
 				this.observer.next(this.state);
 			}
 			logger.info(`${action.description}: success`);
+
+			// Advance the list
+			node = node.next;
 		}
 	}
 
@@ -152,6 +157,14 @@ export class Runtime<TState> {
 		}
 
 		const { logger } = this.opts;
+
+		const toArray = <T>(n: Node<T> | null): string[] => {
+			if (n == null) {
+				return [];
+			}
+
+			return [n.action.description, ...toArray(n.next)];
+		};
 
 		this.promise = new Promise<Result<TState>>(async (resolve) => {
 			this.running = true;
@@ -167,24 +180,24 @@ export class Runtime<TState> {
 					const result = this.findPlan();
 					logger.debug('planning stats', JSON.stringify(result.stats));
 
-					const actions = result.plan;
+					const { start } = result;
 
 					// The plan is empty, we have reached the goal
-					if (actions.length === 0) {
+					if (start == null) {
 						logger.debug('plan empty, nothing else to do');
 						return resolve({ success: true, state: this.state });
 					}
 
 					logger.debug(
 						'plan found, will execute the following actions',
-						actions.map((a) => a.description),
+						toArray(start),
 					);
 
 					// If we got here, we have found a suitable plan
 					found = true;
 
 					// Execute the plan
-					await this.runPlan(result.plan);
+					await this.runPlan(start);
 
 					// We've executed the plan succesfully
 					// we don't exit immediately since the goal may

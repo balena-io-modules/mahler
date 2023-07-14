@@ -29,6 +29,11 @@ function toArray<T>(n: Node<T> | null): Serialized {
 	return [n.action.description, ...toArray(n.next)];
 }
 
+/**
+ * Return a serialized version of the plan for comparison
+ *
+ * The function will throw if the plan is not successful
+ */
 export function serialize<T>(p: Plan<T>): Serialized {
 	if (!p.success) {
 		throw new Error('Plan not found');
@@ -37,6 +42,9 @@ export function serialize<T>(p: Plan<T>): Serialized {
 	return toArray(p.start);
 }
 
+/**
+ * Start building a plan
+ */
 export function plan(): Builder {
 	const repr: Serialized = [];
 

@@ -3,7 +3,7 @@ import { expect } from '~/test-utils';
 import { ServiceStatus } from './state';
 import { planner } from './planner';
 import { DELETED } from 'mahler';
-import { plan } from 'mahler/testing';
+import { plan, serialize } from 'mahler/testing';
 
 describe('orchestrator/planning', () => {
 	it('updates the app/release state if it has not been set', () => {
@@ -34,22 +34,18 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("initialize '/apps/a0'")
-					.action("initialize release 'r0' for app 'a0'")
-					.action(
-						"create container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("initialize '/apps/a0'")
+				.action("initialize release 'r0' for app 'a0'")
+				.action(
+					"create container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.end(),
+		);
 	});
 
 	it('pulls the service image if it does not exist yet', () => {
@@ -89,21 +85,17 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
-					.action(
-						"create container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action(
+					"create container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.end(),
+		);
 	});
 
 	it('starts the service if the container already exists', () => {
@@ -148,17 +140,13 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.end(),
+		);
 	});
 
 	it('installs and stops service if service does not exist and target state is "stopped"', () => {
@@ -202,24 +190,20 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
-					.action(
-						"create container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"stop container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action(
+					"create container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"stop container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.end(),
+		);
 	});
 
 	it('recreates the service container if the configuration does not match', () => {
@@ -269,26 +253,22 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action(
-						"stop container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"remove container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"create container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action(
+					"stop container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"remove container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"create container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.end(),
+		);
 	});
 
 	it('updates a release by first installing the new services and then stopping the old services', () => {
@@ -341,36 +321,32 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("initialize release 'r1' for app 'a0'")
-					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
-					.action(
-						"create container for service 'main' of app 'a0' and release 'r1'",
-					)
-					.action(
-						"stop container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action(
-						"remove container for service 'main' of app 'a0' and release 'r0'",
-					)
-					.action("remove release 'r0'")
-					.action(
-						"start container for service 'main' of app 'a0' and release 'r1'",
-					)
-					.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
-					.action(
-						"create container for service 'other' of app 'a0' and release 'r1'",
-					)
-					.action(
-						"start container for service 'other' of app 'a0' and release 'r1'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("initialize release 'r1' for app 'a0'")
+				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action(
+					"create container for service 'main' of app 'a0' and release 'r1'",
+				)
+				.action(
+					"stop container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action(
+					"remove container for service 'main' of app 'a0' and release 'r0'",
+				)
+				.action("remove release 'r0'")
+				.action(
+					"start container for service 'main' of app 'a0' and release 'r1'",
+				)
+				.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+				.action(
+					"create container for service 'other' of app 'a0' and release 'r1'",
+				)
+				.action(
+					"start container for service 'other' of app 'a0' and release 'r1'",
+				)
+				.end(),
+		);
 	});
 
 	it('migrates unchanged services between releases', () => {
@@ -424,26 +400,20 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		if (result.success) {
-			expect(result.plan.map((a) => a.description)).to.deep.equal(
-				plan()
-					.action("initialize release 'r1' for app 'a0'")
-					.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
-					.action(
-						"migrate unchanged service 'main' of app 'a0 to release 'r1' '",
-					)
-					.action("remove release 'r0'")
-					.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
-					.action(
-						"create container for service 'other' of app 'a0' and release 'r1'",
-					)
-					.action(
-						"start container for service 'other' of app 'a0' and release 'r1'",
-					)
-					.end(),
-			);
-		} else {
-			expect.fail('Plan not found');
-		}
+		expect(serialize(result)).to.deep.equal(
+			plan()
+				.action("initialize release 'r1' for app 'a0'")
+				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action("migrate unchanged service 'main' of app 'a0 to release 'r1' '")
+				.action("remove release 'r0'")
+				.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+				.action(
+					"create container for service 'other' of app 'a0' and release 'r1'",
+				)
+				.action(
+					"start container for service 'other' of app 'a0' and release 'r1'",
+				)
+				.end(),
+		);
 	});
 });
