@@ -7,7 +7,9 @@ import { PlannerConfig } from './types';
 export * from './types';
 
 export type PlanningResult<TState> =
-	| (Omit<PlanningSuccess<TState>, 'plan'> & { plan: Array<Action<TState>> })
+	| (Omit<PlanningSuccess<TState>, 'plan'> & {
+			plan: Array<Action<TState, any, any>>;
+	  })
 	| PlanningFailure;
 
 export interface Planner<TState = any> {

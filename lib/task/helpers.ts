@@ -126,6 +126,8 @@ export function NoOp<
 	return Object.assign((s: TState) => Promise.resolve(s), {
 		_tag: 'action' as const,
 		id,
+		path: ctx.path as any,
+		target: (ctx as any).target,
 		description: 'no-op',
 		condition: () => true,
 		effect: (s: TState) => s,
