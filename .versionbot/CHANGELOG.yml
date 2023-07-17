@@ -1,4 +1,64 @@
 - commits:
+    - subject: Do not generate hash for Instruction id
+      hash: 0c2ddd772679d4eab274668976efd53032d07bcb
+      body: >
+        This is unnecessary as what needs to be compared are plan nodes rather
+        than
+
+        instructions.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Use a linked list to represent a Plan
+      hash: 638ebceda06ed31f2200aea27b301be831420412
+      body: |
+        This should make it easier to convert the plan to a DAG
+        as a linked list is a particular case of that data structure.
+
+        This should also result in slightly better memory usage as it
+        avoids copying the plan array multiple times.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Rename tsconfig paths for more clarity
+      hash: 8068373e25ba9fc84d57babde19d4e86c89b9995
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Create testing namespace to put test related utils
+      hash: 4e5c0af6c95bab494d857e69bd6314f7df46d0ce
+      body: |
+        This also adds a way to create a plan representation using
+        a builder pattern. This will become more useful when we need to test
+        the plan generated when using parallel tasks.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add `path` and `target` to instructions
+      hash: ebc8b9ec6c48e1db1a6472786d4d67de1b925cf1
+      body: |
+        Currently we calculate the action id using a hashing function from the
+        path, target and task id. This is not really useful as in reality what
+        we need to compare are applications of an action to a specific state.
+
+        The planner is doing that comparison at the moment by comparing the
+        actual state objects, which is a slow operation. It should really
+        compare ids generated from the action metadata and the state.
+
+        This is a first step towards that.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.14.0
+  title: ""
+  date: 2023-07-17T02:05:01.894Z
+- commits:
     - subject: Improve planner loop detection
       hash: 5f718cc040000e07c0b27906ed8d7e5931a7298d
       body: |
