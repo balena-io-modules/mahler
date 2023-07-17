@@ -6,7 +6,6 @@ import { Observable } from '../observable';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
-import { createInstructionId } from './utils';
 
 export const NotImplemented = () => Promise.reject('Not implemented');
 
@@ -76,7 +75,7 @@ export interface ActionTask<
 	 * ActionTask --- ground --> Action
 	 * MethodTask --- ground --> Method
 	 */
-	(ctx: ContextAsArgs<TState, TPath, TOp>): Action<TState>;
+	(ctx: ContextAsArgs<TState, TPath, TOp>): Action<TState, TPath, TOp>;
 }
 
 // A method definition
@@ -104,7 +103,7 @@ export interface MethodTask<
 	 * ActionTask --- ground --> Action
 	 * MethodTask --- ground --> Method
 	 */
-	(ctx: ContextAsArgs<TState, TPath, TOp>): Method<TState>;
+	(ctx: ContextAsArgs<TState, TPath, TOp>): Method<TState, TPath, TOp>;
 }
 
 function ground<
@@ -114,7 +113,7 @@ function ground<
 >(
 	task: Task<TState, TPath, TOp>,
 	ctx: ContextAsArgs<TState, TPath, TOp>,
-): Instruction<TState> {
+): Instruction<TState, TPath, TOp> {
 	const templateParts = Path.elems(task.path);
 
 	const path =
@@ -139,17 +138,17 @@ function ground<
 		(ctx as any).target,
 	);
 
-	const { id: taskId, description: taskDescription } = task;
+	const { id, description: taskDescription } = task;
 	const description: string =
 		typeof taskDescription === 'function'
 			? taskDescription(context)
 			: taskDescription;
 
-	const id = createInstructionId(taskId, path, (ctx as any).target);
-
 	if (isMethodTask(task)) {
 		return Object.assign((s: TState) => task.method(s, context), {
 			id,
+			path: context.path as any,
+			target: (ctx as any).target,
 			_tag: 'method' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
@@ -158,6 +157,8 @@ function ground<
 
 	return Object.assign((s: TState) => task.action(s, context), {
 		id,
+		path: context.path as any,
+		target: (ctx as any).target,
 		_tag: 'action' as const,
 		description,
 		condition: (s: TState) => task.condition(s, context),

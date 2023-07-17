@@ -11,11 +11,13 @@ export { TaskOp } from './types';
  *
  * The properties of a context object are the following
  *
- * @property op - The operation taking place
- * @property target - The target value of the referenced element (TODO: this probably should be undefined if the operation is `remove`)
- * @property params - If route parameters are given in the path, e.g. /people/:name/location, then this property includes the relevant values for the operation. e.g. if the change is in `/people/alice/location`, the params.name will have the value 'alice'
+ * @property target - The target value of the referenced element. The target only exists for `create` or `update` operations
  * @property get - A function that returns the value of the referenced element on the state
- * @property set - A funciton that allows to modify the referenced element in a state object
+ * @property set - A function that allows to modify the referenced element in a state object
+ * @property del - A function that allows to delete the referenced element in a state object
+ *
+ * If the path defines any parameters using the `:<param>` syntax, the values of those parameters will also
+ * be included in the Context object.
  *
  * The functions `get` and `set` make the contet a functional lens, which by definition follows the following laws:
  *

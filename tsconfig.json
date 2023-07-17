@@ -12,9 +12,19 @@
 		"declaration": true,
 		"skipLibCheck": true,
 		"paths": {
-			"~/lib": ["lib/index.ts"],
-			"~/tests": ["tests/index.ts"]
+			"mahler": [
+				"lib/index.ts"
+			],
+			"mahler/testing": [
+				"lib/testing/index.ts"
+			],
+			"~/test-utils": [
+				"tests/index.ts"
+			]
 		}
 	},
-	"include": ["lib/**/*.ts", "tests/**/*.ts"]
+	"include": [
+		"lib/**/*.ts",
+		"tests/**/*.ts"
+	]
 }

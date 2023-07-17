@@ -1,14 +1,10 @@
 import { Diff } from '../diff';
 import { Target } from '../target';
-import { Action, Task } from '../task';
-import { PlanningFailure, PlanningSuccess, findPlan } from './findPlan';
-import { PlannerConfig } from './types';
+import { Task } from '../task';
+import { findPlan } from './findPlan';
+import { PlannerConfig, Plan, Node } from './types';
 
 export * from './types';
-
-export type PlanningResult<TState> =
-	| (Omit<PlanningSuccess<TState>, 'plan'> & { plan: Array<Action<TState>> })
-	| PlanningFailure;
 
 export interface Planner<TState = any> {
 	/**
@@ -16,7 +12,21 @@ export interface Planner<TState = any> {
 	 * to the target state. It will throw an exception if a plan
 	 * cannot be found.
 	 */
-	findPlan(current: TState, target: Target<TState>): PlanningResult<TState>;
+	findPlan(current: TState, target: Target<TState>): Plan<TState>;
+}
+
+function reverse<T>(head: Node<T> | null): Node<T> | null {
+	let curr = head;
+	let prev: Node<T> | null = null;
+
+	while (curr != null) {
+		const next = curr.next;
+		curr.next = prev;
+		prev = curr;
+		curr = next;
+	}
+
+	return prev;
 }
 
 function of<TState = any>({
@@ -48,8 +58,9 @@ function of<TState = any>({
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
-				return { ...res, plan: res.plan.map(([_, a]) => a) };
+				res.start = reverse(res.start);
 			}
+
 			return res;
 		},
 	};

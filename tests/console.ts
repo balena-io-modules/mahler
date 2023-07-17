@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import { Logger } from '~/lib';
+import { Logger } from 'mahler';
 import { inspect } from 'util';
 
 // Create the default logger

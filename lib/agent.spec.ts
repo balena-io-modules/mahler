@@ -1,4 +1,4 @@
-import { expect, console } from '~/tests';
+import { expect, console } from '~/test-utils';
 import { Agent } from './agent';
 import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
