@@ -4,8 +4,16 @@ import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
 import { Action, Instruction, Method, Task } from '../task';
-import { PlannerConfig } from './types';
-import { Plan, Node } from './plan';
+import { Plan } from './plan';
+import { Node } from './node';
+import {
+	PlannerConfig,
+	LoopDetected,
+	RecursionDetected,
+	MethodExpansionEmpty,
+	ConditionNotMet,
+	SearchFailed,
+} from './types';
 import { isTaskApplicable } from './utils';
 import assert from '../assert';
 
@@ -15,7 +23,7 @@ interface PlanningState<TState = any> {
 	tasks: Array<Task<TState>>;
 	depth?: number;
 	operation?: Operation<TState, any>;
-	trace?: PlannerConfig['trace'];
+	trace: PlannerConfig<TState>['trace'];
 	initialPlan?: Plan<TState>;
 	callStack?: Array<Method<TState>>;
 }
@@ -33,17 +41,12 @@ function planHasId<T>(id: string, node: Node<T> | null): boolean {
 function tryAction<TState = any>(
 	action: Action<TState>,
 	{
-		depth,
-		operation,
 		current,
 		initialPlan = {
 			success: true,
 			start: null,
 			state: current,
 			stats: { iterations: 0, maxDepth: 0, time: 0 },
-		},
-		trace = () => {
-			/* noop */
 		},
 	}: PlanningState<TState>,
 ): Plan<TState> {
@@ -57,13 +60,7 @@ function tryAction<TState = any>(
 
 	// Detect loops in the plan
 	if (planHasId(id, initialPlan.start)) {
-		trace({
-			depth,
-			operation,
-			action: action.description,
-			error: 'loop detected, action already in plan',
-		});
-		return { success: false, stats: initialPlan.stats };
+		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
 	const state = action.effect(current);
 
@@ -77,9 +74,6 @@ function tryMethod<TState = any>(
 	method: Method<TState>,
 	{
 		current: state,
-		trace = () => {
-			/* noop */
-		},
 		initialPlan = {
 			success: true,
 			start: null,
@@ -96,20 +90,21 @@ function tryMethod<TState = any>(
 
 	// look method in the call stack
 	if (callStack.find((m) => Method.equals(m, method))) {
-		trace({
-			depth: pState.depth,
-			method: method.description,
-			operation: pState.operation,
-			error:
-				'recursion detected, method call already in stack for the same target',
-		});
-		return { success: false, stats: initialPlan.stats };
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: RecursionDetected,
+		};
 	}
 
 	const output = method(state);
 	const instructions = Array.isArray(output) ? output : [output];
 	if (instructions.length === 0) {
-		return { success: false, stats: initialPlan.stats };
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: MethodExpansionEmpty,
+		};
 	}
 
 	const plan: Plan<TState> = {
@@ -121,7 +116,6 @@ function tryMethod<TState = any>(
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
-			trace,
 			current: state,
 			initialPlan: plan,
 			callStack: [...callStack, method],
@@ -144,9 +138,7 @@ function tryInstruction<TState = any>(
 	instruction: Instruction<TState, any, any>,
 	{
 		current,
-		trace = () => {
-			/* noop */
-		},
+		trace,
 		initialPlan = {
 			success: true,
 			start: null,
@@ -157,22 +149,15 @@ function tryInstruction<TState = any>(
 	}: PlanningState<TState>,
 ): Plan<TState> {
 	trace({
-		depth: state.depth,
-		operation: state.operation,
-		instruction: instruction.description,
-		status: 'trying instruction',
+		event: 'try-instruction',
+		operation: state.operation!,
+		instruction,
+		state: current,
 	});
 
 	// test condition
 	if (!instruction.condition(current)) {
-		trace({
-			depth: state.depth,
-			state: current,
-			operation: state.operation,
-			instruction: instruction.description,
-			error: 'condition not met',
-		});
-		return { success: false, stats: initialPlan.stats };
+		return { success: false, stats: initialPlan.stats, error: ConditionNotMet };
 	}
 
 	let res: Plan<TState>;
@@ -182,14 +167,6 @@ function tryInstruction<TState = any>(
 		res = tryAction(instruction, { ...state, trace, current, initialPlan });
 	}
 
-	if (res.success) {
-		trace({
-			depth: state.depth,
-			operation: state.operation,
-			instruction: instruction.description,
-			status: 'instruction selected',
-		});
-	}
 	return res;
 }
 
@@ -197,9 +174,7 @@ export function findPlan<TState = any>({
 	current,
 	diff,
 	tasks,
-	trace = () => {
-		/* noop */
-	},
+	trace,
 	depth = 0,
 	initialPlan = {
 		success: true,
@@ -222,12 +197,6 @@ export function findPlan<TState = any>({
 	// the target
 	if (ops.length === 0) {
 		const maxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
-		trace({
-			depth,
-			state: current,
-			stats: { maxDepth, iterations: stats.iterations },
-			status: 'plan found',
-		});
 		return {
 			success: true,
 			start: initialPlan.start,
@@ -237,11 +206,10 @@ export function findPlan<TState = any>({
 	}
 
 	trace({
+		event: 'find-next',
 		depth,
 		state: current,
-		target: diff.target,
-		pending: ops,
-		status: 'finding plan',
+		operations: ops,
 	});
 
 	for (const operation of ops) {
@@ -275,6 +243,10 @@ export function findPlan<TState = any>({
 				callStack,
 			});
 
+			if (!taskPlan.success) {
+				trace(taskPlan.error);
+			}
+
 			if (taskPlan.success && taskPlan.start != null) {
 				const res = findPlan({
 					depth: depth + 1,
@@ -288,6 +260,8 @@ export function findPlan<TState = any>({
 
 				if (res.success) {
 					return res;
+				} else {
+					trace(res.error);
 				}
 			}
 		}
@@ -299,5 +273,6 @@ export function findPlan<TState = any>({
 			...stats,
 			maxDepth: stats.maxDepth < depth ? depth : stats.maxDepth,
 		},
+		error: SearchFailed(depth),
 	};
 }

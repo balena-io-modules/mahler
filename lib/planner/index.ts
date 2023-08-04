@@ -3,10 +3,12 @@ import { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
 import { PlannerConfig } from './types';
-import { Plan, Node } from './plan';
+import { Plan } from './plan';
+import { Node } from './node';
 
 export * from './types';
 export * from './plan';
+export * from './node';
 
 export interface Planner<TState = any> {
 	/**
@@ -36,7 +38,7 @@ function of<TState = any>({
 	config = {},
 }: {
 	tasks?: Array<Task<TState, any, any>>;
-	config?: Partial<PlannerConfig>;
+	config?: Partial<PlannerConfig<TState>>;
 }): Planner<TState> {
 	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
@@ -49,18 +51,28 @@ function of<TState = any>({
 		return 0;
 	});
 
+	const {
+		trace = () => {
+			/* noop */
+		},
+	} = config;
+
 	return {
 		findPlan(current: TState, target: Target<TState>) {
 			const time = performance.now();
+			trace({ event: 'start', target });
 			const res = findPlan({
 				current,
 				diff: Diff.of(current, target),
 				tasks,
-				trace: config.trace,
+				trace,
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
 				res.start = reverse(res.start);
+				trace({ event: 'success', start: res.start });
+			} else {
+				trace({ event: 'failed' });
 			}
 
 			return res;
