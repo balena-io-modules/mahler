@@ -2,9 +2,11 @@ import { Diff } from '../diff';
 import { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
-import { PlannerConfig, Plan, Node } from './types';
+import { PlannerConfig } from './types';
+import { Plan, Node } from './plan';
 
 export * from './types';
+export * from './plan';
 
 export interface Planner<TState = any> {
 	/**
