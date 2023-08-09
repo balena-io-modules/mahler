@@ -1,4 +1,27 @@
 - commits:
+    - subject: Expose planner API via mahler/planner
+      hash: c299fcb2e025cbd70a59b7cfa343b83a31dbc29d
+      body: |
+        This also removes the export for planner functionality
+        on the top level. Use of `Planner` object should be generally rare and
+        limited to testing. Exposing the planner API via a namespace makes that
+        more evident.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Move Plan types to planner/plan.ts
+      hash: 7a217ff034f625ae23d6e0964e88693a0dfb6470
+      body: |
+        This allows to centralize how a Node is created and the id is generated
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.15.0
+  title: ""
+  date: 2023-08-09T17:14:58.589Z
+- commits:
     - subject: Do not generate hash for Instruction id
       hash: 0c2ddd772679d4eab274668976efd53032d07bcb
       body: >
