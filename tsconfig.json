@@ -18,6 +18,9 @@
 			"mahler/testing": [
 				"lib/testing/index.ts"
 			],
+			"mahler/planner": [
+				"lib/planner/index.ts"
+			],
 			"~/test-utils": [
 				"tests/index.ts"
 			]

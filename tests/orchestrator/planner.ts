@@ -1,4 +1,4 @@
-import { Planner } from 'mahler';
+import { Planner } from 'mahler/planner';
 import { console } from '~/test-utils';
 
 import { Device } from './state';

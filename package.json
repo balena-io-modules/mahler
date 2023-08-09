@@ -6,7 +6,8 @@
   "main": "build/index.js",
   "exports": {
     ".": "./build/index.js",
-    "./testing": "./build/testing/index.js"
+    "./testing": "./build/testing/index.js",
+    "./planner": "./build/planner/index.js"
   },
   "types": "build/index.d.ts",
   "keywords": [
