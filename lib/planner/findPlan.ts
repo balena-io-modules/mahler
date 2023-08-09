@@ -1,11 +1,11 @@
 import { Context } from '../context';
 import { Diff } from '../diff';
-import { createHash } from 'crypto';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
 import { Action, Instruction, Method, Task } from '../task';
-import { PlannerConfig, Plan, Node } from './types';
+import { PlannerConfig } from './types';
+import { Plan, Node } from './plan';
 import { isTaskApplicable } from './utils';
 import assert from '../assert';
 
@@ -30,21 +30,6 @@ function planHasId<T>(id: string, node: Node<T> | null): boolean {
 	return false;
 }
 
-function createNodeId<TState>(s: TState, a: Action<TState, any, any>): string {
-	// md5 should be good enough for this purpose
-	// and it's the fastest of the available options
-	return createHash('md5')
-		.update(
-			JSON.stringify({
-				id: a.id,
-				path: a.path,
-				state: s,
-				...(a.target && { target: a.target }),
-			}),
-		)
-		.digest('hex');
-}
-
 function tryAction<TState = any>(
 	action: Action<TState>,
 	{
@@ -67,7 +52,8 @@ function tryAction<TState = any>(
 	assert(initialPlan.success);
 
 	// Generate an id for the potential node
-	const id = createNodeId(initialPlan.state, action);
+	const node = Node.of(initialPlan.state, action);
+	const id = node.id;
 
 	// Detect loops in the plan
 	if (planHasId(id, initialPlan.start)) {
