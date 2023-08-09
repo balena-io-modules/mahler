@@ -1,7 +1,7 @@
 import * as Docker from 'dockerode';
 import * as tar from 'tar-stream';
 
-import { DELETED, Disposer, Initializer, Target, Task } from 'mahler';
+import { Disposer, Initializer, Task } from 'mahler';
 import { console } from '~/test-utils';
 import { App, Device, Service, ServiceStatus } from './state';
 import { getContainerName, getImageName, getRegistryAndName } from './utils';
