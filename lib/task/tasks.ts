@@ -152,6 +152,14 @@ function ground<
 			_tag: 'method' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
+			toJSON() {
+				return {
+					id,
+					path: context.path,
+					description,
+					target: (ctx as any).target,
+				};
+			},
 		});
 	}
 
@@ -163,6 +171,14 @@ function ground<
 		description,
 		condition: (s: TState) => task.condition(s, context),
 		effect: (s: TState) => task.effect(s, context),
+		toJSON() {
+			return {
+				id,
+				path: context.path,
+				description,
+				target: (ctx as any).target,
+			};
+		},
 	});
 }
 

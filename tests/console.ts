@@ -1,6 +1,5 @@
 import Debug from 'debug';
 import { Logger } from 'mahler';
-import { inspect } from 'util';
 
 // Create the default logger
 // Send logger.info() and logger.debug() output to stdout
@@ -15,10 +14,7 @@ const logger: Logger = {
 	error: Debug('mahler:error'),
 	debug: debug.extend('debug'),
 	trace: (...v: any[]) => {
-		trace(
-			'%s',
-			...v.map((i) => inspect(i, { compact: true, depth: Infinity })),
-		);
+		trace('%s', ...v.map((i) => JSON.stringify(i, null, 2)));
 	},
 };
 
