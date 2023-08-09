@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 
 import { Action } from '../task';
+import { Pointer } from '../pointer';
 
 /**
  * A node defines a specific step in a plan.
@@ -26,6 +27,12 @@ export interface Node<TState> {
 
 export const Node = {
 	of: <TState>(s: TState, a: Action<TState, any, any>): Node<TState> => {
+		// We don't use the full state to calculate the
+		// id as there may be changes in the state that have nothing
+		// to do with the action. We just use the part of the state
+		// that is relevant to the action according to the path
+		const state = Pointer.of(s, a.path);
+
 		// md5 should be good enough for this purpose
 		// and it's the fastest of the available options
 		const id = createHash('md5')
@@ -33,7 +40,7 @@ export const Node = {
 				JSON.stringify({
 					id: a.id,
 					path: a.path,
-					state: s,
+					state,
 					...(a.target && { target: a.target }),
 				}),
 			)
