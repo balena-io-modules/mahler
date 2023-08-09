@@ -1,4 +1,21 @@
 - commits:
+    - subject: Use only relevant state for Node id generation
+      hash: a88049cc0c77ff72399521ea20d018b4198c3c46
+      body: |
+        The state object may be pretty large, which means state changes may be
+        common. Before this change, the Node ID would be calculated using the
+        full state object, increasing the chances of false negative loop
+        detection. This updates id calculation to only consider the part of the
+        state relevant to the action (given by the action path), which should
+        improve loop detection behavior.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.16.1
+  title: ""
+  date: 2023-08-09T18:44:38.890Z
+- commits:
     - subject: Add instruction serialization with toJSON
       hash: bb4831de5f1a162dc9c4117b6f2ad0c8fd5ee33c
       body: ""
