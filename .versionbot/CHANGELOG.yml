@@ -1,4 +1,29 @@
 - commits:
+    - subject: Add instruction serialization with toJSON
+      hash: bb4831de5f1a162dc9c4117b6f2ad0c8fd5ee33c
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Formalize the plan trace interface
+      hash: 4f4b909643f2c79de237d3e1ffc08d6789ecaddc
+      body: |
+        Events happening during the planning process (next iteration, try
+        instruction, condition failed, etc.) are now defined as specific types
+        with accompanying data. These events can be organized as a state
+        machine, which means trace functions can use the state machine to
+        identify where in the process an event happens, and use that
+        information, for instance, to create visualizations of the decision
+        tree.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.16.0
+  title: ""
+  date: 2023-08-09T18:17:00.138Z
+- commits:
     - subject: Expose planner API via mahler/planner
       hash: c299fcb2e025cbd70a59b7cfa343b83a31dbc29d
       body: |
