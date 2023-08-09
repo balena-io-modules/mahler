@@ -62,7 +62,12 @@ function of<TState = any>({
 			const time = performance.now();
 			trace({ event: 'start', target });
 			const res = findPlan({
-				current,
+				initialPlan: {
+					success: true,
+					state: current,
+					start: null,
+					stats: { iterations: 0, maxDepth: 0, time: 0 },
+				},
 				diff: Diff.of(current, target),
 				tasks,
 				trace,

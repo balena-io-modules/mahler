@@ -18,13 +18,12 @@ import { isTaskApplicable } from './utils';
 import assert from '../assert';
 
 interface PlanningState<TState = any> {
-	current: TState;
 	diff: Diff<TState>;
 	tasks: Array<Task<TState>>;
 	depth?: number;
 	operation?: Operation<TState, any>;
 	trace: PlannerConfig<TState>['trace'];
-	initialPlan?: Plan<TState>;
+	initialPlan: Plan<TState>;
 	callStack?: Array<Method<TState>>;
 }
 
@@ -40,15 +39,7 @@ function planHasId<T>(id: string, node: Node<T> | null): boolean {
 
 function tryAction<TState = any>(
 	action: Action<TState>,
-	{
-		current,
-		initialPlan = {
-			success: true,
-			start: null,
-			state: current,
-			stats: { iterations: 0, maxDepth: 0, time: 0 },
-		},
-	}: PlanningState<TState>,
+	{ initialPlan }: PlanningState<TState>,
 ): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
@@ -62,7 +53,7 @@ function tryAction<TState = any>(
 	if (planHasId(id, initialPlan.start)) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
-	const state = action.effect(current);
+	const state = action.effect(initialPlan.state);
 
 	// We create the plan reversed so we can backtrack easily
 	const start = { id, action, next: initialPlan.start };
@@ -72,17 +63,7 @@ function tryAction<TState = any>(
 
 function tryMethod<TState = any>(
 	method: Method<TState>,
-	{
-		current: state,
-		initialPlan = {
-			success: true,
-			start: null,
-			state,
-			stats: { iterations: 0, maxDepth: 0, time: 0 },
-		},
-		callStack = [],
-		...pState
-	}: PlanningState<TState>,
+	{ initialPlan, callStack = [], ...pState }: PlanningState<TState>,
 ): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
@@ -97,7 +78,7 @@ function tryMethod<TState = any>(
 		};
 	}
 
-	const output = method(state);
+	const output = method(initialPlan.state);
 	const instructions = Array.isArray(output) ? output : [output];
 	if (instructions.length === 0) {
 		return {
@@ -111,12 +92,11 @@ function tryMethod<TState = any>(
 		success: true,
 		start: initialPlan.start,
 		stats: initialPlan.stats,
-		state,
+		state: initialPlan.state,
 	};
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
-			current: state,
 			initialPlan: plan,
 			callStack: [...callStack, method],
 		});
@@ -136,52 +116,37 @@ function tryMethod<TState = any>(
 
 function tryInstruction<TState = any>(
 	instruction: Instruction<TState, any, any>,
-	{
-		current,
-		trace,
-		initialPlan = {
-			success: true,
-			start: null,
-			state: current,
-			stats: { iterations: 0, maxDepth: 0, time: 0 },
-		},
-		...state
-	}: PlanningState<TState>,
+	{ trace, initialPlan, ...state }: PlanningState<TState>,
 ): Plan<TState> {
+	assert(initialPlan.success);
 	trace({
 		event: 'try-instruction',
 		operation: state.operation!,
 		instruction,
-		state: current,
+		state: initialPlan.state,
 	});
 
 	// test condition
-	if (!instruction.condition(current)) {
+	if (!instruction.condition(initialPlan.state)) {
 		return { success: false, stats: initialPlan.stats, error: ConditionNotMet };
 	}
 
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
-		res = tryMethod(instruction, { ...state, trace, current, initialPlan });
+		res = tryMethod(instruction, { ...state, trace, initialPlan });
 	} else {
-		res = tryAction(instruction, { ...state, trace, current, initialPlan });
+		res = tryAction(instruction, { ...state, trace, initialPlan });
 	}
 
 	return res;
 }
 
 export function findPlan<TState = any>({
-	current,
 	diff,
 	tasks,
 	trace,
 	depth = 0,
-	initialPlan = {
-		success: true,
-		start: null,
-		state: current,
-		stats: { iterations: 0, maxDepth: 0, time: 0 },
-	},
+	initialPlan,
 	callStack = [],
 }: PlanningState<TState>): Plan<TState> {
 	// Something went wrong if the initial plan
@@ -189,7 +154,7 @@ export function findPlan<TState = any>({
 	assert(initialPlan.success);
 
 	// Get the list of operations from the patch
-	const ops = diff(current);
+	const ops = diff(initialPlan.state);
 
 	const { stats } = initialPlan;
 
@@ -200,7 +165,7 @@ export function findPlan<TState = any>({
 		return {
 			success: true,
 			start: initialPlan.start,
-			state: current,
+			state: initialPlan.state,
 			stats: { ...stats, maxDepth },
 		};
 	}
@@ -208,7 +173,7 @@ export function findPlan<TState = any>({
 	trace({
 		event: 'find-next',
 		depth,
-		state: current,
+		state: initialPlan.state,
 		operations: ops,
 	});
 
@@ -234,7 +199,6 @@ export function findPlan<TState = any>({
 
 			const taskPlan = tryInstruction(task(ctx as any), {
 				depth,
-				current,
 				diff,
 				tasks,
 				trace,
@@ -250,7 +214,6 @@ export function findPlan<TState = any>({
 			if (taskPlan.success && taskPlan.start != null) {
 				const res = findPlan({
 					depth: depth + 1,
-					current: taskPlan.state,
 					diff,
 					tasks,
 					trace,
