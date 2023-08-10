@@ -3,7 +3,7 @@ import { Diff } from '../diff';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
-import { Action, Instruction, Method, Task } from '../task';
+import { Action, Instruction, Method, Task, Parallel } from '../task';
 import { Plan } from './plan';
 import { Node } from './node';
 import {
@@ -13,6 +13,7 @@ import {
 	MethodExpansionEmpty,
 	ConditionNotMet,
 	SearchFailed,
+	NotImplemented,
 } from './types';
 import { isTaskApplicable } from './utils';
 import assert from '../assert';
@@ -103,6 +104,13 @@ function tryMethod<TState = any>(
 	return plan;
 }
 
+function tryParallel<TState = any>(
+	_parallel: Parallel<TState>,
+	{ initialPlan }: PlanningState<TState>,
+): Plan<TState> {
+	return { success: false, stats: initialPlan.stats, error: NotImplemented };
+}
+
 function tryInstruction<TState = any>(
 	instruction: Instruction<TState, any, any>,
 	{ trace, initialPlan, ...state }: PlanningState<TState>,
@@ -123,6 +131,8 @@ function tryInstruction<TState = any>(
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
 		res = tryMethod(instruction, { ...state, trace, initialPlan });
+	} else if (Parallel.is(instruction)) {
+		res = tryParallel(instruction, { ...state, trace, initialPlan });
 	} else {
 		res = tryAction(instruction, { ...state, trace, initialPlan });
 	}

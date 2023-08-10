@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 import { PlanningEvent, PlanningError } from '../planner';
-import { Method, Action } from '../task';
+import { Method, Action, Parallel } from '../task';
 import { Node } from '../planner';
 import { assert } from '../assert';
 
@@ -24,7 +24,7 @@ function htmlEncode(s: string) {
 	return s.replace(/"/g, () => '&quot;');
 }
 
-function instructionId(s: any, i: Method | Action): string {
+function instructionId(s: any, i: Method | Action | Parallel): string {
 	if (Action.is(i)) {
 		const n = Node.of(s, i);
 		return n.id;
@@ -94,6 +94,12 @@ export function mermaid(
 							`	${state.parentId} -.- ${node}[["${htmlEncode(
 								e.instruction.description,
 							)}"]]`,
+						);
+					} else if (Parallel.is(e.instruction)) {
+						graph.push(
+							`	${state.parentId} -.- ${node}[/"${htmlEncode(
+								e.instruction.description,
+							)}"\]`,
 						);
 					} else {
 						graph.push(

@@ -122,6 +122,13 @@ export const RecursionDetected = {
 };
 export type RecursionDetected = typeof RecursionDetected;
 
+// Task type not implemented
+export const NotImplemented = {
+	event: 'error' as const,
+	cause: 'not-implemented' as const,
+};
+export type NotImplemented = typeof NotImplemented;
+
 export function SearchFailed(depth: number) {
 	return {
 		event: 'error' as const,
@@ -136,7 +143,8 @@ export type PlanningError =
 	| LoopDetected
 	| RecursionDetected
 	| MethodExpansionEmpty
-	| SearchFailed;
+	| SearchFailed
+	| NotImplemented;
 
 export interface PlannerConfig<TState> {
 	/**
