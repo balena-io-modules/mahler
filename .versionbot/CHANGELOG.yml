@@ -1,4 +1,26 @@
 - commits:
+    - subject: Add test utility to generate mermaid graph
+      hash: fc67ba30a05849acc3a7254a4f74dff15f5d72b7
+      body: |
+        This allows to visualize the planning process as a decision tree
+        for debugging.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Simplify findPlan arguments
+      hash: 8e31e02048d2f6647b340d93f95f3a1754dd4dd4
+      body: |
+        This also fixes a bug where actions expanded from a method
+        would get repeated ids
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.16.2
+  title: ""
+  date: 2023-08-10T00:49:27.223Z
+- commits:
     - subject: Use only relevant state for Node id generation
       hash: a88049cc0c77ff72399521ea20d018b4198c3c46
       body: |
