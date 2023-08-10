@@ -80,20 +80,9 @@ function tryMethod<TState = any>(
 
 	const output = method(initialPlan.state);
 	const instructions = Array.isArray(output) ? output : [output];
-	if (instructions.length === 0) {
-		return {
-			success: false,
-			stats: initialPlan.stats,
-			error: MethodExpansionEmpty,
-		};
-	}
 
-	const plan: Plan<TState> = {
-		success: true,
-		start: initialPlan.start,
-		stats: initialPlan.stats,
-		state: initialPlan.state,
-	};
+	// We use spread here to avoid modifying the source object
+	const plan: Plan<TState> = { ...initialPlan };
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
@@ -209,9 +198,13 @@ export function findPlan<TState = any>({
 
 			if (!taskPlan.success) {
 				trace(taskPlan.error);
+				continue;
 			}
 
-			if (taskPlan.success && taskPlan.start != null) {
+			// If the start node for the plan didn't change, then the method
+			// expansion didn't add any tasks so it makes no sense to go to a
+			// deeper level
+			if (taskPlan.start !== initialPlan.start) {
 				const res = findPlan({
 					depth: depth + 1,
 					diff,
@@ -226,6 +219,8 @@ export function findPlan<TState = any>({
 				} else {
 					trace(res.error);
 				}
+			} else {
+				trace(MethodExpansionEmpty);
 			}
 		}
 	}
