@@ -19,18 +19,26 @@ export interface Planner<TState = any> {
 	findPlan(current: TState, target: Target<TState>): Plan<TState>;
 }
 
-function reverse<T>(head: Node<T> | null): Node<T> | null {
-	let curr = head;
-	let prev: Node<T> | null = null;
-
-	while (curr != null) {
-		const next = curr.next;
-		curr.next = prev;
-		prev = curr;
-		curr = next;
+function reversePlan<T>(
+	curr: Node<T> | null,
+	prev: Node<T> | null = null,
+): Node<T> | null {
+	if (curr == null) {
+		return prev;
+	}
+	if (Node.isFork(curr)) {
+		// When reversing a fork node, we are turning the node
+		// into an empty node. For this reason, we create the empty node
+		// first that we pass as the `prev` argument to the recursive call to
+		// reversePlan for each of the children
+		const empty = { next: prev };
+		curr.next.map((n) => reversePlan(n, empty));
+		return empty;
 	}
 
-	return prev;
+	const next = curr.next;
+	curr.next = prev;
+	return reversePlan(next, curr);
 }
 
 function of<TState = any>({
@@ -74,7 +82,7 @@ function of<TState = any>({
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
-				res.start = reverse(res.start);
+				res.start = reversePlan(res.start);
 				trace({ event: 'success', start: res.start });
 			} else {
 				trace({ event: 'failed' });

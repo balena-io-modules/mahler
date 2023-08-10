@@ -120,9 +120,14 @@ export class Runtime<TState> {
 		}
 	}
 
-	private async runPlan(node: Node<TState> | null) {
+	private async runPlan(node: Node<TState> | null): Promise<void> {
 		const { logger } = this.opts;
-		while (node != null) {
+
+		if (node == null) {
+			return;
+		}
+
+		if (Node.isAction(node)) {
 			const { action } = node;
 
 			if (this.stopped) {
@@ -146,9 +151,15 @@ export class Runtime<TState> {
 			}
 			logger.info(`${action.description}: success`);
 
-			// Advance the list
-			node = node.next;
+			return await this.runPlan(node.next);
 		}
+
+		if (Node.isFork(node)) {
+			// Run children in parallel
+			await Promise.all(node.next.map(this.runPlan));
+		}
+
+		// Nothing to do if the node is empty
 	}
 
 	start() {
@@ -158,12 +169,20 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		const toArray = <T>(n: Node<T> | null): string[] => {
-			if (n == null) {
+		const flatten = <T>(node: Node<T> | null): string[] => {
+			if (node == null) {
 				return [];
 			}
 
-			return [n.action.description, ...toArray(n.next)];
+			if (Node.isAction(node)) {
+				return [node.action.description, ...flatten(node.next)];
+			}
+
+			if (Node.isFork(node)) {
+				node.next.flatMap((n) => flatten(n));
+			}
+
+			return [];
 		};
 
 		this.promise = new Promise<Result<TState>>(async (resolve) => {
@@ -190,7 +209,7 @@ export class Runtime<TState> {
 
 					logger.debug(
 						'plan found, will execute the following actions',
-						toArray(start),
+						flatten(start),
 					);
 
 					// If we got here, we have found a suitable plan

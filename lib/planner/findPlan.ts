@@ -28,13 +28,20 @@ interface PlanningState<TState = any> {
 	callStack?: Array<Method<TState>>;
 }
 
-function planHasId<T>(id: string, node: Node<T> | null): boolean {
-	while (node != null) {
-		if (node.id === id) {
-			return true;
-		}
-		node = node.next;
+function findLoop<T>(id: string, node: Node<T> | null): boolean {
+	if (node == null) {
+		return false;
 	}
+
+	if (Node.isAction(node)) {
+		return node.id === id;
+	}
+
+	if (Node.isFork(node)) {
+		return node.next.some((n) => findLoop(id, n));
+	}
+
+	// If the node is empty, ignore it
 	return false;
 }
 
@@ -51,7 +58,7 @@ function tryAction<TState = any>(
 	const id = node.id;
 
 	// Detect loops in the plan
-	if (planHasId(id, initialPlan.start)) {
+	if (findLoop(id, initialPlan.start)) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
 	const state = action.effect(initialPlan.state);

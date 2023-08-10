@@ -11,13 +11,14 @@ type GraphState = {
 	depth?: number;
 };
 
+/**
+ * Mermaid classses for nodes
+ */
+const ERROR_NODE = 'stroke:#f00';
+const SELECTED_NODE = 'stroke:#0f0';
+
 export type MermaidOpts = {
 	meta: boolean;
-	/**
-	 * Mermaid class for errors
-	 */
-	error: string;
-	selected: string;
 };
 
 function htmlEncode(s: string) {
@@ -42,17 +43,35 @@ function instructionId(s: any, i: Method | Action | Parallel): string {
 		.digest('hex');
 }
 
+function expandPlan(node: Node<any> | null, prev: string): string[] {
+	if (node == null) {
+		// If we reached the end of the plan, add a stop node
+		return [`	${prev} --> stop(( ))`, `	stop:::finish`];
+	}
+
+	if (Node.isAction(node)) {
+		return [
+			`	${prev} --> ${node.id}`,
+			`	${node.id}:::selected`,
+			...expandPlan(node.next, node.id),
+		];
+	}
+
+	if (Node.isFork(node)) {
+		return node.next.flatMap((n) => expandPlan(n, prev));
+	}
+
+	// If the node is an empty node, ignore it
+	return [];
+}
+
 /**
  * Return a trace function that generates
  * a mermaid graph
  */
 export function mermaid(
 	title: string,
-	{
-		meta = false,
-		error = 'stroke:#f00',
-		selected = 'stroke:#0f0',
-	}: Partial<MermaidOpts> = {},
+	{ meta = false }: Partial<MermaidOpts> = {},
 ) {
 	// The graph description, for now we store it
 	// in memory
@@ -114,25 +133,20 @@ export function mermaid(
 
 				case 'success':
 					graph.push(`	start:::selected`);
-					let n = e.start;
-					let p = 'start';
-					while (n != null) {
-						graph.push(`	${p} --> ${n.id}`);
-						graph.push(`	${n.id}:::selected`);
-						p = n.id;
-						n = n.next;
-					}
+					const n = e.start;
 
-					graph.push(`	${p} --> stop(( ))`);
-					graph.push(`	stop:::finish`);
-					graph.push(`	classDef error ${error}`);
-					graph.push(`	classDef selected ${selected}`);
+					// Expand the plan
+					graph.push(...expandPlan(n, 'start'));
+
+					// Add the style data
+					graph.push(`	classDef error ${ERROR_NODE}`);
+					graph.push(`	classDef selected ${SELECTED_NODE}`);
 					graph.push(`	classDef finish stroke:#000,fill:#000`);
 					return;
 
 				case 'failed':
 					graph.push(`	start:::error`);
-					graph.push(`	classDef error ${error}`);
+					graph.push(`	classDef error ${ERROR_NODE}`);
 					return;
 
 				case 'error':
