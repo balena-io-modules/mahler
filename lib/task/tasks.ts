@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
@@ -254,7 +254,6 @@ function of<
 		| ActionTaskProps<TState, TPath, TOp>
 		| MethodTaskProps<TState, TPath, TOp>,
 ) {
-	const id: string = randomUUID();
 	const { path = '/', op = 'update' } = task;
 
 	// Check that the path is valid
@@ -262,24 +261,38 @@ function of<
 
 	const prefix = typeof (task as any).method === 'function' ? '[method] ' : '';
 
+	const spec = {
+		description: (ctx: Context<TState, TPath, TOp>) =>
+			`${prefix}${op === '*' ? 'process' : op} ${ctx.path}`,
+		path,
+		op,
+		condition: () => true,
+		...(typeof (task as any).effect === 'function'
+			? {
+					action: NotImplemented,
+					effect: (s: TState) => s,
+			  }
+			: {}),
+		...task,
+	};
+
+	// Serialize the task specification converting all elements to strings
+	// including the function bodys where it applies
+	const serialized = (Object.keys(spec) as Array<keyof typeof spec>).reduce(
+		(o, k) => ({ ...o, [k]: String(spec[k]) }),
+		{},
+	);
+	const id = createHash('sha256')
+		.update(JSON.stringify(serialized))
+		.digest('hex');
+
 	const t = Object.assign(
 		(ctx: ContextAsArgs<TState, TPath, TOp>) => {
 			return ground(t as any, ctx);
 		},
 		{
 			id,
-			description: (ctx: Context<TState, TPath, TOp>) =>
-				`${prefix}${op === '*' ? 'process' : op} ${ctx.path}`,
-			path,
-			op,
-			condition: () => true,
-			...(typeof (task as any).effect === 'function'
-				? {
-						action: NotImplemented,
-						effect: (s: TState) => s,
-				  }
-				: {}),
-			...task,
+			...spec,
 		},
 	);
 
