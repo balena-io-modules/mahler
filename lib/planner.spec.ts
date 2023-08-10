@@ -1,7 +1,7 @@
 import { expect, console } from '~/test-utils';
 import { Planner } from './planner';
 import { Task } from './task';
-import { plan, serialize } from './testing';
+import { plan, simplified } from './testing';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -120,7 +120,7 @@ describe('Planner', () => {
 				},
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
-			expect(serialize(result)).to.deep.equal(
+			expect(simplified(result)).to.deep.equal(
 				plan()
 					.action('take block c')
 					.action('put c on table')
@@ -318,7 +318,7 @@ describe('Planner', () => {
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
 
-			expect(serialize(result)).to.deep.equal(
+			expect(simplified(result)).to.deep.equal(
 				plan()
 					.action('unstack block c')
 					.action('put down block c')
