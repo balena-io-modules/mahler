@@ -1,4 +1,20 @@
 - commits:
+    - subject: Move the method expansion check to findPlan
+      hash: b28963c8a7995752c83bbbd4898a10cbe0f237b6
+      body: |
+        A method could be expanded to a an action and further methods, before if
+        one of the sub-method calls returned an empty array, that would cause
+        the parent method to fail. Now we only consider the method failed if one
+        of the expansion conditions failed or the method after the expansion is
+        finshed, didn't add any new actions to the plan.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.17.1
+  title: ""
+  date: 2023-08-10T16:02:50.690Z
+- commits:
     - subject: Ensure task ids are deterministic
       hash: 651315f202e815f3f6a3a2b02d903327d0ab3ff3
       body: >
