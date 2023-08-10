@@ -1,5 +1,7 @@
 import { Node, Plan } from '../planner';
 
+export * from './mermaid';
+
 /**
  * A "serialized" plan.
  *
