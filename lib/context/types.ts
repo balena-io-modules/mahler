@@ -85,9 +85,12 @@ type ContextOnSinglePath<
 	TChildState,
 	TKey,
 	TProps extends {},
-> = TKey extends keyof TChildState // If the key is a valid key on the object of type S
-	? ContextOnEmptyPath<TState, TPath, TOp, TChildState[TKey], '', TProps> // Then evaluate the empty path
-	: ContextOnEmptyPath<TState, TPath, TOp, TChildState, TKey, TProps>; // Otherwise, check if the path is already empty
+> = TKey extends ''
+	? ContextOnEmptyPath<TState, TPath, TOp, TChildState, TProps>
+	: // If the key is a valid key on the object of type S
+	TKey extends keyof TChildState
+	? ContextOnEmptyPath<TState, TPath, TOp, TChildState[TKey], TProps> // Then evaluate the empty path
+	: never; // If the key is not empty at this point, then the path is invalid
 
 // The type of a change for an empty path, where the key is an empty string
 type ContextOnEmptyPath<
@@ -95,44 +98,40 @@ type ContextOnEmptyPath<
 	TPath extends Path,
 	TOp extends TaskOp,
 	TChildState,
-	TTail,
 	TProps extends {},
-> = TTail extends ''
-	? // If the key is an empty string, then the type is S
-	  keyof TProps extends never // If A has no keys, then this will hold true. In that case, do not add params
-		? TOp extends '*' | 'delete'
-			? {
-					path: TPath;
-					get(state: TState): TChildState;
-					set(state: TState, value: TChildState): TState;
-					del(state: TState): TState;
-			  }
-			: {
-					path: TPath;
-					target: TChildState;
-					get(state: TState): TChildState;
-					set(state: TState, value: TChildState): TState;
-					del(state: TState): TState;
-			  }
-		: TOp extends '*' | 'delete'
-		? Identity<
-				TProps & {
-					path: TPath;
-					get(state: TState): TChildState;
-					set(state: TState, value: TChildState): TState;
-					del(state: TState): TState;
-				}
-		  >
-		: Identity<
-				TProps & {
-					path: TPath;
-					target: TChildState;
-					get(state: TState): TChildState;
-					set(state: TState, value: TChildState): TState;
-					del(state: TState): TState;
-				}
-		  >
-	: never; // If the key is not empty, the type is invalid
+> = keyof TProps extends never // If A has no keys, then this will hold true. In that case, do not add params
+	? TOp extends '*' | 'delete'
+		? {
+				path: TPath;
+				get(state: TState): TChildState;
+				set(state: TState, value: TChildState): TState;
+				del(state: TState): TState;
+		  }
+		: {
+				path: TPath;
+				target: TChildState;
+				get(state: TState): TChildState;
+				set(state: TState, value: TChildState): TState;
+				del(state: TState): TState;
+		  }
+	: TOp extends '*' | 'delete'
+	? Identity<
+			TProps & {
+				path: TPath;
+				get(state: TState): TChildState;
+				set(state: TState, value: TChildState): TState;
+				del(state: TState): TState;
+			}
+	  >
+	: Identity<
+			TProps & {
+				path: TPath;
+				target: TChildState;
+				get(state: TState): TChildState;
+				set(state: TState, value: TChildState): TState;
+				del(state: TState): TState;
+			}
+	  >;
 
 // Utility type to check if the key is a parameter
 type ContextOnCompoundPathWithParameter<

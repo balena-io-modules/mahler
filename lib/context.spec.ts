@@ -2,6 +2,14 @@ import { expect } from '~/test-utils';
 import { Context } from './context';
 
 describe('Context', () => {
+	it('gets context from generic dictionary', () => {
+		type Counters = { [K in keyof any]: number };
+		const c = Context.of<Counters, '/', 'update'>(`/`, `/`, { a: 1, b: 2 });
+		expect(c).to.deep.include({
+			target: { a: 1, b: 2 },
+		});
+	});
+
 	it('calculates a simple context', () => {
 		type State = { a: { b: { c: string[] }; d: number } };
 
