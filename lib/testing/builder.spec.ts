@@ -58,4 +58,22 @@ describe('testing/builder', () => {
 				.end(),
 		).to.deep.equal(['a', [['b', 'c']], 'f']);
 	});
+
+	it('builds a plan with just forks', () => {
+		expect(
+			plan()
+				.fork()
+				.branch('a + 1')
+				.branch('b + 1')
+				.join()
+				.fork()
+				.branch('a + 1')
+				.branch('b + 1')
+				.join()
+				.end(),
+		).to.deep.equal([
+			[['a + 1'], ['b + 1']],
+			[['a + 1'], ['b + 1']],
+		]);
+	});
 });

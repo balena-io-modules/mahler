@@ -77,7 +77,7 @@ export interface Parallel<
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable
 	 */
-	(s: TState): Instruction<TState> | Array<Instruction<TState>>;
+	(s: TState): Array<Instruction<TState>>;
 }
 
 export type Instruction<

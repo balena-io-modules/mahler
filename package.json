@@ -32,7 +32,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "clean": "rimraf build",
@@ -75,6 +75,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "mahler-wasm": "^0.1.0",
     "optics-ts": "^2.4.0"
   },
   "versionist": {

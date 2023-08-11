@@ -97,6 +97,54 @@ describe('Agent', () => {
 			// Intermediate states returned by the observable should be emitted by the agent
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 		});
+
+		it('runs parallel plans', async () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				action: async (state: Counters, ctx) => {
+					await setTimeout(100 * Math.random());
+					return ctx.set(state, ctx.get(state) + 1);
+				},
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const byTwo = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
+				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+				description: ({ counter }) => `increase '${counter}'`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
+				parallel: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+				description: `increment counters`,
+			});
+
+			const agent = Agent.of({
+				initial: { a: 0, b: 0 },
+				opts: { logger: console, minWaitMs: 1 * 1000 },
+				tasks: [multiIncrement, byTwo, byOne],
+			});
+
+			agent.seek({ a: 3, b: 2 });
+
+			// We wait at most for one cycle to complete, meaning the
+			// state is reached immediately and the agent terminates after the
+			// first pause
+			await expect(agent.wait(1500)).to.eventually.deep.equal({
+				success: true,
+				state: { a: 3, b: 2 },
+			});
+		});
 	});
 
 	describe('heater', () => {

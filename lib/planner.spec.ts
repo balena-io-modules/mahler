@@ -330,6 +330,139 @@ describe('Planner', () => {
 			);
 		});
 
+		it('solves parallel problems', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0)
+						.length > 1,
+				parallel: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 0)
+						.map((k) => byOne({ counter: k, target: ctx.target[k] })),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [multiIncrement, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+			expect(simplified(result)).to.deep.equal(
+				plan()
+					.fork()
+					.branch('a + 1')
+					.branch('b + 1')
+					.join()
+					.fork()
+					.branch('a + 1')
+					.branch('b + 1')
+					.join()
+					.action('a + 1')
+					.end(),
+			);
+		});
+
+		it('solves parallel problems with methods', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const byTwo = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
+				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+				description: ({ counter }) => `increase '${counter}'`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
+				parallel: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [multiIncrement, byTwo, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+
+			expect(simplified(result)).to.deep.equal(
+				plan()
+					.fork()
+					.branch('a + 1', 'a + 1')
+					.branch('b + 1', 'b + 1')
+					.join()
+					.action('a + 1')
+					.end(),
+			);
+		});
+
+		it('detects planning conflicts', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const conflictingIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1)
+						.length > 1,
+				parallel: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.flatMap((k) => [
+							// We create parallel steps to increase the same element of the state
+							// concurrently
+							byOne({ counter: k, target: ctx.target[k] }),
+							byOne({ counter: k, target: ctx.target[k] }),
+						]),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [conflictingIncrement, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+
+			// The resulting plan is just the linear version because the parallel version
+			// will result in a conflict being detected
+			expect(simplified(result)).to.deep.equal(
+				plan()
+					.action('a + 1')
+					.action('a + 1')
+					.action('a + 1')
+					.action('b + 1')
+					.action('b + 1')
+					.end(),
+			);
+		});
+
 		it.skip('simple travel problem', async () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 			// the available cash, some actions may be possible

@@ -1,11 +1,12 @@
 import { setTimeout as delay } from 'timers/promises';
+import { diff, patch, Operation as PatchOperation } from 'mahler-wasm';
 
 import { Observer, Observable } from '../observable';
-import { Planner, Node } from '../planner';
+import { Planner, Node, EmptyNode } from '../planner';
 import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
-import { equals } from '../json';
+import { assert } from '../assert';
 
 import {
 	AgentOpts,
@@ -16,6 +17,7 @@ import {
 	Timeout,
 	UnknownError,
 } from './types';
+import { simplified } from '../testing';
 
 /**
  * Internal error
@@ -90,9 +92,12 @@ export class Runtime<TState> {
 		return result;
 	}
 
-	private async runAction(action: Action) {
+	private async runAction(action: Action): Promise<PatchOperation[]> {
 		try {
-			const res = action(this.state);
+			// We keep a reference to the previous state, which is
+			// what we need to compare the updated state to
+			const before = this.state;
+			const res = action(before);
 			if (Observable.is<TState>(res)) {
 				const runtime = this;
 				// If the action result is an observable, then
@@ -101,11 +106,16 @@ export class Runtime<TState> {
 				return new Promise((resolve, reject) => {
 					res.subscribe({
 						next(s) {
-							runtime.state = s;
-							runtime.observer.next(s);
+							const changes = diff(before, s);
+							if (changes.length > 0) {
+								runtime.state = patch(runtime.state, changes);
+								runtime.observer.next(runtime.state);
+							}
 						},
 						complete() {
-							resolve(runtime.state);
+							// There should be no more changes to perform
+							// here
+							resolve([]);
 						},
 						error(e) {
 							reject(e);
@@ -113,14 +123,17 @@ export class Runtime<TState> {
 					});
 				});
 			} else {
-				return await res;
+				const after = await res;
+				return diff(before, after);
 			}
 		} catch (e) {
 			throw new ActionRunFailed(action, e);
 		}
 	}
 
-	private async runPlan(node: Node<TState> | null): Promise<void> {
+	private async runPlan(
+		node: Node<TState> | null,
+	): Promise<undefined | EmptyNode<TState>> {
 		const { logger } = this.opts;
 
 		if (node == null) {
@@ -138,12 +151,16 @@ export class Runtime<TState> {
 				throw new ActionConditionFailed(action);
 			}
 
-			// QUESTION: do we need to handle concurrency to deal with state changes
-			// coming from sensors?
 			logger.info(`${action.description}: running ...`);
-			const state = await this.runAction(action);
-			if (!equals(this.state, state)) {
-				this.state = state;
+			const changes = await this.runAction(action);
+			if (changes.length > 0) {
+				// NOTE: there is a small chance that the state changes while the
+				// patch is being applied. This means there is potential to lose changes
+				// by a race (even though patch should be very fast).
+				// There are two potential solutions here, either we wrap this call in a
+				// mutex, so only one patch can be applied at a time, or we find a way to update
+				// the state object in place, so only the relevant parts of the state are updated
+				this.state = patch(this.state, changes);
 
 				// Notify observer of the new state only if there
 				// are changes
@@ -155,11 +172,19 @@ export class Runtime<TState> {
 		}
 
 		if (Node.isFork(node)) {
-			// Run children in parallel
-			await Promise.all(node.next.map(this.runPlan));
+			// Run children in parallel. Continue following the plan when reaching the
+			// empty node only for one of the branches
+			const [empty] = await Promise.all(node.next.map((n) => this.runPlan(n)));
+
+			// There should always be at least one branch in the fork because
+			// of the way the planner is implemented
+			assert(empty !== undefined);
+
+			return await this.runPlan(empty.next);
 		}
 
-		// Nothing to do if the node is empty
+		// We return the node
+		return node;
 	}
 
 	start() {
@@ -209,7 +234,7 @@ export class Runtime<TState> {
 
 					logger.debug(
 						'plan found, will execute the following actions',
-						flatten(start),
+						simplified(result),
 					);
 
 					// If we got here, we have found a suitable plan

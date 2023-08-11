@@ -1,3 +1,9 @@
+import {
+	diff as createPatch,
+	patch as applyPatch,
+	Operation as PatchOperation,
+} from 'mahler-wasm';
+
 import { Context } from '../context';
 import { Diff } from '../diff';
 import { Operation } from '../operation';
@@ -13,7 +19,8 @@ import {
 	MethodExpansionEmpty,
 	ConditionNotMet,
 	SearchFailed,
-	NotImplemented,
+	MergeFailed,
+	ConflictDetected,
 } from './types';
 import { isTaskApplicable } from './utils';
 import assert from '../assert';
@@ -25,7 +32,7 @@ interface PlanningState<TState = any> {
 	operation?: Operation<TState, any>;
 	trace: PlannerConfig<TState>['trace'];
 	initialPlan: Plan<TState>;
-	callStack?: Array<Method<TState>>;
+	callStack?: Array<Method<TState> | Parallel<TState>>;
 }
 
 function findLoop<T>(id: string, node: Node<T> | null): boolean {
@@ -63,10 +70,19 @@ function tryAction<TState = any>(
 	}
 	const state = action.effect(initialPlan.state);
 
+	// We calculate the changes only at the action level
+	const changes = createPatch(initialPlan.state, state);
+
 	// We create the plan reversed so we can backtrack easily
 	const start = { id, action, next: initialPlan.start };
 
-	return { success: true, state, start, stats: initialPlan.stats };
+	return {
+		success: true,
+		start,
+		stats: initialPlan.stats,
+		state,
+		pendingChanges: initialPlan.pendingChanges.concat(changes),
+	};
 }
 
 function tryMethod<TState = any>(
@@ -91,11 +107,12 @@ function tryMethod<TState = any>(
 
 	// We use spread here to avoid modifying the source object
 	const plan: Plan<TState> = { ...initialPlan };
+	const cStack = [...callStack, method];
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
 			initialPlan: plan,
-			callStack: [...callStack, method],
+			callStack: cStack,
 		});
 
 		if (!res.success) {
@@ -104,18 +121,129 @@ function tryMethod<TState = any>(
 
 		// Update the plan
 		plan.start = res.start;
-		plan.stats = res.stats;
 		plan.state = res.state;
+		plan.pendingChanges = res.pendingChanges;
 	}
 
 	return plan;
 }
 
+function findConflict(
+	ops: PatchOperation[][],
+): [PatchOperation, PatchOperation] | undefined {
+	const unique = new Map<string, [number, PatchOperation]>();
+
+	for (let i = 0; i < ops.length; i++) {
+		const patches = ops[i];
+
+		for (const o of patches) {
+			for (const [path, [index, op]] of unique.entries()) {
+				if (
+					i !== index &&
+					(o.path.startsWith(path) || path.startsWith(o.path))
+				) {
+					// We found a conflicting operation on a different
+					// branch than the current one
+					return [o, op];
+				}
+			}
+			unique.set(o.path, [i, o]);
+		}
+	}
+}
+
 function tryParallel<TState = any>(
-	_parallel: Parallel<TState>,
-	{ initialPlan }: PlanningState<TState>,
+	parallel: Parallel<TState>,
+	{ initialPlan, callStack = [], ...pState }: PlanningState<TState>,
 ): Plan<TState> {
-	return { success: false, stats: initialPlan.stats, error: NotImplemented };
+	assert(initialPlan.success);
+
+	// look task in the call stack
+	if (callStack.find((p) => Parallel.equals(p, parallel))) {
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: RecursionDetected,
+		};
+	}
+
+	const instructions = parallel(initialPlan.state);
+
+	// Nothing to do here as other branches may still
+	// result in actions
+	if (instructions.length === 0) {
+		return initialPlan;
+	}
+
+	const empty = Node.empty(initialPlan.start);
+
+	const plan: Plan<TState> = {
+		...initialPlan,
+		start: empty,
+	};
+
+	let results: Array<Plan<TState> & { success: true }> = [];
+	const cStack = [...callStack, parallel];
+	for (const i of instructions) {
+		const res = tryInstruction(i, {
+			...pState,
+			initialPlan: plan,
+			callStack: cStack,
+		});
+
+		if (!res.success) {
+			return res;
+		}
+
+		results.push(res);
+	}
+
+	// There should not be any results pointing to null as we passed
+	// an empty node as the start node to each one
+	assert(results.every((r) => r.start != null));
+
+	// If all branches are empty (they still point to the start node we provided)
+	// we just return the initialPlan
+	results = results.filter((r) => r.start !== empty);
+	if (results.length === 0) {
+		return initialPlan;
+	}
+
+	// Here is where we check for conflicts created by the parallel plan.
+	// If two branches change the same part of the state, that means that there is
+	// a conflict and the planning should fail.
+	// QUESTION: Intersection is an expensive operation, should we just do it during
+	// testing?
+	const conflict = findConflict(results.map((r) => r.pendingChanges));
+	if (conflict) {
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: ConflictDetected(conflict),
+		};
+	}
+
+	// We add the fork node
+	const start = Node.fork(results.map((r) => r.start!));
+
+	// We don't update the state here as
+	// applyPatch performs changes in place, which means
+	// we need to make a structured copy of the state
+	const state = initialPlan.state;
+
+	// Since we already checked conflicts, we can just concat the changes
+	const pendingChanges = results.reduce(
+		(acc, r) => acc.concat(r.pendingChanges),
+		initialPlan.pendingChanges,
+	);
+
+	return {
+		success: true,
+		state,
+		pendingChanges,
+		start,
+		stats: initialPlan.stats,
+	};
 }
 
 function tryInstruction<TState = any>(
@@ -173,6 +301,7 @@ export function findPlan<TState = any>({
 			start: initialPlan.start,
 			state: initialPlan.state,
 			stats: { ...stats, maxDepth },
+			pendingChanges: [],
 		};
 	}
 
@@ -222,12 +351,22 @@ export function findPlan<TState = any>({
 			// expansion didn't add any tasks so it makes no sense to go to a
 			// deeper level
 			if (taskPlan.start !== initialPlan.start) {
+				let state: TState;
+				try {
+					// applyPatch makes a copy of the source object so we only want to
+					// perform this operation if the instruction suceeded
+					state = applyPatch(initialPlan.state, taskPlan.pendingChanges);
+				} catch (e: any) {
+					trace(MergeFailed(e));
+					continue;
+				}
+
 				const res = findPlan({
 					depth: depth + 1,
 					diff,
 					tasks,
 					trace,
-					initialPlan: taskPlan,
+					initialPlan: { ...taskPlan, state, pendingChanges: [] },
 					callStack,
 				});
 

@@ -121,7 +121,7 @@ export interface ParallelTask<
 	parallel(
 		s: TState,
 		c: Context<TState, TPath, TOp>,
-	): Instruction<TState> | Array<Instruction<TState>>;
+	): Array<Instruction<TState>>;
 
 	/**
 	 * The task function grounds the task
@@ -194,15 +194,30 @@ function ground<
 		});
 	}
 
-	const fn = isMethodTask(task)
-		? (s: TState) => task.method(s, context)
-		: (s: TState) => task.parallel(s, context);
-	const tag = isMethodTask(task) ? ('method' as const) : ('parallel' as const);
-	return Object.assign(fn, {
+	if (isMethodTask(task)) {
+		return Object.assign((s: TState) => task.method(s, context), {
+			id,
+			path: context.path as any,
+			target: (ctx as any).target,
+			_tag: 'method' as const,
+			description,
+			condition: (s: TState) => task.condition(s, context),
+			toJSON() {
+				return {
+					id,
+					path: context.path,
+					description,
+					target: (ctx as any).target,
+				};
+			},
+		});
+	}
+
+	return Object.assign((s: TState) => task.parallel(s, context), {
 		id,
 		path: context.path as any,
 		target: (ctx as any).target,
-		_tag: tag,
+		_tag: 'parallel' as const,
 		description,
 		condition: (s: TState) => task.condition(s, context),
 		toJSON() {

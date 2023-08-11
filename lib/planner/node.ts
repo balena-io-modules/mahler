@@ -61,7 +61,7 @@ function isForkNode<TState>(n: Node<TState>): n is ForkNode<TState> {
 }
 
 export const Node = {
-	of: <TState>(s: TState, a: Action<TState, any, any>): ActionNode<TState> => {
+	of<TState>(s: TState, a: Action<TState, any, any>): ActionNode<TState> {
 		// We don't use the full state to calculate the
 		// id as there may be changes in the state that have nothing
 		// to do with the action. We just use the part of the state
@@ -85,6 +85,16 @@ export const Node = {
 			id,
 			action: a,
 			next: null,
+		};
+	},
+	empty<TState>(next: Node<TState> | null): EmptyNode<TState> {
+		return {
+			next,
+		};
+	},
+	fork<TState>(next: Array<Node<TState>>): ForkNode<TState> {
+		return {
+			next,
 		};
 	},
 	isAction: isActionNode,

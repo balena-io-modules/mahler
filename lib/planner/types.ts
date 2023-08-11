@@ -1,6 +1,7 @@
 import { Operation } from 'lib/operation';
 import { Target } from '../target';
 import { Instruction } from '../task';
+import { Operation as PatchOperation } from 'mahler-wasm';
 
 import { Node } from './node';
 
@@ -122,13 +123,6 @@ export const RecursionDetected = {
 };
 export type RecursionDetected = typeof RecursionDetected;
 
-// Task type not implemented
-export const NotImplemented = {
-	event: 'error' as const,
-	cause: 'not-implemented' as const,
-};
-export type NotImplemented = typeof NotImplemented;
-
 export function SearchFailed(depth: number) {
 	return {
 		event: 'error' as const,
@@ -136,7 +130,28 @@ export function SearchFailed(depth: number) {
 		depth,
 	};
 }
+
 export type SearchFailed = ReturnType<typeof SearchFailed>;
+
+export function MergeFailed(failure: Error) {
+	return {
+		event: 'error' as const,
+		cause: 'merge-error' as const,
+		failure,
+	};
+}
+
+export type MergeFailed = ReturnType<typeof MergeFailed>;
+
+export function ConflictDetected(conflict: [PatchOperation, PatchOperation]) {
+	return {
+		event: 'error' as const,
+		cause: 'conflict-detected' as const,
+		conflict,
+	};
+}
+
+export type ConflictDetected = ReturnType<typeof ConflictDetected>;
 
 export type PlanningError =
 	| ConditionNotMet
@@ -144,7 +159,8 @@ export type PlanningError =
 	| RecursionDetected
 	| MethodExpansionEmpty
 	| SearchFailed
-	| NotImplemented;
+	| MergeFailed
+	| ConflictDetected;
 
 export interface PlannerConfig<TState> {
 	/**

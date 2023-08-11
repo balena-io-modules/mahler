@@ -5,6 +5,7 @@ import { findPlan } from './findPlan';
 import { PlannerConfig } from './types';
 import { Plan } from './plan';
 import { Node } from './node';
+import { assert } from '../assert';
 
 export * from './types';
 export * from './plan';
@@ -22,23 +23,60 @@ export interface Planner<TState = any> {
 function reversePlan<T>(
 	curr: Node<T> | null,
 	prev: Node<T> | null = null,
-): Node<T> | null {
+): Node<T> | null | [Node<T>, Node<T> | null] {
 	if (curr == null) {
 		return prev;
 	}
+
 	if (Node.isFork(curr)) {
 		// When reversing a fork node, we are turning the node
 		// into an empty node. For this reason, we create the empty node
 		// first that we pass as the `prev` argument to the recursive call to
 		// reversePlan for each of the children
-		const empty = { next: prev };
-		curr.next.map((n) => reversePlan(n, empty));
-		return empty;
+		const empty = Node.empty(prev);
+
+		// We then recursively call reversePlan on each of the branches,
+		// this will run until finding an empty node, at which point it will
+		// return. The ends will be disconected so we will need to join them
+		// as part of a new fork node
+		const ends = curr.next.map((n) => reversePlan(n, empty));
+		const forkNext: Array<Node<T>> = [];
+		let next: Node<T> | null = null;
+		for (const node of ends) {
+			// If this fails the algorithm has a bug
+			assert(node != null && Array.isArray(node));
+
+			// We get the pointers from the fork node end
+			const [p, n] = node;
+
+			// The prev pointer of the fork end will be part of the
+			// next list of the fork node
+			forkNext.push(p);
+
+			// Every next pointer should be the same, so we just assign it here
+			next = n;
+		}
+
+		const fork = Node.fork(forkNext);
+
+		// We continue the recursion here
+		return reversePlan(next, fork);
 	}
 
-	const next = curr.next;
-	curr.next = prev;
-	return reversePlan(next, curr);
+	if (Node.isAction(curr)) {
+		const next = curr.next;
+		curr.next = prev;
+		return reversePlan(next, curr);
+	}
+
+	// If the node is empty, that means
+	// that a previous node must exist
+	assert(prev != null);
+
+	// If empty we want the fork to handle
+	// the continuation, so we need to return
+	// the previous and next nodes of the empty node
+	return [prev, curr.next];
 }
 
 function of<TState = any>({
@@ -50,10 +88,10 @@ function of<TState = any>({
 }): Planner<TState> {
 	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
-		if (Task.isMethod(a) && Task.isAction(b)) {
+		if ((Task.isMethod(a) || Task.isParallel(a)) && Task.isAction(b)) {
 			return -1;
 		}
-		if (Task.isAction(a) && Task.isMethod(b)) {
+		if (Task.isAction(a) && (Task.isMethod(b) || Task.isParallel(b))) {
 			return 1;
 		}
 		return 0;
@@ -75,6 +113,7 @@ function of<TState = any>({
 					state: current,
 					start: null,
 					stats: { iterations: 0, maxDepth: 0, time: 0 },
+					pendingChanges: [],
 				},
 				diff: Diff.of(current, target),
 				tasks,
@@ -82,8 +121,11 @@ function of<TState = any>({
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
-				res.start = reversePlan(res.start);
-				trace({ event: 'success', start: res.start });
+				const start = reversePlan(res.start);
+				assert(!Array.isArray(start));
+
+				res.start = start;
+				trace({ event: 'success', start });
 			} else {
 				trace({ event: 'failed' });
 			}
