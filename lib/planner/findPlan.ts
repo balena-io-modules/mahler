@@ -248,14 +248,16 @@ function tryParallel<TState = any>(
 
 function tryInstruction<TState = any>(
 	instruction: Instruction<TState, any, any>,
-	{ trace, initialPlan, ...state }: PlanningState<TState>,
+	{ trace, initialPlan, callStack = [], ...state }: PlanningState<TState>,
 ): Plan<TState> {
 	assert(initialPlan.success);
 	trace({
 		event: 'try-instruction',
 		operation: state.operation!,
+		parent: callStack[callStack.length - 1],
 		instruction,
 		state: initialPlan.state,
+		prev: initialPlan.start,
 	});
 
 	// test condition
@@ -265,11 +267,11 @@ function tryInstruction<TState = any>(
 
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
-		res = tryMethod(instruction, { ...state, trace, initialPlan });
+		res = tryMethod(instruction, { ...state, trace, initialPlan, callStack });
 	} else if (Parallel.is(instruction)) {
-		res = tryParallel(instruction, { ...state, trace, initialPlan });
+		res = tryParallel(instruction, { ...state, trace, initialPlan, callStack });
 	} else {
-		res = tryAction(instruction, { ...state, trace, initialPlan });
+		res = tryAction(instruction, { ...state, trace, initialPlan, callStack });
 	}
 
 	return res;
@@ -296,6 +298,10 @@ export function findPlan<TState = any>({
 	// the target
 	if (ops.length === 0) {
 		const maxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
+		trace({
+			event: 'found',
+			prev: initialPlan.start,
+		});
 		return {
 			success: true,
 			start: initialPlan.start,
@@ -309,6 +315,7 @@ export function findPlan<TState = any>({
 		event: 'find-next',
 		depth,
 		state: initialPlan.state,
+		prev: initialPlan.start,
 		operations: ops,
 	});
 

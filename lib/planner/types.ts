@@ -41,6 +41,11 @@ export type PlanningEvent<TState> =
 			 * Search expansion started
 			 */
 			event: 'find-next';
+
+			/**
+			 * The last node in the plan
+			 */
+			prev: Node<TState> | null;
 			/**
 			 * The current state at this planning stage
 			 */
@@ -60,6 +65,17 @@ export type PlanningEvent<TState> =
 			 * An instruction was chosen
 			 */
 			event: 'try-instruction';
+
+			/**
+			 * The caller instruction
+			 */
+			parent: Instruction<TState, any, any> | undefined;
+
+			/**
+			 * The previous node in the plan
+			 */
+			prev: Node<TState> | null;
+
 			/**
 			 * The instruction chosen
 			 */
@@ -76,6 +92,17 @@ export type PlanningEvent<TState> =
 			 * is a method, the current state may evolve as the method is unwrapped
 			 */
 			state: TState;
+	  }
+	| {
+			/**
+			 * No more operations remain to be tested
+			 */
+			event: 'found';
+
+			/**
+			 * The last node added to the plan
+			 */
+			prev: Node<TState> | null;
 	  }
 	| {
 			/**
