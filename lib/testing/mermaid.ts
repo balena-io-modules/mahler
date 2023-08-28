@@ -6,7 +6,7 @@ import { Node } from '../planner';
 import { assert } from '../assert';
 
 type GraphState = {
-	parentGraph?: Map<string, string | string[]>;
+	parentMap?: Map<string, string[]>;
 	parentId?: string;
 	levelId?: string;
 	depth?: number;
@@ -26,49 +26,61 @@ function htmlEncode(s: string) {
 	return s.replace(/"/g, () => '&quot;');
 }
 
+function hash(o: any) {
+	return createHash('md5')
+		.update(JSON.stringify(o))
+		.digest('hex')
+		.substring(0, 7);
+}
+
 function instructionId(s: any, i: Method | Action | Parallel): string {
 	if (Action.is(i)) {
 		const n = Node.of(s, i);
 		return n.id;
 	}
 
-	return createHash('md5')
-		.update(
-			JSON.stringify({
-				id: i.id,
-				path: i.path,
-				state: s,
-				target: i.target,
-			}),
-		)
-		.digest('hex');
+	return hash({
+		id: i.id,
+		path: i.path,
+		state: s,
+		target: i.target,
+	});
 }
 
-function nodeId<T>(n: Node<T> | null, fallbackId: string): string {
+function actionId(action: string, parent: string) {
+	return hash({ parent, action });
+}
+
+function nodeId<T>(
+	n: Node<T> | null,
+	fallbackId: string,
+	parentMap: Map<string, string[]>,
+): string {
 	if (n == null) {
 		return fallbackId;
 	}
 
 	if (Node.isAction(n)) {
-		return n.id;
+		const parentId = getParent(n.id, parentMap);
+		return actionId(n.id, parentId);
 	}
 
 	if (Node.isFork(n)) {
 		const actions = n.next.filter(Node.isAction);
 		if (actions.length > 0) {
-			return `j` + actions[0].id;
+			return `j` + actions[0].id.substring(0, 7);
 		}
 
 		const forks = n.next.filter(Node.isFork);
 		if (forks.length > 0) {
-			const ids = forks.map((f) => nodeId(f, 'none'));
+			const ids = forks.map((f) => nodeId(f, 'none', parentMap));
 
 			// Not sure if this is necessary as this is covered
 			// by the assert below
 			assert(ids.every((i) => i !== 'none'));
 
 			// We combine the parent ids into a new (deterministic) id
-			return `j` + createHash('md5').update(JSON.stringify(ids)).digest('hex');
+			return hash(ids);
 		}
 
 		// This is an empty fork and should
@@ -83,6 +95,7 @@ function expandPlan(
 	node: Node<any> | null,
 	prev: string,
 	graph: string[],
+	parentMap: Map<string, string[]>,
 ): [EmptyNode<any>, string] | undefined {
 	if (node == null) {
 		// If we reached the end of the plan, add a stop node
@@ -91,15 +104,17 @@ function expandPlan(
 	}
 
 	if (Node.isAction(node)) {
-		graph.push(`	${prev} --> ${node.id}`, `	${node.id}:::selected`);
-		return expandPlan(node.next, node.id, graph);
+		const pId = getParent(node.id, parentMap);
+		const nId = actionId(node.id, pId);
+		graph.push(`	${prev} --> ${nId}`, `	${nId}:::selected`);
+		return expandPlan(node.next, nId, graph, parentMap);
 	}
 
 	if (Node.isFork(node)) {
-		const joinId = nodeId(node, 'none');
+		const joinId = nodeId(node, 'none', parentMap);
 		const forkId = 'f' + joinId;
 		graph.push(`	${prev} --> ${forkId}(( ))`, `	${forkId}:::selected`);
-		const ends = node.next.map((n) => expandPlan(n, forkId, graph)!);
+		const ends = node.next.map((n) => expandPlan(n, forkId, graph, parentMap)!);
 
 		graph.push(`	${joinId}(( ))`);
 		ends.forEach(([_, p]) => graph.push(`	${p} --> ${joinId}`));
@@ -107,7 +122,7 @@ function expandPlan(
 
 		const [first] = ends[0];
 
-		return expandPlan(first.next, joinId, graph);
+		return expandPlan(first.next, joinId, graph, parentMap);
 	}
 
 	// If the node is an empty node, ignore it
@@ -118,20 +133,17 @@ function addJoinNodes(
 	next: string,
 	node: Node<any> | null,
 	graph: string[],
-	parentGraph = new Map<string, string | string[]>(),
+	parentMap = new Map<string, string[]>(),
 	isFirst = true,
 ): string | undefined {
 	if (node == null || !(Node.isFork(node) || Node.isAction(node))) {
 		return;
 	}
 
-	const nId = nodeId(node, 'start');
-	let pList: string[] = [];
-	if (parentGraph.has(next)) {
-		const p = parentGraph.get(next)!;
-		pList = Array.isArray(p) ? p : [p];
-
-		if (pList.includes(nId)) {
+	const nId = nodeId(node, 'start', parentMap);
+	if (parentMap.has(next)) {
+		const p = getParent(next, parentMap);
+		if (p.includes(nId)) {
 			return nId;
 		}
 	}
@@ -139,25 +151,39 @@ function addJoinNodes(
 	if (Node.isAction(node)) {
 		if (!isFirst) {
 			graph.push(`	${nId} -.- ${next}`);
-
-			pList.push(nId);
-			parentGraph.set(next, pList.length === 1 ? pList[0] : pList);
+			setParent(next, nId, parentMap);
 		}
-		return node.id;
+		return nId;
 	}
 
 	// Add any additional join found in the linked fork nodes
-	node.next.forEach((n) => addJoinNodes(nId, n, graph, parentGraph, false));
+	node.next.forEach((n) => addJoinNodes(nId, n, graph, parentMap, false));
 
 	// Add the last join node linked to the target
 	if (!isFirst) {
 		graph.push(`	${nId}(( )) -.- ${next}`);
-		parentGraph.set(next, nId);
+		setParent(next, nId, parentMap);
 	} else {
 		graph.push(`	${nId}(( ))`);
 	}
 
 	return nId;
+}
+
+function setParent(id: string, parent: string, graph: Map<string, string[]>) {
+	const p = graph.get(id);
+	if (p == null) {
+		graph.set(id, [parent]);
+	} else if (!p.includes(parent)) {
+		p.push(parent);
+	}
+}
+
+function getParent(id: string, graph: Map<string, string[]>): string {
+	const p = graph.get(id);
+	assert(p != null && p.length > 0);
+
+	return p[p.length - 1];
 }
 
 /**
@@ -183,24 +209,24 @@ export function mermaid(
 					graph.push('graph TD');
 					graph.push(`	${node}(( ))`);
 					state.parentId = node;
-					state.parentGraph = new Map();
+					state.parentMap = new Map();
 
 					break;
 
 				case 'find-next':
-					assert(state.parentGraph != null);
+					assert(state.parentMap != null);
 					node = `d${e.depth}`;
 
 					// Add any missing join nodes
-					let fnParentId = addJoinNodes(node, e.prev, graph, state.parentGraph);
+					let fnParentId = addJoinNodes(node, e.prev, graph, state.parentMap);
 
-					// Node Id will return start if prev is null
-					fnParentId = fnParentId || nodeId(e.prev, 'start');
+					fnParentId = fnParentId || nodeId(e.prev, 'start', state.parentMap);
 
 					graph.push(`	${fnParentId} -.- ${node}{ }`);
 
 					// A find-next node always has a single parent
-					state.parentGraph.set(node, fnParentId);
+					setParent(node, fnParentId, state.parentMap);
+
 					state.levelId = node;
 					state.parentId = node;
 					state.depth = e.depth;
@@ -211,11 +237,11 @@ export function mermaid(
 					assert(state.depth != null);
 					assert(state.levelId != null);
 					assert(state.parentId != null);
-					assert(state.parentGraph != null);
+					assert(state.parentMap != null);
 
 					// check if the instruction is an action or a method
 					// and set the ID and node accordingly
-					node = instructionId(e.state, e.instruction);
+					const insId = instructionId(e.state, e.instruction);
 
 					// If this the immediate call after a level node
 					// then use the levelId
@@ -230,13 +256,13 @@ export function mermaid(
 							parentId = instructionId(e.state, e.parent);
 
 							if (e.prev != null) {
-								const prevNodeId = nodeId(e.prev, parentId);
+								const prevNodeId = nodeId(e.prev, parentId, state.parentMap);
 
 								// If this is the first child of the compound task
 								// the parent id and the node parent id will be the same
 								if (
-									!state.parentGraph.has(parentId) ||
-									state.parentGraph.get(parentId) !== prevNodeId
+									!state.parentMap.has(parentId) ||
+									getParent(parentId, state.parentMap) !== prevNodeId
 								) {
 									parentId = prevNodeId;
 								}
@@ -247,13 +273,18 @@ export function mermaid(
 									node,
 									e.prev,
 									graph,
-									state.parentGraph,
+									state.parentMap,
 								);
 
-								parentId = joinParent || nodeId(e.prev, parentId);
+								parentId =
+									joinParent || nodeId(e.prev, parentId, state.parentMap);
 							}
 						}
 					}
+
+					// Non action nodes have an id equal to the instruction
+					node = insId;
+					setParent(node, parentId, state.parentMap);
 
 					if (Method.is(e.instruction) || Parallel.is(e.instruction)) {
 						graph.push(
@@ -262,6 +293,9 @@ export function mermaid(
 							)}"]]`,
 						);
 					} else {
+						// An action node id is not unique, only the
+						// pairing with the parent is unique
+						node = actionId(node, parentId);
 						graph.push(
 							`	${parentId} -.- ${node}("${htmlEncode(
 								e.instruction.description,
@@ -269,17 +303,15 @@ export function mermaid(
 						);
 					}
 
-					state.parentGraph.set(node, parentId);
-
 					// Parent id only is useful in case of error
 					state.parentId = node;
 
 					break;
 
 				case 'found':
-					assert(state.parentGraph != null);
+					assert(state.parentMap != null);
 					const sParentId =
-						addJoinNodes('stop', e.prev, graph, state.parentGraph) || 'start';
+						addJoinNodes('stop', e.prev, graph, state.parentMap) || 'start';
 					graph.push(`	${sParentId} -.- stop(( ))`);
 					graph.push(`	stop:::finish`);
 					graph.push(`	classDef finish stroke:#000,fill:#000`);
@@ -287,11 +319,12 @@ export function mermaid(
 					return;
 
 				case 'success':
+					assert(state.parentMap != null);
 					graph.push(`	start:::selected`);
 					const n = e.start;
 
 					// Expand the plan
-					expandPlan(n, 'start', graph);
+					expandPlan(n, 'start', graph, state.parentMap);
 
 					// Add the style data
 					graph.push(`	classDef error ${ERROR_NODE}`);
