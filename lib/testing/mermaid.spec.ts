@@ -305,8 +305,8 @@ describe('Mermaid', () => {
 				start -.- d0{ }
 				d0 -.- 21ac729[["+2"]]
 				21ac729 -.- dc2da69("+1")
-				dc2da69 -.- 61b87f5("+1")
-				61b87f5 -.- d1{ }
+				dc2da69 -.- 19e83b4("+1")
+				19e83b4 -.- d1{ }
 				d1 -.- c1bb3cb[["+2"]]
 				c1bb3cb -.- c1bb3cb-err[ ]
 				c1bb3cb-err:::error
@@ -317,9 +317,9 @@ describe('Mermaid', () => {
 				start:::selected
 				start --> dc2da69
 				dc2da69:::selected
-				dc2da69 --> 61b87f5
-				61b87f5:::selected
-				61b87f5 --> c9c70c6
+				dc2da69 --> 19e83b4
+				19e83b4:::selected
+				19e83b4 --> c9c70c6
 				c9c70c6:::selected
 				c9c70c6 --> stop
 				classDef error stroke:#f00
@@ -459,12 +459,12 @@ describe('Mermaid', () => {
 				d0 -.- 9e1cfaf[["increment counters"]]
 				9e1cfaf -.- 682aa0e[["increase 'a'"]]
 				682aa0e -.- 4b66884("a + 1")
-				4b66884 -.- aca9913("a + 1")
+				4b66884 -.- 29aedf2("a + 1")
 				9e1cfaf -.- 5dd218c[["increase 'b'"]]
 				5dd218c -.- aafffea("b + 1")
-				aafffea -.- 95588d8("b + 1")
-				aca9913 -.- j0270df9
-				95588d8 -.- j0270df9
+				aafffea -.- 17593a3("b + 1")
+				29aedf2 -.- j0270df9
+				17593a3 -.- j0270df9
 				j0270df9(( ))
 				j0270df9 -.- d1{ }
 				d1 -.- 1e78f4e[["increment counters"]]
@@ -482,15 +482,15 @@ describe('Mermaid', () => {
 				fj17bab65:::selected
 				fj17bab65 --> 4b66884
 				4b66884:::selected
-				4b66884 --> aca9913
-				aca9913:::selected
+				4b66884 --> 29aedf2
+				29aedf2:::selected
 				fj17bab65 --> aafffea
 				aafffea:::selected
-				aafffea --> 95588d8
-				95588d8:::selected
+				aafffea --> 17593a3
+				17593a3:::selected
 				j17bab65(( ))
-				aca9913 --> j17bab65
-				95588d8 --> j17bab65
+				29aedf2 --> j17bab65
+				17593a3 --> j17bab65
 				j17bab65:::selected
 				j17bab65 --> eb463ce
 				eb463ce:::selected
@@ -576,22 +576,22 @@ describe('Mermaid', () => {
 				db6e0ff -.- 6363386[["increment multiple"]]
 				6363386 -.- f086833[["a + 2"]]
 				f086833 -.- 55f3eb4("a++")
-				55f3eb4 -.- b830f67("a++")
+				55f3eb4 -.- c49ebf7("a++")
 				6363386 -.- 491551c[["b + 2"]]
 				491551c -.- 497f947("b++")
-				497f947 -.- c976f6e("b++")
+				497f947 -.- f401546("b++")
 				db6e0ff -.- a3bcc2f[["increment multiple"]]
 				a3bcc2f -.- a6594ae[["c + 2"]]
 				a6594ae -.- 7932f99("c++")
-				7932f99 -.- ac6f061("c++")
+				7932f99 -.- 6f42d9e("c++")
 				a3bcc2f -.- 9a04ffd[["d + 2"]]
 				9a04ffd -.- d8ec9ff("d++")
-				d8ec9ff -.- a0fa6b2("d++")
-				b830f67 -.- j7f6fe40
-				c976f6e -.- j7f6fe40
+				d8ec9ff -.- 9e0f26a("d++")
+				c49ebf7 -.- j7f6fe40
+				f401546 -.- j7f6fe40
 				j7f6fe40(( )) -.- 4d89b9e
-				ac6f061 -.- jad26c69
-				a0fa6b2 -.- jad26c69
+				6f42d9e -.- jad26c69
+				9e0f26a -.- jad26c69
 				jad26c69(( )) -.- 4d89b9e
 				4d89b9e(( ))
 				4d89b9e -.- d1{ }
@@ -615,29 +615,29 @@ describe('Mermaid', () => {
 				fj405808e:::selected
 				fj405808e --> 55f3eb4
 				55f3eb4:::selected
-				55f3eb4 --> b830f67
-				b830f67:::selected
+				55f3eb4 --> c49ebf7
+				c49ebf7:::selected
 				fj405808e --> 497f947
 				497f947:::selected
-				497f947 --> c976f6e
-				c976f6e:::selected
+				497f947 --> f401546
+				f401546:::selected
 				j405808e(( ))
-				b830f67 --> j405808e
-				c976f6e --> j405808e
+				c49ebf7 --> j405808e
+				f401546 --> j405808e
 				j405808e:::selected
 				ffbcbfff --> fj6c9e279(( ))
 				fj6c9e279:::selected
 				fj6c9e279 --> 7932f99
 				7932f99:::selected
-				7932f99 --> ac6f061
-				ac6f061:::selected
+				7932f99 --> 6f42d9e
+				6f42d9e:::selected
 				fj6c9e279 --> d8ec9ff
 				d8ec9ff:::selected
-				d8ec9ff --> a0fa6b2
-				a0fa6b2:::selected
+				d8ec9ff --> 9e0f26a
+				9e0f26a:::selected
 				j6c9e279(( ))
-				ac6f061 --> j6c9e279
-				a0fa6b2 --> j6c9e279
+				6f42d9e --> j6c9e279
+				9e0f26a --> j6c9e279
 				j6c9e279:::selected
 				fbcbfff(( ))
 				j405808e --> fbcbfff

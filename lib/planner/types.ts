@@ -1,6 +1,6 @@
 import { Operation } from 'lib/operation';
 import { Target } from '../target';
-import { Instruction } from '../task';
+import { Instruction, Method, Parallel } from '../task';
 import { Operation as PatchOperation } from 'mahler-wasm';
 
 import { Node } from './node';
@@ -69,7 +69,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The caller instruction
 			 */
-			parent: Instruction<TState, any, any> | undefined;
+			parent: Method<TState, any, any> | Parallel<TState, any, any> | undefined;
 
 			/**
 			 * The previous node in the plan
