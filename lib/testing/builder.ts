@@ -1,4 +1,4 @@
-import { SimplePlan } from './types';
+import { DAG, Branch, Fork } from './dag';
 
 interface PlanBuilder {
 	/**
@@ -10,78 +10,24 @@ interface PlanBuilder {
 	 * Adds a sub-plan to the simple plan
 	 * to represent a fork in the current plan
 	 */
-	fork(): ForkBuilder;
+	fork(...branches: Branch[]): PlanBuilder;
 
 	/**
 	 * Builds the test plan
 	 */
-	end(): SimplePlan;
-}
-
-interface ForkBuilder<P extends PlanBuilder | ForkBuilder<any> = PlanBuilder> {
-	/**
-	 * Adds a branch to the fork
-	 */
-	branch(...actions: string[]): ForkBuilder<P>;
+	dag(): DAG;
 
 	/**
-	 * Adds an action to the current branch
+	 * Return the string representation
 	 */
-	action(description: string): ForkBuilder<P>;
-
-	/**
-	 * Creates a fork within a fork
-	 */
-	fork(): ForkBuilder<ForkBuilder<P>>;
-
-	/**
-	 * Joins the forked branches and returns
-	 * the original builder
-	 */
-	join(): P;
-}
-
-function createFork<P extends PlanBuilder | ForkBuilder<any> = PlanBuilder>(
-	parent: P,
-	p: SimplePlan = [],
-): ForkBuilder<P> {
-	const repr: SimplePlan = [];
-	let br: SimplePlan = [];
-	const f: ForkBuilder<P> = {
-		branch(...actions: string[]) {
-			if (br.length > 0) {
-				repr.push(br);
-				br = [];
-			}
-			br.push(...actions);
-			return f;
-		},
-		action(description: string) {
-			br.push(description);
-			return f;
-		},
-		fork() {
-			return createFork(f, br);
-		},
-		join() {
-			if (br.length > 0) {
-				repr.push(br);
-			}
-			if (repr.length > 0) {
-				p.push(repr);
-			}
-			return parent;
-		},
-	};
-
-	return f;
+	end(): string;
 }
 
 /**
  * Start building a plan
  */
 export function plan(): PlanBuilder {
-	const repr: SimplePlan = [];
+	const repr: DAG = [];
 
 	const builder = {
 		action(description: string) {
@@ -90,22 +36,38 @@ export function plan(): PlanBuilder {
 			return builder;
 		},
 
-		fork() {
-			return createFork(builder, repr);
+		fork(...branches: Branch[]) {
+			branches = branches.filter((b) => b.length > 0);
+			if (branches.length > 0) {
+				repr.push(branches);
+			}
+			return builder;
+		},
+
+		dag() {
+			return repr;
 		},
 
 		end() {
-			return repr;
+			return DAG.toString(repr);
 		},
 	};
 
 	return builder;
 }
 
-export function branch(...values: string[]) {
+export function branch(...values: Branch): Branch {
 	let b = plan();
 	for (const a of values) {
-		b = b.action(a);
+		if (!Array.isArray(a)) {
+			b = b.action(a);
+		} else if (a.length > 0) {
+			b = b.fork(...a);
+		}
 	}
-	return b.end();
+	return b.dag();
+}
+
+export function fork(...branches: Branch[]): Fork {
+	return branches.filter((b) => b.length > 0);
 }

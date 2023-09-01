@@ -17,7 +17,6 @@ import {
 	Timeout,
 	UnknownError,
 } from './types';
-import { simplified } from '../testing';
 
 /**
  * Internal error
@@ -194,20 +193,25 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		const flatten = <T>(node: Node<T> | null): string[] => {
+		const flatten = <T>(
+			node: Node<T> | null,
+			accum: string[],
+		): Node<T> | null => {
 			if (node == null) {
-				return [];
+				return null;
 			}
 
 			if (Node.isAction(node)) {
-				return [node.action.description, ...flatten(node.next)];
+				accum.push(node.action.description);
+				return flatten(node.next, accum);
 			}
 
 			if (Node.isFork(node)) {
-				node.next.flatMap((n) => flatten(n));
+				const [next] = node.next.map((n) => flatten(n, accum));
+				return flatten(next, accum);
 			}
 
-			return [];
+			return node.next;
 		};
 
 		this.promise = new Promise<Result<TState>>(async (resolve) => {
@@ -232,10 +236,9 @@ export class Runtime<TState> {
 						return resolve({ success: true, state: this.state });
 					}
 
-					logger.debug(
-						'plan found, will execute the following actions',
-						simplified(result),
-					);
+					const plan: string[] = [];
+					flatten(start, plan);
+					logger.debug('plan found, will execute the following actions', plan);
 
 					// If we got here, we have found a suitable plan
 					found = true;

@@ -1,4 +1,4 @@
-import { stripIndent } from 'common-tags';
+import dedent from 'dedent';
 import { expect } from '~/test-utils';
 import { mermaid } from './mermaid';
 import { Planner } from '../planner';
@@ -12,7 +12,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 0);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -36,7 +36,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -63,7 +63,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -108,7 +108,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -146,7 +146,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 2);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -195,7 +195,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 2);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -249,7 +249,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -296,7 +296,7 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 3);
 
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -357,7 +357,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -449,7 +449,7 @@ describe('Mermaid', () => {
 		});
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -565,7 +565,7 @@ describe('Mermaid', () => {
 		});
 		planner.findPlan({ a: 0, b: 0, c: 0, d: 0 }, { a: 3, b: 2, c: 2, d: 2 });
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---
@@ -686,7 +686,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
-			stripIndent`
+			dedent`
 			---
 			title: ${this.test!.title}
 			---

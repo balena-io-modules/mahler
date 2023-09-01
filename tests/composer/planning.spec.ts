@@ -2,7 +2,7 @@ import { expect } from '~/test-utils';
 
 import { planner } from './planner';
 import { ServiceStatus } from './state';
-import { plan, simplified } from 'mahler/testing';
+import { plan, stringify } from 'mahler/testing';
 
 describe('composer/planning', () => {
 	it('pulls the service image if it does not exist yet', () => {
@@ -22,7 +22,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest' for service 'main'")
 				.action("installing container for service 'main'")
@@ -48,7 +48,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("installing container for service 'main'")
 				.action("starting container for service 'main'")
@@ -78,7 +78,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan().action("stopping container for service 'main'").end(),
 		);
 	});
@@ -101,7 +101,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest' for service 'main'")
 				.action("installing container for service 'main'")
@@ -134,7 +134,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("stopping container for service 'main'")
 				.action("removing container for service 'main'")
@@ -168,7 +168,7 @@ describe('composer/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("removing container for service 'main'")
 				.action("pull image 'alpine:3.14' for service 'main'")
@@ -202,7 +202,7 @@ it('knows to recreate service if config has changed', () => {
 		},
 	});
 
-	expect(simplified(result)).to.deep.equal(
+	expect(stringify(result)).to.deep.equal(
 		plan()
 			.action("stopping container for service 'main'")
 			.action("removing container for service 'main'")

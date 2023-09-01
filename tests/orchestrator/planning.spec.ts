@@ -3,7 +3,7 @@ import { expect } from '~/test-utils';
 import { ServiceStatus } from './state';
 import { planner } from './planner';
 import { DELETED } from 'mahler';
-import { plan, simplified } from 'mahler/testing';
+import { plan, stringify } from 'mahler/testing';
 
 describe('orchestrator/planning', () => {
 	it('updates the app/release state if it has not been set', () => {
@@ -34,7 +34,7 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("initialize '/apps/a0'")
 				.action("initialize release 'r0' for app 'a0'")
@@ -85,7 +85,7 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
 				.action(
@@ -140,7 +140,7 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action(
 					"start container for service 'main' of app 'a0' and release 'r0'",
@@ -190,7 +190,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
 				.action(
@@ -253,7 +253,7 @@ describe('orchestrator/planning', () => {
 			images: [{ name: 'a0_main:r0' }],
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action(
 					"stop container for service 'main' of app 'a0' and release 'r0'",
@@ -321,7 +321,7 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("initialize release 'r1' for app 'a0'")
 				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
@@ -400,7 +400,7 @@ describe('orchestrator/planning', () => {
 			},
 		});
 
-		expect(simplified(result)).to.deep.equal(
+		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("initialize release 'r1' for app 'a0'")
 				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
