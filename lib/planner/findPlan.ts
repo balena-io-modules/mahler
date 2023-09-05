@@ -9,9 +9,9 @@ import { Diff } from '../diff';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
-import { Action, Instruction, Method, Task, Parallel } from '../task';
+import { Action, Instruction, Method, Task } from '../task';
 import { Plan } from './plan';
-import { Node } from './node';
+import { EmptyNode, Node } from './node';
 import {
 	PlannerConfig,
 	LoopDetected,
@@ -20,7 +20,6 @@ import {
 	ConditionNotMet,
 	SearchFailed,
 	MergeFailed,
-	ConflictDetected,
 } from './types';
 import { isTaskApplicable } from './utils';
 import assert from '../assert';
@@ -32,7 +31,7 @@ interface PlanningState<TState = any> {
 	operation?: Operation<TState, any>;
 	trace: PlannerConfig<TState>['trace'];
 	initialPlan: Plan<TState>;
-	callStack?: Array<Method<TState> | Parallel<TState>>;
+	callStack?: Array<Method<TState>>;
 }
 
 function findLoop<T>(id: string, node: Node<T> | null): boolean {
@@ -85,22 +84,14 @@ function tryAction<TState = any>(
 	};
 }
 
-function tryMethod<TState = any>(
+// Expand the method in a sequential way
+function trySequential<TState = any>(
 	method: Method<TState>,
 	{ initialPlan, callStack = [], ...pState }: PlanningState<TState>,
 ): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
 	assert(initialPlan.success);
-
-	// look method in the call stack
-	if (callStack.find((m) => Method.equals(m, method))) {
-		return {
-			success: false,
-			stats: initialPlan.stats,
-			error: RecursionDetected,
-		};
-	}
 
 	const output = method(initialPlan.state);
 	const instructions = Array.isArray(output) ? output : [output];
@@ -152,14 +143,37 @@ function findConflict(
 	}
 }
 
+function findTail<TState = any>(
+	empty: EmptyNode<TState>,
+	node: Node<TState> | null,
+) {
+	if (node == null) {
+		return null;
+	}
+
+	if (Node.isAction(node)) {
+		if (node.next === empty) {
+			return node;
+		}
+		return findTail(empty, node.next);
+	}
+
+	if (Node.isFork(node)) {
+		return findTail(empty, node.next[0]);
+	}
+
+	// The current node should not be the empty node we are looking for
+	return findTail(empty, node.next);
+}
+
 function tryParallel<TState = any>(
-	parallel: Parallel<TState>,
-	{ initialPlan, callStack = [], ...pState }: PlanningState<TState>,
+	parallel: Method<TState>,
+	{ trace, initialPlan, callStack = [], ...pState }: PlanningState<TState>,
 ): Plan<TState> {
 	assert(initialPlan.success);
 
 	// look task in the call stack
-	if (callStack.find((p) => Parallel.equals(p, parallel))) {
+	if (callStack.find((p) => Method.equals(p, parallel))) {
 		return {
 			success: false,
 			stats: initialPlan.stats,
@@ -167,7 +181,8 @@ function tryParallel<TState = any>(
 		};
 	}
 
-	const instructions = parallel(initialPlan.state);
+	const output = parallel(initialPlan.state);
+	const instructions = Array.isArray(output) ? output : [output];
 
 	// Nothing to do here as other branches may still
 	// result in actions
@@ -187,6 +202,7 @@ function tryParallel<TState = any>(
 	for (const i of instructions) {
 		const res = tryInstruction(i, {
 			...pState,
+			trace,
 			initialPlan: plan,
 			callStack: cStack,
 		});
@@ -198,10 +214,6 @@ function tryParallel<TState = any>(
 		results.push(res);
 	}
 
-	// There should not be any results pointing to null as we passed
-	// an empty node as the start node to each one
-	assert(results.every((r) => r.start != null));
-
 	// If all branches are empty (they still point to the start node we provided)
 	// we just return the initialPlan
 	results = results.filter((r) => r.start !== empty);
@@ -209,18 +221,47 @@ function tryParallel<TState = any>(
 		return initialPlan;
 	}
 
+	// if the method has just a single branch there is no point in
+	// having the fork and empty node, so we need to remove the empty
+	// and connect the last action in the branch directly to the existing plan
+	if (results.length === 1) {
+		const branch = results[0];
+		const last = findTail(empty, branch.start);
+
+		assert(last != null);
+
+		// We remove the empty node from the plan
+		last.next = initialPlan.start;
+
+		return {
+			success: true,
+			state: initialPlan.state,
+			pendingChanges: branch.pendingChanges,
+			start: branch.start,
+			stats: initialPlan.stats,
+		};
+	}
+
 	// Here is where we check for conflicts created by the parallel plan.
 	// If two branches change the same part of the state, that means that there is
-	// a conflict and the planning should fail.
-	// QUESTION: Intersection is an expensive operation, should we just do it during
-	// testing?
+	// a conflict and the branches need to be executed in sequence instead.
+	// NOTE: This is currently implemented in a pretty brute way. A better algorithm
+	// would be to find which branches are in conflict, keep one of them in the parallel
+	// part of the execution and move the other ones to the sequential part.
 	const conflict = findConflict(results.map((r) => r.pendingChanges));
 	if (conflict) {
-		return {
-			success: false,
-			stats: initialPlan.stats,
-			error: ConflictDetected(conflict),
-		};
+		// TODO we need a trace event here so the diagram can be updated
+		trace({
+			event: 'backtrack-method',
+			method: parallel,
+			state: initialPlan.state,
+		});
+		return trySequential(parallel, {
+			trace,
+			initialPlan,
+			callStack,
+			...pState,
+		});
 	}
 
 	// We add the fork node
@@ -267,8 +308,8 @@ function tryInstruction<TState = any>(
 
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
-		res = tryMethod(instruction, { ...state, trace, initialPlan, callStack });
-	} else if (Parallel.is(instruction)) {
+		// We try methods in parallel first. If conflicts are found then we'll try
+		// running them in sequence
 		res = tryParallel(instruction, { ...state, trace, initialPlan, callStack });
 	} else {
 		res = tryAction(instruction, { ...state, trace, initialPlan, callStack });

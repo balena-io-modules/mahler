@@ -7,7 +7,7 @@ import {
 	ActionNode,
 	ForkNode,
 } from '../planner';
-import { Method, Action, Parallel, Instruction } from '../task';
+import { Method, Action, Instruction } from '../task';
 import { Node } from '../planner';
 import { assert } from '../assert';
 
@@ -22,7 +22,7 @@ function hash(o: any) {
 		.substring(0, 7);
 }
 
-function instructionId(s: any, i: Method | Action | Parallel): string {
+function instructionId(s: any, i: Method | Action): string {
 	if (Action.is(i)) {
 		const n = Node.of(s, i);
 		return n.id;
@@ -173,6 +173,10 @@ class Diagram {
 	parent: DiagramNode | null = null;
 	depth = 0;
 	graph: string[] = [];
+	// Keeps track of the index where the method (identified by instruction id)
+	// was added to the graph to allow backtracking when switching from parallel to
+	// sequential
+	callStack = new Map<string, number>();
 
 	constructor(title: string) {
 		this.graph = ['---', `title: ${title}`, `---`];
@@ -328,10 +332,11 @@ class Diagram {
 		}
 
 		const node = DiagramNode.instruction(e.state, e.instruction, parent.id);
-		if (Method.is(e.instruction) || Parallel.is(e.instruction)) {
+		if (Method.is(e.instruction)) {
 			this.graph.push(
 				`	${parent} -.- ${node}[["${htmlEncode(e.instruction.description)}"]]`,
 			);
+			this.callStack.set(node.id, this.graph.length - 1);
 		} else {
 			this.graph.push(
 				`	${parent} -.- ${node}("${htmlEncode(e.instruction.description)}")`,
@@ -342,6 +347,14 @@ class Diagram {
 		this.parent = node;
 
 		return node;
+	}
+
+	onBacktracking<T>(e: PlanningEvent<T> & { event: 'backtrack-method' }): void {
+		const node = DiagramNode.instruction(e.state, e.method);
+		const pos = this.callStack.get(node.id);
+		assert(pos !== undefined);
+		this.graph.splice(pos + 1);
+		this.parent = node;
 	}
 
 	onError(e: PlanningError): DiagramNode {
@@ -440,6 +453,8 @@ export function mermaid(
 					node = diagram.onTryInstruction(e);
 
 					break;
+				case 'backtrack-method':
+					return diagram.onBacktracking(e);
 
 				case 'found':
 					diagram.onFound(e);

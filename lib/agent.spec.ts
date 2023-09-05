@@ -122,7 +122,7 @@ describe('Agent', () => {
 			const multiIncrement = Task.of({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				parallel: (state: Counters, ctx) =>
+				method: (state: Counters, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 1)
 						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),

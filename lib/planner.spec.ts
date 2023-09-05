@@ -344,7 +344,7 @@ describe('Planner', () => {
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0)
 						.length > 1,
-				parallel: (state: Counters, ctx) =>
+				method: (state: Counters, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 0)
 						.map((k) => byOne({ counter: k, target: ctx.target[k] })),
@@ -386,7 +386,7 @@ describe('Planner', () => {
 			const multiIncrement = Task.of({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				parallel: (state: Counters, ctx) =>
+				method: (state: Counters, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 1)
 						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
@@ -428,7 +428,7 @@ describe('Planner', () => {
 			const multiIncrement = Task.of({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				parallel: (state: Counters, ctx) =>
+				method: (state: Counters, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 1)
 						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
@@ -438,7 +438,7 @@ describe('Planner', () => {
 			const chunker = Task.of({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				parallel: (state: Counters, ctx) => {
+				method: (state: Counters, ctx) => {
 					const toUpdate = Object.keys(state).filter(
 						(k) => ctx.target[k] - state[k] > 1,
 					);
@@ -485,7 +485,7 @@ describe('Planner', () => {
 			);
 		});
 
-		it('detects planning conflicts', () => {
+		it('reverts to sequential execution if branches have conflicts', () => {
 			type Counters = { [k: string]: number };
 
 			const byOne = Task.of({
@@ -499,7 +499,7 @@ describe('Planner', () => {
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1)
 						.length > 1,
-				parallel: (state: Counters, ctx) =>
+				method: (state: Counters, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 1)
 						.flatMap((k) => [
@@ -524,9 +524,9 @@ describe('Planner', () => {
 				plan()
 					.action('a + 1')
 					.action('a + 1')
+					.action('b + 1')
+					.action('b + 1')
 					.action('a + 1')
-					.action('b + 1')
-					.action('b + 1')
 					.end(),
 			);
 		});

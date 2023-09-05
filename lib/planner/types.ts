@@ -1,7 +1,6 @@
 import { Operation } from 'lib/operation';
 import { Target } from '../target';
-import { Instruction, Method, Parallel } from '../task';
-import { Operation as PatchOperation } from 'mahler-wasm';
+import { Instruction, Method } from '../task';
 
 import { Node } from './node';
 
@@ -69,7 +68,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The caller instruction
 			 */
-			parent: Method<TState, any, any> | Parallel<TState, any, any> | undefined;
+			parent: Method<TState, any, any> | undefined;
 
 			/**
 			 * The previous node in the plan
@@ -93,6 +92,7 @@ export type PlanningEvent<TState> =
 			 */
 			state: TState;
 	  }
+	| { event: 'backtrack-method'; method: Method<TState>; state: TState }
 	| {
 			/**
 			 * No more operations remain to be tested
@@ -170,24 +170,13 @@ export function MergeFailed(failure: Error) {
 
 export type MergeFailed = ReturnType<typeof MergeFailed>;
 
-export function ConflictDetected(conflict: [PatchOperation, PatchOperation]) {
-	return {
-		event: 'error' as const,
-		cause: 'conflict-detected' as const,
-		conflict,
-	};
-}
-
-export type ConflictDetected = ReturnType<typeof ConflictDetected>;
-
 export type PlanningError =
 	| ConditionNotMet
 	| LoopDetected
 	| RecursionDetected
 	| MethodExpansionEmpty
 	| SearchFailed
-	| MergeFailed
-	| ConflictDetected;
+	| MergeFailed;
 
 export interface PlannerConfig<TState> {
 	/**

@@ -342,7 +342,7 @@ describe('Mermaid', () => {
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0).length >
 				1,
-			parallel: (state: Counters, ctx) =>
+			method: (state: Counters, ctx) =>
 				Object.keys(state)
 					.filter((k) => ctx.target[k] - state[k] > 0)
 					.map((k) => byOne({ counter: k, target: ctx.target[k] })),
@@ -364,23 +364,23 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- ec9e183[["increment counters"]]
-				ec9e183 -.- 306db69("a + 1")
-				ec9e183 -.- a21ae1f("b + 1")
-				306db69 -.- j17bab65
-				a21ae1f -.- j17bab65
+				d0 -.- 588eea4[["increment counters"]]
+				588eea4 -.- de739bb("a + 1")
+				588eea4 -.- 5716ae8("b + 1")
+				de739bb -.- j17bab65
+				5716ae8 -.- j17bab65
 				j17bab65(( ))
 				j17bab65 -.- d1{ }
-				d1 -.- c647f08[["increment counters"]]
-				c647f08 -.- f435bfd("a + 1")
-				c647f08 -.- 832b19f("b + 1")
-				f435bfd -.- j0270df9
-				832b19f -.- j0270df9
+				d1 -.- c5108a8[["increment counters"]]
+				c5108a8 -.- eef8f5d("a + 1")
+				c5108a8 -.- 1021e18("b + 1")
+				eef8f5d -.- j0270df9
+				1021e18 -.- j0270df9
 				j0270df9(( ))
 				j0270df9 -.- d2{ }
-				d2 -.- d90079a[["increment counters"]]
-				d90079a -.- d90079a-err[ ]
-				d90079a-err:::error
+				d2 -.- ee9e70b[["increment counters"]]
+				ee9e70b -.- ee9e70b-err[ ]
+				ee9e70b-err:::error
 				d2 -.- 2627161("a + 1")
 				2627161 -.- stop(( ))
 				stop:::finish
@@ -388,23 +388,23 @@ describe('Mermaid', () => {
 				start:::selected
 				start --> fj17bab65(( ))
 				fj17bab65:::selected
-				fj17bab65 --> 306db69
-				306db69:::selected
-				fj17bab65 --> a21ae1f
-				a21ae1f:::selected
+				fj17bab65 --> de739bb
+				de739bb:::selected
+				fj17bab65 --> 5716ae8
+				5716ae8:::selected
 				j17bab65(( ))
-				306db69 --> j17bab65
-				a21ae1f --> j17bab65
+				de739bb --> j17bab65
+				5716ae8 --> j17bab65
 				j17bab65:::selected
 				j17bab65 --> fj0270df9(( ))
 				fj0270df9:::selected
-				fj0270df9 --> f435bfd
-				f435bfd:::selected
-				fj0270df9 --> 832b19f
-				832b19f:::selected
+				fj0270df9 --> eef8f5d
+				eef8f5d:::selected
+				fj0270df9 --> 1021e18
+				1021e18:::selected
 				j0270df9(( ))
-				f435bfd --> j0270df9
-				832b19f --> j0270df9
+				eef8f5d --> j0270df9
+				1021e18 --> j0270df9
 				j0270df9:::selected
 				j0270df9 --> 2627161
 				2627161:::selected
@@ -435,7 +435,7 @@ describe('Mermaid', () => {
 		const multiIncrement = Task.of({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			parallel: (state: Counters, ctx) =>
+			method: (state: Counters, ctx) =>
 				Object.keys(state)
 					.filter((k) => ctx.target[k] - state[k] > 1)
 					.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
@@ -456,20 +456,20 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- 9e1cfaf[["increment counters"]]
-				9e1cfaf -.- 682aa0e[["increase 'a'"]]
+				d0 -.- 2396eea[["increment counters"]]
+				2396eea -.- 682aa0e[["increase 'a'"]]
 				682aa0e -.- 4b66884("a + 1")
 				4b66884 -.- 29aedf2("a + 1")
-				9e1cfaf -.- 5dd218c[["increase 'b'"]]
+				2396eea -.- 5dd218c[["increase 'b'"]]
 				5dd218c -.- aafffea("b + 1")
 				aafffea -.- 17593a3("b + 1")
 				29aedf2 -.- j0270df9
 				17593a3 -.- j0270df9
 				j0270df9(( ))
 				j0270df9 -.- d1{ }
-				d1 -.- 1e78f4e[["increment counters"]]
-				1e78f4e -.- 1e78f4e-err[ ]
-				1e78f4e-err:::error
+				d1 -.- 7de2726[["increment counters"]]
+				7de2726 -.- 7de2726-err[ ]
+				7de2726-err:::error
 				d1 -.- 976345d[["increase 'a'"]]
 				976345d -.- 976345d-err[ ]
 				976345d-err:::error
@@ -521,7 +521,7 @@ describe('Mermaid', () => {
 		const multiIncrement = Task.of({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			parallel: (state: Counters, ctx) =>
+			method: (state: Counters, ctx) =>
 				Object.keys(state)
 					.filter((k) => ctx.target[k] - state[k] > 1)
 					.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
@@ -531,7 +531,7 @@ describe('Mermaid', () => {
 		const chunker = Task.of({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			parallel: (state: Counters, ctx) => {
+			method: (state: Counters, ctx) => {
 				const toUpdate = Object.keys(state).filter(
 					(k) => ctx.target[k] - state[k] > 1,
 				);
@@ -572,19 +572,19 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- db6e0ff[["chunk"]]
-				db6e0ff -.- 6363386[["increment multiple"]]
-				6363386 -.- f086833[["a + 2"]]
+				d0 -.- 16c4cee[["chunk"]]
+				16c4cee -.- 85de134[["increment multiple"]]
+				85de134 -.- f086833[["a + 2"]]
 				f086833 -.- 55f3eb4("a++")
 				55f3eb4 -.- c49ebf7("a++")
-				6363386 -.- 491551c[["b + 2"]]
+				85de134 -.- 491551c[["b + 2"]]
 				491551c -.- 497f947("b++")
 				497f947 -.- f401546("b++")
-				db6e0ff -.- a3bcc2f[["increment multiple"]]
-				a3bcc2f -.- a6594ae[["c + 2"]]
+				16c4cee -.- 14b5abe[["increment multiple"]]
+				14b5abe -.- a6594ae[["c + 2"]]
 				a6594ae -.- 7932f99("c++")
 				7932f99 -.- 6f42d9e("c++")
-				a3bcc2f -.- 9a04ffd[["d + 2"]]
+				14b5abe -.- 9a04ffd[["d + 2"]]
 				9a04ffd -.- d8ec9ff("d++")
 				d8ec9ff -.- 9e0f26a("d++")
 				c49ebf7 -.- j7f6fe40
@@ -595,12 +595,12 @@ describe('Mermaid', () => {
 				jad26c69(( )) -.- 4d89b9e
 				4d89b9e(( ))
 				4d89b9e -.- d1{ }
-				d1 -.- e9716b8[["chunk"]]
-				e9716b8 -.- e9716b8-err[ ]
-				e9716b8-err:::error
-				d1 -.- d24469f[["increment multiple"]]
-				d24469f -.- d24469f-err[ ]
-				d24469f-err:::error
+				d1 -.- cb79260[["chunk"]]
+				cb79260 -.- cb79260-err[ ]
+				cb79260-err:::error
+				d1 -.- a65b91b[["increment multiple"]]
+				a65b91b -.- a65b91b-err[ ]
+				a65b91b-err:::error
 				d1 -.- 8923404[["a + 2"]]
 				8923404 -.- 8923404-err[ ]
 				8923404-err:::error
@@ -652,7 +652,7 @@ describe('Mermaid', () => {
 		);
 	});
 
-	it('draws planning conflicts', function () {
+	it('draws sequential plan when backtracking is reported', function () {
 		type Counters = { [k: string]: number };
 
 		const byOne = Task.of({
@@ -666,7 +666,7 @@ describe('Mermaid', () => {
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1).length >
 				1,
-			parallel: (state: Counters, ctx) =>
+			method: (state: Counters, ctx) =>
 				Object.keys(state)
 					.filter((k) => ctx.target[k] - state[k] > 1)
 					.flatMap((k) => [
@@ -693,53 +693,31 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- 4eb9782[["increment counters"]]
-				4eb9782 -.- 31dcac9("a + 1")
-				4eb9782 -.- 31dcac9("a + 1")
-				4eb9782 -.- 01f267c("b + 1")
-				4eb9782 -.- 01f267c("b + 1")
-				01f267c -.- 01f267c-err[ ]
-				01f267c-err:::error
-				d0 -.- e98197f("a + 1")
-				e98197f -.- d1{ }
-				d1 -.- ac04f57[["increment counters"]]
-				ac04f57 -.- 006821a("a + 1")
-				ac04f57 -.- 006821a("a + 1")
-				ac04f57 -.- fffbba2("b + 1")
-				ac04f57 -.- fffbba2("b + 1")
-				fffbba2 -.- fffbba2-err[ ]
-				fffbba2-err:::error
-				d1 -.- 508e19c("a + 1")
-				508e19c -.- d2{ }
-				d2 -.- 005b62e[["increment counters"]]
-				005b62e -.- 005b62e-err[ ]
-				005b62e-err:::error
-				d2 -.- 2627161("a + 1")
-				2627161 -.- d3{ }
-				d3 -.- 8537a4a[["increment counters"]]
-				8537a4a -.- 8537a4a-err[ ]
-				8537a4a-err:::error
-				d3 -.- cc6de07("b + 1")
-				cc6de07 -.- d4{ }
-				d4 -.- 6c9329a[["increment counters"]]
-				6c9329a -.- 6c9329a-err[ ]
-				6c9329a-err:::error
-				d4 -.- ab7b1e6("b + 1")
-				ab7b1e6 -.- stop(( ))
+				d0 -.- 817288c[["increment counters"]]
+				817288c -.- 1ebf911("a + 1")
+				1ebf911 -.- 29aedf2("a + 1")
+				29aedf2 -.- 2525149("b + 1")
+				2525149 -.- 17593a3("b + 1")
+				17593a3 -.- d1{ }
+				d1 -.- 4b2ca33[["increment counters"]]
+				4b2ca33 -.- 4b2ca33-err[ ]
+				4b2ca33-err:::error
+				d1 -.- eb463ce("a + 1")
+				eb463ce -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> e98197f
-				e98197f:::selected
-				e98197f --> 508e19c
-				508e19c:::selected
-				508e19c --> 2627161
-				2627161:::selected
-				2627161 --> cc6de07
-				cc6de07:::selected
-				cc6de07 --> ab7b1e6
-				ab7b1e6:::selected
-				ab7b1e6 --> stop
+				start --> 1ebf911
+				1ebf911:::selected
+				1ebf911 --> 29aedf2
+				29aedf2:::selected
+				29aedf2 --> 2525149
+				2525149:::selected
+				2525149 --> 17593a3
+				17593a3:::selected
+				17593a3 --> eb463ce
+				eb463ce:::selected
+				eb463ce --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`,

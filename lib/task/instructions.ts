@@ -66,28 +66,11 @@ export interface Method<
 	(s: TState): Instruction<TState> | Array<Instruction<TState>>;
 }
 
-/** A method task that has been applied to a specific context */
-export interface Parallel<
-	TState = any,
-	TPath extends Path = any,
-	TOp extends TaskOp = any,
-> extends Instance<TState, TPath, TOp> {
-	readonly _tag: 'parallel';
-	/**
-	 * The method to be called when the task is executed
-	 * if the method returns an empty list, this means the procedure is not applicable
-	 */
-	(s: TState): Array<Instruction<TState>>;
-}
-
 export type Instruction<
 	TState = any,
 	TPath extends Path = any,
 	TOp extends TaskOp = any,
-> =
-	| Action<TState, TPath, TOp>
-	| Method<TState, TPath, TOp>
-	| Parallel<TState, TPath, TOp>;
+> = Action<TState, TPath, TOp> | Method<TState, TPath, TOp>;
 
 /**
  * Check if an instruction is a method
@@ -98,20 +81,6 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 		typeof (t as any).condition === 'function' &&
 		typeof t === 'function' &&
 		(t as any)._tag === 'method'
-	);
-}
-
-/**
- * Check if an instruction is a parallel
- */
-function isParallel<TState = any>(
-	t: Instruction<TState>,
-): t is Parallel<TState> {
-	return (
-		(t as any).condition != null &&
-		typeof (t as any).condition === 'function' &&
-		typeof t === 'function' &&
-		(t as any)._tag === 'parallel'
 	);
 }
 
@@ -140,11 +109,6 @@ function isEqual<TState = any>(
 
 export const Method = {
 	is: isMethod,
-	equals: isEqual,
-};
-
-export const Parallel = {
-	is: isParallel,
 	equals: isEqual,
 };
 
