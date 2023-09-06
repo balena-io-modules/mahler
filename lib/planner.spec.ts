@@ -1,7 +1,7 @@
 import { expect, console } from '~/test-utils';
 import { Planner } from './planner';
-import { Task } from './task';
-import { plan, serialize } from './testing';
+import { Instruction, Task } from './task';
+import { plan, branch, fork, stringify } from './testing';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -120,7 +120,7 @@ describe('Planner', () => {
 				},
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
-			expect(serialize(result)).to.deep.equal(
+			expect(stringify(result)).to.deep.equal(
 				plan()
 					.action('take block c')
 					.action('put c on table')
@@ -318,7 +318,7 @@ describe('Planner', () => {
 				{ blocks: { a: 'b', b: 'c', c: 'table' } },
 			);
 
-			expect(serialize(result)).to.deep.equal(
+			expect(stringify(result)).to.deep.equal(
 				plan()
 					.action('unstack block c')
 					.action('put down block c')
@@ -326,6 +326,207 @@ describe('Planner', () => {
 					.action('stack block b on top of block c')
 					.action('pickup block a')
 					.action('stack block a on top of block b')
+					.end(),
+			);
+		});
+
+		it('solves parallel problems', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0)
+						.length > 1,
+				method: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 0)
+						.map((k) => byOne({ counter: k, target: ctx.target[k] })),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [multiIncrement, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+			expect(stringify(result)).to.deep.equal(
+				plan()
+					.fork(branch('a + 1'), branch('b + 1'))
+					.fork(branch('a + 1'), branch('b + 1'))
+					.action('a + 1')
+					.end(),
+			);
+		});
+
+		it('solves parallel problems with methods', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const byTwo = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
+				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+				description: ({ counter }) => `increase '${counter}'`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
+				method: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [multiIncrement, byTwo, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+
+			expect(stringify(result)).to.deep.equal(
+				plan()
+					.fork(branch('a + 1', 'a + 1'), branch('b + 1', 'b + 1'))
+					.action('a + 1')
+					.end(),
+			);
+		});
+
+		it('Finds parallel plans with nested forks', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter}++`,
+			});
+
+			const byTwo = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
+				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+				description: ({ counter }) => `${counter} + 2`,
+			});
+
+			const multiIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
+				method: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+				description: `increment multiple`,
+			});
+
+			const chunker = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
+				method: (state: Counters, ctx) => {
+					const toUpdate = Object.keys(state).filter(
+						(k) => ctx.target[k] - state[k] > 1,
+					);
+
+					const chunkSize = 2;
+					const tasks: Array<Instruction<Counters>> = [];
+					for (let i = 0; i < toUpdate.length; i += chunkSize) {
+						const chunk = toUpdate.slice(i, i + chunkSize);
+						tasks.push(
+							multiIncrement({
+								target: {
+									...state,
+									...chunk.reduce(
+										(acc, k) => ({ ...acc, [k]: ctx.target[k] }),
+										{},
+									),
+								},
+							}),
+						);
+					}
+
+					return tasks;
+				},
+				description: 'chunk',
+			});
+
+			const planner = Planner.of({
+				tasks: [chunker, multiIncrement, byTwo, byOne],
+				config: { trace: console.trace },
+			});
+			const result = planner.findPlan(
+				{ a: 0, b: 0, c: 0, d: 0 },
+				{ a: 3, b: 2, c: 2, d: 2 },
+			);
+
+			expect(stringify(result)).to.deep.equal(
+				plan()
+					.fork(
+						branch(fork(branch('a++', 'a++'), branch('b++', 'b++'))),
+						branch(fork(branch('c++', 'c++'), branch('d++', 'd++'))),
+					)
+					.action('a++')
+					.end(),
+			);
+		});
+
+		it('reverts to sequential execution if branches have conflicts', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of({
+				path: '/:counter',
+				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
+				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const conflictingIncrement = Task.of({
+				condition: (state: Counters, ctx) =>
+					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1)
+						.length > 1,
+				method: (state: Counters, ctx) =>
+					Object.keys(state)
+						.filter((k) => ctx.target[k] - state[k] > 1)
+						.flatMap((k) => [
+							// We create parallel steps to increase the same element of the state
+							// concurrently
+							byOne({ counter: k, target: ctx.target[k] }),
+							byOne({ counter: k, target: ctx.target[k] }),
+						]),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.of({
+				tasks: [conflictingIncrement, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+
+			// The resulting plan is just the linear version because the parallel version
+			// will result in a conflict being detected
+			expect(stringify(result)).to.deep.equal(
+				plan()
+					.action('a + 1')
+					.action('a + 1')
+					.action('b + 1')
+					.action('b + 1')
+					.action('a + 1')
 					.end(),
 			);
 		});

@@ -1,6 +1,6 @@
 import { Operation } from 'lib/operation';
 import { Target } from '../target';
-import { Instruction } from '../task';
+import { Instruction, Method } from '../task';
 
 import { Node } from './node';
 
@@ -40,6 +40,11 @@ export type PlanningEvent<TState> =
 			 * Search expansion started
 			 */
 			event: 'find-next';
+
+			/**
+			 * The last node in the plan
+			 */
+			prev: Node<TState> | null;
 			/**
 			 * The current state at this planning stage
 			 */
@@ -59,6 +64,17 @@ export type PlanningEvent<TState> =
 			 * An instruction was chosen
 			 */
 			event: 'try-instruction';
+
+			/**
+			 * The caller instruction
+			 */
+			parent: Method<TState, any, any> | undefined;
+
+			/**
+			 * The previous node in the plan
+			 */
+			prev: Node<TState> | null;
+
 			/**
 			 * The instruction chosen
 			 */
@@ -75,6 +91,18 @@ export type PlanningEvent<TState> =
 			 * is a method, the current state may evolve as the method is unwrapped
 			 */
 			state: TState;
+	  }
+	| { event: 'backtrack-method'; method: Method<TState>; state: TState }
+	| {
+			/**
+			 * No more operations remain to be tested
+			 */
+			event: 'found';
+
+			/**
+			 * The last node added to the plan
+			 */
+			prev: Node<TState> | null;
 	  }
 	| {
 			/**
@@ -129,14 +157,26 @@ export function SearchFailed(depth: number) {
 		depth,
 	};
 }
+
 export type SearchFailed = ReturnType<typeof SearchFailed>;
+
+export function MergeFailed(failure: Error) {
+	return {
+		event: 'error' as const,
+		cause: 'merge-error' as const,
+		failure,
+	};
+}
+
+export type MergeFailed = ReturnType<typeof MergeFailed>;
 
 export type PlanningError =
 	| ConditionNotMet
 	| LoopDetected
 	| RecursionDetected
 	| MethodExpansionEmpty
-	| SearchFailed;
+	| SearchFailed
+	| MergeFailed;
 
 export interface PlannerConfig<TState> {
 	/**

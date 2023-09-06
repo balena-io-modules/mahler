@@ -86,7 +86,8 @@ export interface MethodTask<
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
 	 * The method to be called when the task is executed
-	 * if the method returns an empty list, this means the sequence is not applicable
+	 * if the method returns an empty list, this means there are no
+	 * further instructions that can be applied
 	 */
 	method(
 		s: TState,
@@ -144,14 +145,15 @@ function ground<
 			? taskDescription(context)
 			: taskDescription;
 
-	if (isMethodTask(task)) {
-		return Object.assign((s: TState) => task.method(s, context), {
+	if (isActionTask(task)) {
+		return Object.assign((s: TState) => task.action(s, context), {
 			id,
 			path: context.path as any,
 			target: (ctx as any).target,
-			_tag: 'method' as const,
+			_tag: 'action' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
+			effect: (s: TState) => task.effect(s, context),
 			toJSON() {
 				return {
 					id,
@@ -163,14 +165,13 @@ function ground<
 		});
 	}
 
-	return Object.assign((s: TState) => task.action(s, context), {
+	return Object.assign((s: TState) => task.method(s, context), {
 		id,
 		path: context.path as any,
 		target: (ctx as any).target,
-		_tag: 'action' as const,
+		_tag: 'method' as const,
 		description,
 		condition: (s: TState) => task.condition(s, context),
-		effect: (s: TState) => task.effect(s, context),
 		toJSON() {
 			return {
 				id,
@@ -259,7 +260,12 @@ function of<
 	// Check that the path is valid
 	Path.assert(path);
 
-	const prefix = typeof (task as any).method === 'function' ? '[method] ' : '';
+	const prefix =
+		typeof (task as any).method === 'function'
+			? '[method] '
+			: typeof (task as any).parallel === 'function'
+			? '[parallel] '
+			: '';
 
 	const spec = {
 		description: (ctx: Context<TState, TPath, TOp>) =>

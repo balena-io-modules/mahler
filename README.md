@@ -9,8 +9,9 @@ A automated task composer and [HTN](https://en.wikipedia.org/wiki/Hierarchical_t
 - Simple, declarative API. Tasks are straightforward to define by declaring a pre-condition, effect, action and applicability. A task can be applicable to a specific part of the state object and/or data operation (create, update, delete). Tasks can be referenced in compound tasks (methods), to create more curated behaviors. Task runtime errors during previous plan executions may be used as contextual information to allow the planner to find alternative paths on the nexts run.
 - Highly configurable agent interface allows to create autonomous agents to serve a wide variety of use cases. The state of the agent can be queried at any point of the execution and observable interface allows to follow changes to the state or errors during the plan execution. Plans can be interrupted and goals can be modified if system objectives change.
 - Sensor interface allows to monitor changes in the state of the system coming from external events. Updated state may be used by agents to trigger a re-plan when necessary.
-- Easy to debug. Error reporting includes information about system state and goals for easy replicability.
+- Easy to debug. Error reporting includes information about system state and goals for easy replicability. Planning decision tree and resulting plans can be diagrammed to visually inpect where planning is failing.
 - Log ready. Agent uses task metadata and execution context to generate clear logs to communicate the state of the system to end users or for debugging. Plug your own logger to suit your system needs.
+- Async ready. The planner automatically detects when operations can be performed in paralllel and creates branches in the plan for async execution.
 
 ## Concepts
 

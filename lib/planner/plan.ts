@@ -1,6 +1,8 @@
 import { Node } from './node';
 import { PlanningStats, PlanningError } from './types';
 
+import { Operation } from 'mahler-wasm';
+
 export type Plan<TState> =
 	| {
 			/**
@@ -20,6 +22,14 @@ export type Plan<TState> =
 			 * track of intermediate steps in the planning process.
 			 */
 			state: TState;
+
+			/**
+			 * The changes that will be applied to the initial
+			 * state as part of the plan. We need this in order
+			 * to be able to merge the changes from parallel
+			 * operations
+			 */
+			pendingChanges: Operation[];
 
 			/**
 			 * The resulting stats of the planning process
