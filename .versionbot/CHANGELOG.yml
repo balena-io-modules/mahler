@@ -1,4 +1,98 @@
 - commits:
+    - subject: Remove parallel tasks
+      hash: 722f5c21812df62f079216a485f7bdd83b59241d
+      body: |
+        With this change, all methods are assumed to be parallel by default
+        unless conflicts are detected on the parallel branches, in which case
+        the planner will switch to sequential operation.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve testing tools to work with parallel plans
+      hash: 6fff8a1cdf043c9be9ffadbab8d419b960310851
+      body: |
+        This improves the API of the plan builder to be simpler and less
+        confusing. The `end` method of the builder now returns a string.
+        The `simplified` method has been renamed to `stringify` and now returns
+        a string instead of an array. This should make it easier to visually
+        inspect differences betwen the expected and the generated plan
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix wrong assumption about action nodes in mermaid
+      hash: 76c027c0486682f2a80c70f6df1c1b4d4d787f1c
+      body: |
+        Diagram would break in the case of parallel tasks with conflicts, this
+        is because an action may be chosen again after a previous compound task
+        was chosen, which means an action in the decision tree may have multiple
+        parents. We were assuming that an action could only have a single parent
+        which would mess up the diagram
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Update diagramming feature to work with parallel tasks
+      hash: 2952b53b42605f6b616948312d190fd5adc1e351
+      body: |
+        This adds a new state to the trace diagram (`found`). The state is on
+        the last level search when no more operations are pending. This allows
+        the digramming tool to draw joining paths by using the metadata in the
+        trace.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Implement planning for parallel tasks
+      hash: 60c2dd14cce295dcf1628fa367ee55ca4f12552a
+      body: |
+        WIP
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Convert Plan from a Linked List to a DAG
+      hash: ab14029f224cc2a118629a5e55b774e887cecf49
+      body: |
+        Plan nodes can now be of three types, a regular action node (same as
+        before), a fork node, creating branching on the plan, and an empty node,
+        to indicate joining of previously created branches. This commit also
+        updates all existing functions to deal with this new plan format, even
+        though the planner still cannot generate these types of plans
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Refactor @mahler/testing sub-module
+      hash: 4361c94d211086117f20598ebd8f4309c032bb32
+      body: |
+        This breaks up index into multiple files to simplify the move to
+        a DAG representation of a plan.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add Parallel task support.
+      hash: 427ca3c1a12979123148e525d024aedda0bfc02b
+      body: |
+        Parallel tasks are the complement of Method tasks. While a method
+        returns a list of instructions to be executed in sequence, a parallel
+        task returns a list of instructions to be executed in parallel. When a
+        parallel task is found, the planner will create a 'fork' in the plan,
+        where sub-plans are executed in concurrent executions.
+
+        While actions may now be executed in parallel, the state object is still
+        shared, so this PR also provides utilities for conflict detection during
+        testing.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.18.0
+  title: ""
+  date: 2023-09-06T23:51:12.199Z
+- commits:
     - subject: Fix bug with Context type inference
       hash: 9f3ad1eba9cfe80fa22a45239180d01e96c90dcb
       body: |
