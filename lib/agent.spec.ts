@@ -197,7 +197,7 @@ describe('Agent', () => {
 		});
 
 		const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
-			while (true) {
+			while (subscriber) {
 				subscriber.next((state) => {
 					// For this test we assume the temperature source of truth comes
 					// from the agent, but that won't be true in a real system,

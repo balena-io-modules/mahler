@@ -8,18 +8,18 @@ export interface Logger {
 
 export const NullLogger: Logger = {
 	debug: () => {
-		/*noop*/
+		/* noop*/
 	},
 	info: () => {
-		/*noop*/
+		/* noop*/
 	},
 	warn: () => {
-		/*noop*/
+		/* noop*/
 	},
 	error: () => {
-		/*noop*/
+		/* noop*/
 	},
 	trace: () => {
-		/*noop*/
+		/* noop*/
 	},
 };

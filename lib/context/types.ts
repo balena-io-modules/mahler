@@ -5,7 +5,7 @@ export type TaskOp = Op | '*';
 
 // Utility type to normalize intersections
 export type Identity<T> = T extends object
-	? {} & {
+	? object & {
 			[P in keyof T]: T[P];
 	  }
 	: T;
@@ -16,7 +16,7 @@ export type ContextWithSlash<
 	TPath extends Path,
 	TOp extends TaskOp,
 	TChildState,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = TPath extends `/${infer TTail}`
 	? ContextWithoutSlash<TState, TPath, TOp, TChildState, TTail, TProps> // If the path starts with a slash, evaluate the remaining part of the path
 	: never; // Otherwise, the path is invalid
@@ -28,7 +28,7 @@ type ContextWithoutSlash<
 	TOp extends TaskOp,
 	TChildState,
 	TSubPath extends Path,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = TSubPath extends `${infer THead}/${infer TTail}`
 	? ContextOnCompoundPathWithParameter<
 			TState,
@@ -55,9 +55,9 @@ type ContextOnSinglePathWithParameter<
 	TOp extends TaskOp,
 	TChildState,
 	TParam extends string,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = TParam extends `:${infer Arg}`
-	? TChildState extends Array<infer _>
+	? TChildState extends any[]
 		? ContextOnSinglePath<
 				TState,
 				TPath,
@@ -84,7 +84,7 @@ type ContextOnSinglePath<
 	TOp extends TaskOp,
 	TChildState,
 	TKey,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = TKey extends ''
 	? ContextOnEmptyPath<TState, TPath, TOp, TChildState, TProps>
 	: // If the key is a valid key on the object of type S
@@ -98,7 +98,7 @@ type ContextOnEmptyPath<
 	TPath extends Path,
 	TOp extends TaskOp,
 	TChildState,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = keyof TProps extends never // If A has no keys, then this will hold true. In that case, do not add params
 	? TOp extends '*' | 'delete'
 		? {
@@ -141,7 +141,7 @@ type ContextOnCompoundPathWithParameter<
 	TChildState,
 	THead extends string,
 	TTail extends Path,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = THead extends `:${infer Arg}` // Check if the key is a route parameters first
 	? TChildState extends Array<infer U> // Immediately check if the object is an array, in which case continue the evaluation o the tail
 		? ContextWithoutSlash<
@@ -179,7 +179,7 @@ type ContextOnCompoundPath<
 	TChildState,
 	THead,
 	TTail extends Path,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = THead extends keyof TChildState
 	? ContextWithoutSlash<TState, TPath, TOp, TChildState[THead], TTail, TProps>
 	: ContextOnArray<TState, TPath, TOp, TChildState, THead, TTail, TProps>; // If H is not a key of the object, it may be that is a number, so check if S is an array
@@ -192,9 +192,9 @@ type ContextOnArray<
 	TChildState,
 	THead,
 	TTail extends Path,
-	TProps extends {},
+	TProps extends NonNullable<unknown>,
 > = TChildState extends Array<infer U> // If the object of type S is an array
-	? THead extends `${infer _ extends number}` // and the key is a number
+	? THead extends `${number}` // and the key is a number
 		? ContextWithoutSlash<TState, TPath, TOp, U, TTail, TProps>
 		: never
 	: never;

@@ -5,7 +5,7 @@ function isPath(x: unknown): x is Path {
 		x != null &&
 		typeof x === 'string' &&
 		(x.startsWith('/') || x === '') &&
-		/[-a-zA-Z0-9@:%._\\+~#?&\/=]*/.test(x)
+		/[-a-zA-Z0-9@:%._\\+~#?&/=]*/.test(x)
 	);
 }
 

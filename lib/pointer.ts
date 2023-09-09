@@ -12,12 +12,12 @@ type PointerWithCompoundPath<
 	O,
 	H extends string,
 	T extends Path,
-> = O extends Array<infer _>
+> = O extends any[]
 	? PointerWithoutSlash<O[number], T>
 	: H extends keyof O
 	? PointerWithoutSlash<O[H], T>
 	: never;
-type PointerWithSinglePath<O, H extends string> = O extends Array<infer _>
+type PointerWithSinglePath<O, H extends string> = O extends any[]
 	? O[number]
 	: H extends keyof O
 	? O[H]

@@ -22,7 +22,10 @@ import {
  * Internal error
  */
 class ActionRunFailed extends Error {
-	constructor(readonly action: Action, readonly cause: any) {
+	constructor(
+		readonly action: Action,
+		readonly cause: any,
+	) {
 		super(`Action '${action.description}' failed with error: ${cause}`);
 	}
 }
@@ -214,7 +217,7 @@ export class Runtime<TState> {
 			return node.next;
 		};
 
-		this.promise = new Promise<Result<TState>>(async (resolve) => {
+		this.promise = (async () => {
 			this.running = true;
 
 			let tries = 0;
@@ -233,7 +236,7 @@ export class Runtime<TState> {
 					// The plan is empty, we have reached the goal
 					if (start == null) {
 						logger.debug('plan empty, nothing else to do');
-						return resolve({ success: true, state: this.state });
+						return { success: true as const, state: this.state };
 					}
 
 					const plan: string[] = [];
@@ -265,19 +268,19 @@ export class Runtime<TState> {
 					} else {
 						/* Something else happened, better exit immediately */
 						logger.error('Unknown error while looking for plan:', e);
-						return resolve({
-							success: false,
+						return {
+							success: false as const,
 							error: new UnknownError(e),
-						});
+						};
 					}
 				}
 
 				if (!found) {
 					if (this.opts.maxRetries > 0 && tries >= this.opts.maxRetries) {
-						return resolve({
-							success: false,
+						return {
+							success: false as const,
 							error: new Failure(tries),
-						});
+						};
 					}
 				}
 				const wait = Math.min(this.opts.backoffMs(tries), this.opts.maxWaitMs);
@@ -289,8 +292,8 @@ export class Runtime<TState> {
 			}
 
 			// The only way to get here is if the runtime was stopped
-			return resolve({ success: false, error: new Stopped() });
-		})
+			return { success: false as const, error: new Stopped() };
+		})()
 			// QUESTION: if we get here this is pretty bad, should we notify
 			// subscribers of an error?
 			.catch((e) => ({ success: false as const, error: e }))
@@ -315,14 +318,17 @@ export class Runtime<TState> {
 			return this.promise;
 		}
 
-		return new Promise(async (resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			const timer = setTimeout(() => {
 				reject(new Timeout(timeout));
 			}, timeout);
 
-			const res = await this.promise;
-			clearTimeout(timer);
-			resolve(res);
+			this.promise
+				.then((res) => {
+					clearTimeout(timer);
+					resolve(res);
+				})
+				.catch(reject);
 		});
 	}
 }

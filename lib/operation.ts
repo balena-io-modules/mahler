@@ -1,16 +1,16 @@
 import { Path } from './path';
 import { Pointer } from './pointer';
 
-export interface CreateOperation<T, P extends Path> {
+interface CreateOperation<T, P extends Path> {
 	op: 'create';
 	path: P;
 	value: Pointer<T, P>;
 }
-export interface DeleteOperation<P extends Path> {
+interface DeleteOperation<P extends Path> {
 	op: 'delete';
 	path: P;
 }
-export interface UpdateOperation<T, P extends Path> {
+interface UpdateOperation<T, P extends Path> {
 	op: 'update';
 	path: P;
 	value: Pointer<T, P>;
@@ -29,7 +29,7 @@ export class OperationNotSupported extends Error {
 	}
 }
 
-function of<_ = any, P extends Path = '/'>(o: {
+function of<P extends Path = '/'>(o: {
 	op: 'delete';
 	path: P;
 }): DeleteOperation<P>;
