@@ -26,7 +26,7 @@ export { TaskOp } from './types';
  *  set(set(s, a), a) = set(s,a)
  */
 export type Context<TState, TPath extends Path, TOp extends TaskOp> = Identity<
-	ContextWithSlash<TState, TPath, TOp, TState, {}>
+	ContextWithSlash<TState, TPath, TOp, TState, object>
 >;
 
 // Redeclare the type for exporting

@@ -1,6 +1,5 @@
 import { expect } from '~/test-utils';
 import { plan, branch, fork } from './builder';
-import { DAG } from './dag';
 import dedent from 'dedent';
 
 describe('testing/builder', () => {

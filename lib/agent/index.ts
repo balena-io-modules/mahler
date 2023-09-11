@@ -41,7 +41,7 @@ export interface Agent<TState = any> extends Observable<TState> {
 	/**
 	 * Stop any running execution
 	 */
-	stop(): Promise<void>;
+	stop(): void;
 }
 
 type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
@@ -128,7 +128,7 @@ function of<TState>({
 			// when the target changes or the agent is stopped
 			setupRuntime = setupRuntime.then((runtime) => {
 				// Flatten the promise chain to avoid memory leaks
-				setupRuntime = new Promise(async (resolve) => {
+				setupRuntime = (async () => {
 					if (runtime != null) {
 						await runtime.stop();
 						state = runtime.state;
@@ -137,23 +137,26 @@ function of<TState>({
 					runtime = new Runtime(subject, state, target, planner, sensors, opts);
 					runtime.start();
 
-					resolve(runtime);
-				});
+					return runtime;
+				})();
 				return setupRuntime;
 			});
 		},
-		async stop() {
-			const runtime = await setupRuntime;
-			if (runtime != null) {
-				return runtime.stop();
-			}
+		stop() {
+			void setupRuntime.then((runtime) => {
+				if (runtime == null) {
+					return;
+				}
 
-			// We notify subscribers of completion only
-			// when stop is called
-			subject.complete();
+				// Reset the runtime
+				setupRuntime = Promise.resolve(null);
 
-			// Reset the runtime
-			setupRuntime = Promise.resolve(null);
+				return runtime.stop().then(() => {
+					// We notify subscribers of completion only
+					// when stop is called
+					subject.complete();
+				});
+			});
 		},
 		async wait(timeout: number = 0) {
 			assert(timeout >= 0);
