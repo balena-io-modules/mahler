@@ -1,4 +1,15 @@
 - commits:
+    - subject: Update to @balena/lint v7
+      hash: a2f119597a592e7ae27415ada9ef49fbc852d565
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.18.1
+  title: ""
+  date: 2023-09-11T13:36:55.494Z
+- commits:
     - subject: Remove parallel tasks
       hash: 722f5c21812df62f079216a485f7bdd83b59241d
       body: |
