@@ -1,4 +1,15 @@
 - commits:
+    - subject: Add local prettierrc/eslintrc for editor compat
+      hash: a4d5ea1acf684e897ce0716bc3e8e43bfb5f50ac
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.18.2
+  title: ""
+  date: 2023-09-15T18:53:14.389Z
+- commits:
     - subject: Update to @balena/lint v7
       hash: a2f119597a592e7ae27415ada9ef49fbc852d565
       body: ""
