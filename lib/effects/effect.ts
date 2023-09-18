@@ -1,5 +1,3 @@
-export { pipe, flow } from 'fp-ts/function';
-
 type Async<T> = () => Promise<T>;
 type Sync<T> = () => T;
 
@@ -76,9 +74,9 @@ export interface Effect<T> {
 /**
  * Builds an effect from a sync and async computation.
  */
-function build(async: Async<void>, sync: Sync<void>): Effect<void>;
-function build<T>(async: Async<T>, sync: Sync<T>): Effect<T>;
-function build<T>(
+function from(async: Async<void>, sync: Sync<void>): Effect<void>;
+function from<T>(async: Async<T>, sync: Sync<T>): Effect<T>;
+function from<T>(
 	async: Async<T>,
 	sync = (() => {
 		/* noop */
@@ -89,7 +87,7 @@ function build<T>(
 			return await async();
 		},
 		map<U>(fu: (t: T) => U): Effect<U> {
-			return build<U>(
+			return from<U>(
 				async () => {
 					const t = await async();
 					return fu(t);
@@ -98,7 +96,7 @@ function build<T>(
 			);
 		},
 		flatMap<U>(fu: (t: T) => Effect<U>): Effect<U> {
-			return build<U>(async () => {
+			return from<U>(async () => {
 				const t = await async();
 				return fu(t).run();
 			}, fu(sync()));
@@ -110,7 +108,7 @@ function build<T>(
  * Creates a pure effect, from a given function.
  */
 function pure<T>(f: Sync<T>): Effect<T> {
-	return build(async () => f(), f);
+	return from(async () => f(), f);
 }
 
 /**
@@ -119,38 +117,6 @@ function pure<T>(f: Sync<T>): Effect<T> {
 export function of<T>(t: T): Effect<T> {
 	return pure(() => t);
 }
-
-/**
- * Maps a function over an effect.
- *
- * This returns a function on effects that can be used as
- * part of a pipe
- */
-export function map<T, U>(ef: (t: T) => U): (et: Effect<T>) => Effect<U> {
-	return (et: Effect<T>) => et.map(ef);
-}
-
-/**
- * Chains two effects together.
- *
- * This returns a function on effects that can be used as
- * part of a pipe
- */
-export function flatMap<T, U>(
-	ef: (t: T) => Effect<U>,
-): (et: Effect<T>) => Effect<U> {
-	return (et: Effect<T>) => et.flatMap(ef);
-}
-
-/**
- * Chains two effects together.
- *
- * This returns a function on effects that can be used as
- * part of a pipe
- *
- * This is an alias of flatMap
- */
-export const bind = flatMap;
 
 async function run<T>(e: Effect<T>): Promise<T> {
 	return await e.run();
@@ -163,101 +129,22 @@ async function run<T>(e: Effect<T>): Promise<T> {
 export function IO(async: Async<void>): Effect<void>;
 export function IO<T>(async: Async<T>, t: T): Effect<T>;
 export function IO<T>(async: Async<T>, t?: T): Effect<T> {
-	return build(async, of(t!));
+	return from(async, of(t!));
 }
 
-/**
- * Creates a new effect conditionally depending
- * on the evaluation of a predicate.
- *
- * Returns a pipeable function on effects
- */
-export function when<T>(
-	pred: (t: T) => boolean,
-	f: (t: T) => Effect<T>,
-): (et: Effect<T>) => Effect<T> {
-	return (et: Effect<T>) => et.flatMap((t) => (pred(t) ? f(t) : of(t)));
-}
-
-/**
- * Flattens a nested effect.
- */
-export function flatten<T>(eet: Effect<Effect<T>>): Effect<T> {
-	return eet.flatMap((et) => et);
-}
-
-/**
- * Return a pipeable function that can be applied to the contents
- * of an effect without modifying the internal value.
- *
- * The given function must not modify the passed value and its result, if
- * any, will be discarded
- *
- * Example: logging
- * ```ts
- * import {of, pipe, tap} from '@mahler/effects';
- *
- * const effect = pipe(
- * 	0,
- * 	of,
- * 	tap(x => console.log('before', x)),
- * 	map(x => x + 1),
- * 	tap(x => console.log('after', x)),
- * );
- *
- * effect(); // before 0, after 1
- * ```
- */
-export function tap<T, U = void>(f: (t: T) => U): (et: Effect<T>) => Effect<T> {
-	return (et: Effect<T>) =>
-		et.map((t) => {
-			f(t);
-			return t;
-		});
-}
-
-/**
- * Returs a pipeable function that performs an IO operation
- *
- * This is similar to `tap`, except it only modifies the async side of the effect.
- *
- * The return value of the function is discarded
- */
-export function tapIO<T, U = void>(
-	f: (t: T) => Promise<U>,
-): (et: Effect<T>) => Effect<T> {
-	return (et: Effect<T>) =>
-		et.flatMap((t) =>
-			IO(async () => {
-				await f(t);
-				return t;
-			}, t),
-		);
-}
-
-/**
- * Set a property of an object in an effect.
- */
-export function set<T, K extends keyof T>(
-	key: K,
-	eu: Effect<T[K]>,
-): (et: Effect<T>) => Effect<T> {
-	return (et) => et.flatMap((t) => eu.map((u) => ({ ...t, [key]: u })));
-}
-
-function isEffect<T>(x: unknown): x is Effect<T> {
+function is<T>(x: unknown): x is Effect<T> {
 	return (
 		x != null &&
 		typeof x === 'function' &&
-		typeof (x as any).then === 'function' &&
+		typeof (x as any).run === 'function' &&
 		typeof (x as any).map === 'function'
 	);
 }
 
 export const Effect = {
 	of,
-	build,
-	is: isEffect,
+	from,
+	is,
 	map<T, U>(et: Effect<T>, ef: (t: T) => U): Effect<U> {
 		return et.map(ef);
 	},

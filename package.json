@@ -75,7 +75,6 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "fp-ts": "^2.16.1",
     "mahler-wasm": "^0.1.0",
     "optics-ts": "^2.4.0"
   },

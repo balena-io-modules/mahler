@@ -1,5 +1,5 @@
 import { expect } from '~/test-utils';
-import { Effect, pipe, bind, map, IO, when, of } from './effects';
+import { Effect, doPipe, map, when, of, bindIO } from './effects';
 
 describe('Effects API', () => {
 	describe('Effect', () => {
@@ -12,13 +12,13 @@ describe('Effects API', () => {
 			const effect = Effect.of(0)
 				.map((x) => x + 1)
 				.flatMap((x) =>
-					Effect.build(
+					Effect.from(
 						async () => x + 2,
 						() => x + 1,
 					),
 				)
 				.flatMap((x) =>
-					Effect.build(
+					Effect.from(
 						async () => x + 1,
 						() => x + 1,
 					),
@@ -31,7 +31,7 @@ describe('Effects API', () => {
 			const effect = Effect.of(0)
 				.map((x) => x + 1)
 				.flatMap((x) =>
-					Effect.build(
+					Effect.from(
 						async () => {
 							if (x < 2) {
 								throw new Error('x is too small');
@@ -43,7 +43,7 @@ describe('Effects API', () => {
 					),
 				)
 				.flatMap((x) =>
-					Effect.build(
+					Effect.from(
 						async () => x + 1,
 						() => x + 1,
 					),
@@ -55,16 +55,15 @@ describe('Effects API', () => {
 
 	describe('pipe', () => {
 		it('allows piping effects', async () => {
-			const effect = pipe(
+			const effect = doPipe(
 				0,
-				of,
 				map((x) => x + 1),
-				bind((x) => IO(async () => x + 2, x + 1)),
-				map((x) => x + 1),
-				when(
-					(x) => x < 2,
-					() => of(1),
+				bindIO(
+					async (x) => x + 2,
+					(x) => x + 1,
 				),
+				map((x) => x + 1),
+				when((x) => x < 2, of),
 			);
 			expect(effect()).to.equal(3);
 			expect(await effect.run()).to.equal(4);
