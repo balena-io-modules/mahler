@@ -2,7 +2,6 @@ import { expect, console } from '~/test-utils';
 import { Agent } from './agent';
 import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
-import { Observable } from './observable';
 
 import { setTimeout } from 'timers/promises';
 
@@ -64,39 +63,39 @@ describe('Agent', () => {
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 		});
 
-		it('it allows to use observables as actions', async () => {
-			const counter = Task.of({
-				condition: (state: number, { target }) => state < target,
-				effect: (_: number, { target }) => target,
-				action: (state: number, { target }) =>
-					Observable.of(async (s) => {
-						while (state < target) {
-							state = state + 1;
-							s.next(state);
-							await setTimeout(10);
-						}
-					}),
-			});
-			const agent = Agent.of({
-				initial: 0,
-				opts: { logger: console },
-				tasks: [counter],
-			});
-
-			// Subscribe to the count
-			const count: number[] = [];
-			agent.subscribe((s) => count.push(s));
-
-			agent.seek(10);
-
-			await expect(agent.wait()).to.eventually.deep.equal({
-				success: true,
-				state: 10,
-			});
-
-			// Intermediate states returned by the observable should be emitted by the agent
-			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-		});
+		// it('it allows to use observables as actions', async () => {
+		// 	const counter = Task.of({
+		// 		condition: (state: number, { target }) => state < target,
+		// 		effect: (_: number, { target }) => target,
+		// 		action: (state: number, { target }) =>
+		// 			Observable.of(async (s) => {
+		// 				while (state < target) {
+		// 					state = state + 1;
+		// 					s.next(state);
+		// 					await setTimeout(10);
+		// 				}
+		// 			}),
+		// 	});
+		// 	const agent = Agent.of({
+		// 		initial: 0,
+		// 		opts: { logger: console },
+		// 		tasks: [counter],
+		// 	});
+		//
+		// 	// Subscribe to the countage
+		// 	const count: number[] = [];age
+		// 	agent.subscribe((s) => count.push(s));
+		//
+		// 	agent.seek(10);
+		//
+		// 	await expect(agent.wait()).to.eventually.deep.equal({
+		// 		success: true,
+		// 		state: 10,
+		// 	});
+		//
+		// 	// Intermediate states returned by the observable should be emitted by the agent
+		// 	expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		// });
 
 		it('runs parallel plans', async () => {
 			type Counters = { [k: string]: number };

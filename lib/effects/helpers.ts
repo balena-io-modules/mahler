@@ -1,4 +1,5 @@
 import { Effect, IO } from './effect';
+import { AsyncReturn } from './types';
 
 /**
  * Maps a function over an effect.
@@ -39,11 +40,15 @@ export const bind = flatMap;
  * If no sync function is used, then the identity function
  * will be used as the sync part.
  */
-export function bindIO<T>(
-	fa: (t: T) => Promise<T>,
-	fs: (t: T) => T = (t: T) => t,
-): (et: Effect<T>) => Effect<T> {
-	return bind((t) => IO(async () => fa(t), fs(t)));
+export function bindIO<T, U extends T = T>(
+	fa: (t: T) => AsyncReturn<U>,
+	// TODO: the `as U` cast is a potential source for bugs
+	// as the async side could return a value not in the sync side
+	// I'm not sure there is a way to type check that both return
+	// values match
+	fs: (t: T) => U = (t: T) => t as U,
+): (et: Effect<T>) => Effect<U> {
+	return bind((t) => IO(() => fa(t), fs(t)));
 }
 
 /**
@@ -52,11 +57,12 @@ export function bindIO<T>(
  *
  * Returns a pipeable function on effects
  */
-export function when<T>(
-	pred: (t: T) => boolean,
-	f: (t: T) => Effect<T>,
+export function when<T, U extends T = T>(
+	condition: (t: T) => boolean,
+	doIf: (t: T) => Effect<U>,
+	doElse: (t: T) => Effect<U> = (t) => Effect.of(t as U),
 ): (et: Effect<T>) => Effect<T> {
-	return bind((t) => (pred(t) ? f(t) : Effect.of(t)));
+	return bind((t) => (condition(t) ? doIf(t) : doElse(t)));
 }
 
 /**

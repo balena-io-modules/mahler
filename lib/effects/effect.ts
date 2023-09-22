@@ -1,5 +1,7 @@
-type Async<T> = () => Promise<T>;
-type Sync<T> = () => T;
+import { Observable, Subscribable, Next, Observer } from '../observable';
+import { Async, Sync } from './types';
+
+type LazyObservable<T> = () => Observable<T>;
 
 /**
  * The Effect type combines a sync and async computations into a single
@@ -21,8 +23,8 @@ type Sync<T> = () => T;
  * to combine effects. The pipe function can be used to chain effects in a more declarative
  * way.
  *
- * An Effect can be called as a function or via its `run()` method. The function is used to perform
- * the sync computation, while calling `run` is used to perform the async computation.
+ * An Effect can be called as a function or be awaited as a promise. The function is used to perform
+ * the sync computation, while awaiting will perform the async computation.
  *
  * Example: a function that reads a number from hardware
  * ```ts
@@ -48,16 +50,19 @@ type Sync<T> = () => T;
  * console.log(await eff); // 43
  * ```
  */
-export interface Effect<T> {
+export interface Effect<T> extends Subscribable<T> {
 	/**
 	 * Execute the effect synchronously
 	 */
 	(): T;
 	/**
-	 * Execute the full version of the effect, including the async
-	 * computation.
+	 * Allow to use the effect as a promise and apply the full
+	 * asynchronous part of the operation
 	 */
-	run(): Promise<T>;
+	then<U = T, N = never>(
+		resolved?: (t: T) => U | PromiseLike<U>,
+		rejected?: (reason: any) => N | PromiseLike<N>,
+	): PromiseLike<U | N>;
 	/**
 	 * The map function transforms the effect by applying a function
 	 * to the internal value.
@@ -72,59 +77,85 @@ export interface Effect<T> {
 }
 
 /**
- * Builds an effect from a sync and async computation.
+ * Builds an effect from a sync and async computation. The async computation is
+ * encoded as an observable, which allows an effect to be subscribed
  */
-function from(async: Async<void>, sync: Sync<void>): Effect<void>;
-function from<T>(async: Async<T>, sync: Sync<T>): Effect<T>;
-function from<T>(
-	async: Async<T>,
+function build(obs: LazyObservable<void>, sync?: Sync<void>): Effect<void>;
+function build<T>(obs: LazyObservable<T>, sync: Sync<T>): Effect<T>;
+function build<T>(
+	obs: LazyObservable<T>,
 	sync = (() => {
 		/* noop */
 	}) as () => T,
 ): Effect<T> {
 	return Object.assign(sync, {
-		async run(): Promise<T> {
-			return await async();
+		subscribe(next: Next<T> | Observer<T>) {
+			return obs().subscribe(next);
+		},
+		then<U = T, N = never>(
+			onresolve?: (t: T) => U | PromiseLike<U>,
+			onreject?: (reason: any) => N | PromiseLike<N>,
+		): PromiseLike<U | N> {
+			return new Promise<T>((resolve, reject) => {
+				let res: T;
+				obs().subscribe({
+					next(t) {
+						res = t;
+					},
+					error: reject,
+					complete: () => resolve(res),
+				});
+			}).then(onresolve, onreject);
 		},
 		map<U>(fu: (t: T) => U): Effect<U> {
-			return from<U>(
-				async () => {
-					const t = await async();
-					return fu(t);
-				},
+			return build<U>(
+				() => obs().map(fu),
 				() => fu(sync()),
 			);
 		},
 		flatMap<U>(fu: (t: T) => Effect<U>): Effect<U> {
-			return from<U>(async () => {
-				const t = await async();
-				return fu(t).run();
-			}, fu(sync()));
+			return build<U>(() => obs().flatMap((t) => fu(t)), fu(sync()));
 		},
 	});
 }
 
 /**
- * Creates a pure effect, from a given function.
+ * Build an effect with an async and a sync computation
+ *
+ * The async part of the effect is either an async function or a function
+ * returning an async generator. If a generator is used, then the yielded
+ * values from the effect will be provided to subscribers of the effect.
+ *
+ * The synchronous function is mandatory except for effects returning
+ * `void`
+ */
+function from(async: Async<void>, sync: Sync<void>): Effect<void>;
+function from<T>(async: Async<T>, sync: Sync<T>): Effect<T>;
+function from<T>(async: Async<T>, sync?: Sync<T>): Effect<T> {
+	return build(() => Observable.from(async()), sync!);
+}
+
+/**
+ * Creates a pure effect, from a given synchronous operation.
  */
 function pure<T>(f: Sync<T>): Effect<T> {
 	return from(async () => f(), f);
 }
 
 /**
- * Wraps a value in an effect
+ * Creates a new effect from a value. It basically "lifts" the value
+ * to the Effects domain.
  */
-export function of<T>(t: T): Effect<T> {
+function of<T>(t: T): Effect<T> {
 	return pure(() => t);
-}
-
-async function run<T>(e: Effect<T>): Promise<T> {
-	return await e.run();
 }
 
 /**
  * Create a side effect from an async function and a fallback
  * value.
+ *
+ * This is equivalent to calling `Effect.from(async, () => t)` but it provides
+ * a shorter syntax.
  */
 export function IO(async: Async<void>): Effect<void>;
 export function IO<T>(async: Async<T>, t: T): Effect<T>;
@@ -132,11 +163,14 @@ export function IO<T>(async: Async<T>, t?: T): Effect<T> {
 	return from(async, of(t!));
 }
 
+/**
+ * Type guard to check if a given value is an effect
+ */
 function is<T>(x: unknown): x is Effect<T> {
 	return (
 		x != null &&
 		typeof x === 'function' &&
-		typeof (x as any).run === 'function' &&
+		typeof (x as any).then === 'function' &&
 		typeof (x as any).map === 'function'
 	);
 }
@@ -151,5 +185,4 @@ export const Effect = {
 	flatMap<T, U>(et: Effect<T>, ef: (t: T) => Effect<U>): Effect<U> {
 		return et.flatMap(ef);
 	},
-	run,
 };
