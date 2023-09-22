@@ -1,6 +1,6 @@
 import assert from '../assert';
 import { NullLogger } from '../logger';
-import { Observable, Subject } from '../observable';
+import { Subscribable, Subject } from '../observable';
 import { Planner } from '../planner';
 import { Sensor } from '../sensor';
 import { Target } from '../target';
@@ -10,7 +10,7 @@ import { AgentOpts, NotStarted, Result } from './types';
 
 export * from './types';
 
-export interface Agent<TState = any> extends Observable<TState> {
+export interface Agent<TState = any> extends Subscribable<TState> {
 	/**
 	 * Tells the agent to seek a new target.
 	 *

@@ -6,15 +6,21 @@ export interface Observer<T> {
 	complete(): void;
 }
 
+interface Subscriber<T> extends Observer<T> {
+	closed: boolean;
+}
+
 export interface Subscription {
 	unsubscribe(): void;
 }
 
-export interface Observable<T> {
-	/**
-	 * Add a subscriber to the sensor
-	 */
-	subscribe(subscriber: Next<T> | Observer<T>): Subscription;
+export interface Subscribable<T> {
+	subscribe(subscriber: Observer<T> | Next<T>): Subscription;
+}
+
+export interface Observable<T> extends Subscribable<T> {
+	map<U>(f: (t: T) => U): Observable<U>;
+	flatMap<U>(f: (t: T) => Observable<U>): Observable<U>;
 }
 
 /**
@@ -24,7 +30,7 @@ export interface Observable<T> {
  * We use the name Subject as is the terminology used by rxjs
  * https://rxjs.dev/guide/subject
  */
-export class Subject<T> implements Observer<T>, Observable<T> {
+export class Subject<T> implements Observer<T>, Subscribable<T> {
 	private subscribers: Array<Observer<T>> = [];
 
 	// Removes all subscribers
@@ -67,61 +73,197 @@ export class Subject<T> implements Observer<T>, Observable<T> {
 		}
 		this.subscribers.push(s);
 
-		const subject = this;
+		const self = this;
 
 		return {
 			unsubscribe() {
-				const index = subject.subscribers.indexOf(s);
+				const index = self.subscribers.indexOf(s);
 				if (index !== -1) {
-					subject.subscribers.splice(index, 1);
+					self.subscribers.splice(index, 1);
 				}
 			},
 		};
 	}
 }
 
-function of<T>(
-	observable: (observer: Observer<T>) => void | Promise<void>,
-): Observable<T> {
-	const subject = new Subject<T>();
+type ObservableInput<T> =
+	| PromiseLike<T>
+	| Iterable<T>
+	| AsyncIterable<T>
+	| Subscribable<T>;
 
-	let running = false;
-	return {
-		subscribe(next: Next<T> | Observer<T>) {
-			const subscription = subject.subscribe(next);
+function isPromiseLike(x: unknown): x is PromiseLike<any> {
+	if (x instanceof Promise) {
+		return true;
+	}
+	return (
+		x != null &&
+		(typeof x === 'function' || typeof x === 'object') &&
+		typeof (x as any).then === 'function'
+	);
+}
 
-			// Now that we have subscribers we start the observable
-			if (!running) {
-				Promise.resolve(observable(subject))
-					.then(() => {
-						// Notify the proxy of the observable completion
-						subject.complete();
-					})
-					.catch((e) => {
-						// Notify subscriber of uncaught errors on the observable
-						subject.error(e);
-					})
-					.finally(() => {
-						// The observable will restart when a new subscriber is added
-						running = false;
-					});
-				running = true;
+function isSubscribable<T>(x: unknown): x is Subscribable<T> {
+	return x != null && typeof (x as any).subscribe === 'function';
+}
+
+function isIterable<T>(x: unknown): x is Iterable<T> {
+	return x != null && typeof x === 'object' && Symbol.iterator in x;
+}
+
+async function processPromise<T>(p: PromiseLike<T>, subscriber: Subscriber<T>) {
+	const t = await p;
+	if (subscriber.closed) {
+		return;
+	}
+	subscriber.next(t);
+	subscriber.complete();
+}
+
+async function processIterable<T>(
+	input: Iterable<T> | AsyncIterable<T>,
+	subscriber: Subscriber<T>,
+) {
+	const items = isIterable(input)
+		? input[Symbol.iterator]()
+		: input[Symbol.asyncIterator]();
+
+	let n = await items.next();
+	while (!n.done) {
+		if (subscriber.closed) {
+			return;
+		}
+		subscriber.next(n.value);
+		n = await items.next();
+	}
+
+	if (subscriber.closed) {
+		return;
+	}
+
+	// If the iterable or generator function
+	// returns an extra value at the end, we
+	// need to pass it to the subscriber as well
+	if (n.value != null) {
+		subscriber.next(n.value);
+	}
+	subscriber.complete();
+}
+
+function from<T>(input: ObservableInput<T>): Observable<T> {
+	const self: Observable<T> = {
+		subscribe(next: Observer<T> | Next<T>): Subscription {
+			let s: Subscriber<T>;
+			if (typeof next === 'function') {
+				s = {
+					next,
+					// This will result in an unhandledRejection as the
+					// promise is not awaited below. While this is not ideal,
+					// those errors can be detected through the node `unhandledRejection`
+					// event https://nodejs.org/api/process.html#event-unhandledrejection
+					// when in doubt, users should pass an error handler
+					error: (e) => {
+						throw e;
+					},
+					complete: () => void 0,
+					closed: false,
+				};
+			} else {
+				s = { ...next, closed: false };
 			}
 
-			return subscription;
+			if (isSubscribable(input)) {
+				return input.subscribe(s);
+			}
+
+			if (isPromiseLike(input)) {
+				processPromise(input, s).catch(s.error);
+			} else {
+				processIterable(input, s).catch(s.error);
+			}
+
+			return {
+				unsubscribe: () => {
+					s.closed = true;
+					s.next = () => void 0;
+				},
+			};
+		},
+		map<U>(f: (t: T) => U): Observable<U> {
+			return from(map(self, f));
+		},
+		flatMap<U>(f: (t: T) => Subscribable<U>): Observable<U> {
+			return from(flatMap(self, f));
+		},
+	};
+
+	return self;
+}
+
+function flatMap<T, U>(
+	o: Subscribable<T>,
+	f: (t: T) => Subscribable<U>,
+): Subscribable<U> {
+	return {
+		subscribe(subscriber: Observer<U>): Subscription {
+			const subscriptions: Subscription[] = [];
+			const subscription = o.subscribe({
+				next: (t) => {
+					const innerSubscription = f(t).subscribe({
+						next: subscriber.next,
+						error: (e) => {
+							subscriber.error(e);
+							subscriptions.forEach((s) => s.unsubscribe());
+						},
+						complete: () => {
+							subscriptions.splice(subscriptions.indexOf(innerSubscription), 1);
+							if (subscriptions.length === 0) {
+								subscriber.complete();
+							}
+						},
+					});
+					subscriptions.push(innerSubscription);
+				},
+				error: subscriber.error,
+				complete: () => {
+					if (subscriptions.length === 0) {
+						subscriber.complete();
+					}
+				},
+			});
+			return {
+				unsubscribe: () => {
+					subscription.unsubscribe();
+					subscriptions.forEach((s) => s.unsubscribe());
+				},
+			};
 		},
 	};
 }
 
-function is<T = any>(x: unknown): x is Observable<T> {
-	return (
-		x != null &&
-		(x as any).subscribe != null &&
-		typeof (x as any).subscribe === 'function'
-	);
+function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
+	return {
+		subscribe(subscriber: Observer<U>): Subscription {
+			return o.subscribe({
+				...subscriber,
+				next: (t) => subscriber.next(f(t)),
+			});
+		},
+	};
+}
+
+function of<T>(...values: T[]): Observable<T> {
+	return from(values);
+}
+
+function is<T>(x: unknown): x is Observable<T> {
+	return isSubscribable<T>(x) && typeof (x as any).map === 'function';
 }
 
 export const Observable = {
 	of,
+	from,
 	is,
+	map,
+	flatMap,
 };
