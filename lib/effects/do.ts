@@ -374,6 +374,11 @@ export function doPipe(a: any, ...fns: Array<EfectFn<any, any>>) {
 }
 
 /**
+ * Alias of doPipe for more declarative definitions
+ */
+export const fromPipe = doPipe;
+
+/**
  * Chain functions from left to right
  *
  * Returns a new function that receives the same arguments as first
@@ -722,4 +727,8 @@ export function doFlow(...fns: Array<EfectFn<any, any>>) {
 	return (a: any) => (pipe as any)(a, Effect.of, ...fns);
 }
 
+/**
+ * Alias of doFlow for more declarative
+ * definitions
+ */
 export const then = doFlow;

@@ -67,10 +67,18 @@ function tryAction<TState = any>(
 	if (findLoop(id, initialPlan.start)) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
-	const state = action.effect(initialPlan.state);
+	const state = action(initialPlan.state)();
 
 	// We calculate the changes only at the action level
 	const changes = createPatch(initialPlan.state, state);
+
+	// If the action performs no changes then we just return the initial plan
+	// as this action does not contribute to the overall goal
+	// TODO: should we return `success: false` here instead? what if the action
+	// is part of a method
+	if (changes.length === 0) {
+		return initialPlan;
+	}
 
 	// We create the plan reversed so we can backtrack easily
 	const start = { id, action, next: initialPlan.start };
@@ -222,7 +230,7 @@ function tryParallel<TState = any>(
 	}
 
 	// if the method has just a single branch there is no point in
-	// having the fork and empty node, so we need to remove the empty
+	// having the fork and empty node, so we need to remove the empty node
 	// and connect the last action in the branch directly to the existing plan
 	if (results.length === 1) {
 		const branch = results[0];

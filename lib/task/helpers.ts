@@ -1,3 +1,4 @@
+import { Effect } from '../effects';
 import { Context, TaskOp } from '../context';
 
 import { Path } from '../path';
@@ -17,7 +18,9 @@ type PureTaskProps<
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'action' | 'op'>> &
-	Pick<ActionTask<TState, TPath, TOp>, 'effect' | 'op'>;
+	Pick<ActionTask<TState, TPath, TOp>, 'op'> & {
+		effect(s: TState, c: Context<TState, TPath, TOp>): TState;
+	};
 
 /**
  * A pure task is a task that has no side effects,
@@ -122,13 +125,12 @@ export function NoOp<
 >(ctx: Context<TState, TPath, TOp>): Action<TState> {
 	const id = 'noop';
 
-	return Object.assign((s: TState) => Promise.resolve(s), {
+	return Object.assign((s: TState) => Effect.of(s), {
 		_tag: 'action' as const,
 		id,
 		path: ctx.path as any,
 		target: (ctx as any).target,
 		description: 'no-op',
 		condition: () => true,
-		effect: (s: TState) => s,
 	});
 }

@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'timers/promises';
 import { diff, patch, Operation as PatchOperation } from 'mahler-wasm';
 
-import { Observer, Observable } from '../observable';
+import { Observer } from '../observable';
 import { Planner, Node, EmptyNode } from '../planner';
 import { Sensor, Subscription } from '../sensor';
 import { Target } from '../target';
@@ -100,34 +100,29 @@ export class Runtime<TState> {
 			// what we need to compare the updated state to
 			const before = this.state;
 			const res = action(before);
-			if (Observable.is<TState>(res)) {
-				const runtime = this;
-				// If the action result is an observable, then
-				// we need to subscribe to it and update the internal
-				// state as the observable emits new values
-				return new Promise((resolve, reject) => {
-					res.subscribe({
-						next(s) {
-							const changes = diff(before, s);
-							if (changes.length > 0) {
-								runtime.state = patch(runtime.state, changes);
-								runtime.observer.next(runtime.state);
-							}
-						},
-						complete() {
-							// There should be no more changes to perform
-							// here
-							resolve([]);
-						},
-						error(e) {
-							reject(e);
-						},
-					});
+			const runtime = this;
+			// If the action result is an observable, then
+			// we need to subscribe to it and update the internal
+			// state as the observable emits new values
+			return new Promise((resolve, reject) => {
+				res.subscribe({
+					next(s) {
+						const changes = diff(before, s);
+						if (changes.length > 0) {
+							runtime.state = patch(runtime.state, changes);
+							runtime.observer.next(runtime.state);
+						}
+					},
+					complete() {
+						// There should be no more changes to perform
+						// here
+						resolve([]);
+					},
+					error(e) {
+						reject(e);
+					},
 				});
-			} else {
-				const after = await res;
-				return diff(before, after);
-			}
+			});
 		} catch (e) {
 			throw new ActionRunFailed(action, e);
 		}

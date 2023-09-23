@@ -2,12 +2,10 @@ import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
-import { Observable } from '../observable';
+import { Effect, IO, when, pipe } from '../effects';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
-
-export const NotImplemented = () => Promise.reject('Not implemented');
 
 interface TaskSpec<
 	TState = any,
@@ -52,7 +50,7 @@ export interface ActionTask<
 	 * provides. The effect function can only be ran if the pre condition
 	 * is met.
 	 */
-	effect(s: TState, c: Context<TState, TPath, TOp>): TState;
+	effect(s: TState, c: Context<TState, TPath, TOp>): TState | Effect<TState>;
 
 	/**
 	 * The actual action the task performs. The action may return an Observable
@@ -60,10 +58,7 @@ export interface ActionTask<
 	 * the planner will wait for the observable to complete before continuing, but
 	 * use any state updates to communicate about state changes to its observers.
 	 */
-	action(
-		s: TState,
-		c: Context<TState, TPath, TOp>,
-	): Promise<TState> | Observable<TState>;
+	action(s: TState, c: Context<TState, TPath, TOp>): Promise<TState>;
 
 	/**
 	 * The task function grounds the task
@@ -146,14 +141,30 @@ function ground<
 			: taskDescription;
 
 	if (isActionTask(task)) {
-		return Object.assign((s: TState) => task.action(s, context), {
+		// Convert the old style API into a function returning effects
+		const fn = (state: TState) =>
+			pipe(
+				state,
+				Effect.of,
+				when(
+					(s) => task.condition(s, context),
+					(s) => {
+						const e = task.effect(s, context);
+						if (Effect.is(e)) {
+							return e;
+						} else {
+							return IO(async () => task.action(s, context), e);
+						}
+					},
+				),
+			);
+		return Object.assign(fn, {
 			id,
 			path: context.path as any,
 			target: (ctx as any).target,
 			_tag: 'action' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
-			effect: (s: TState) => task.effect(s, context),
 			toJSON() {
 				return {
 					id,
@@ -230,8 +241,21 @@ export type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> &
-	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
+> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> & {
+	effect(s: TState, c: Context<TState, TPath, TOp>): TState;
+};
+
+// Action tasks defined using effects don't need conditions or actions
+// defined
+export type ActionTaskWithEffectProps<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+> = Partial<
+	Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id' | 'action' | 'condition'>
+> & {
+	effect(s: TState, c: Context<TState, TPath, TOp>): Effect<TState>;
+};
 
 /**
  * Create a task
@@ -241,6 +265,13 @@ function of<
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 >(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
+function of<
+	TState = any,
+	TPath extends Path = '/',
+	TOp extends TaskOp = 'update',
+>(
+	t: ActionTaskWithEffectProps<TState, TPath, TOp>,
+): ActionTask<TState, TPath, TOp>;
 function of<
 	TState = any,
 	TPath extends Path = '/',
@@ -275,7 +306,7 @@ function of<
 		condition: () => true,
 		...(typeof (task as any).effect === 'function'
 			? {
-					action: NotImplemented,
+					action: async (s: TState) => s,
 					effect: (s: TState) => s,
 			  }
 			: {}),

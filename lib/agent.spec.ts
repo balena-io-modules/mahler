@@ -2,6 +2,7 @@ import { expect, console } from '~/test-utils';
 import { Agent } from './agent';
 import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
+import { IO, fromPipe, when } from './effects';
 
 import { setTimeout } from 'timers/promises';
 
@@ -23,7 +24,7 @@ describe('Agent', () => {
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
-			await agent.stop();
+			agent.stop();
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
@@ -63,39 +64,47 @@ describe('Agent', () => {
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 		});
 
-		// it('it allows to use observables as actions', async () => {
-		// 	const counter = Task.of({
-		// 		condition: (state: number, { target }) => state < target,
-		// 		effect: (_: number, { target }) => target,
-		// 		action: (state: number, { target }) =>
-		// 			Observable.of(async (s) => {
-		// 				while (state < target) {
-		// 					state = state + 1;
-		// 					s.next(state);
-		// 					await setTimeout(10);
-		// 				}
-		// 			}),
-		// 	});
-		// 	const agent = Agent.of({
-		// 		initial: 0,
-		// 		opts: { logger: console },
-		// 		tasks: [counter],
-		// 	});
-		//
-		// 	// Subscribe to the countage
-		// 	const count: number[] = [];age
-		// 	agent.subscribe((s) => count.push(s));
-		//
-		// 	agent.seek(10);
-		//
-		// 	await expect(agent.wait()).to.eventually.deep.equal({
-		// 		success: true,
-		// 		state: 10,
-		// 	});
-		//
-		// 	// Intermediate states returned by the observable should be emitted by the agent
-		// 	expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-		// });
+		it('allows to use observables as actions', async () => {
+			const counter = Task.of({
+				effect: (state: number, { target }) =>
+					fromPipe(
+						state,
+						when(
+							(s) => s < target,
+							(s) =>
+								// this IO call uses a generator function as the async
+								// side, to produce multiple values while the computation is performed
+								// The sync side just tells us that the effect of the computation is that
+								// the counter reaches the target
+								IO(async function* () {
+									while (s < target) {
+										yield ++s;
+										await setTimeout(10);
+									}
+								}, target),
+						),
+					),
+			});
+			const agent = Agent.of({
+				initial: 0,
+				opts: { logger: console },
+				tasks: [counter],
+			});
+
+			// Subscribe to the count
+			const count: number[] = [];
+			agent.subscribe((s) => count.push(s));
+
+			agent.seek(10);
+
+			await expect(agent.wait()).to.eventually.deep.equal({
+				success: true,
+				state: 10,
+			});
+
+			// Intermediate states returned by the observable should be emitted by the agent
+			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+		});
 
 		it('runs parallel plans', async () => {
 			type Counters = { [k: string]: number };

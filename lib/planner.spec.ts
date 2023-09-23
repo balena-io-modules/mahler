@@ -2,6 +2,7 @@ import { expect, console } from '~/test-utils';
 import { Planner } from './planner';
 import { Instruction, Task } from './task';
 import { plan, branch, fork, stringify } from './testing';
+import { Effect, when, fromPipe } from './effects';
 
 describe('Planner', () => {
 	describe('plan', () => {
@@ -327,6 +328,48 @@ describe('Planner', () => {
 					.action('pickup block a')
 					.action('stack block a on top of block b')
 					.end(),
+			);
+		});
+
+		it('accepts tasks defined with actions', () => {
+			const inc = Task.of({
+				condition: (state: number, { target }) => state < target,
+				effect: (state: number) => state + 1,
+				action: async (state: number) => state + 1,
+				description: '+1',
+			});
+
+			const planner = Planner.of<number>({
+				tasks: [inc],
+				config: { trace: console.trace },
+			});
+			const result = planner.findPlan(0, 3);
+			expect(stringify(result)).to.deep.equal(
+				plan().action('+1').action('+1').action('+1').end(),
+			);
+		});
+
+		it('accepts tasks defined with Effects', () => {
+			const inc = Task.of({
+				effect: (state: number, { target }) =>
+					fromPipe(
+						state,
+						when(
+							(s) => s < target,
+							(s) => Effect.of(s + 1),
+						),
+					),
+				description: '+1',
+			});
+
+			const planner = Planner.of({
+				tasks: [inc],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan(0, 3);
+			expect(stringify(result)).to.deep.equal(
+				plan().action('+1').action('+1').action('+1').end(),
 			);
 		});
 
