@@ -76,12 +76,15 @@ describe('Agent', () => {
 								// side, to produce multiple values while the computation is performed
 								// The sync side just tells us that the effect of the computation is that
 								// the counter reaches the target
-								IO(async function* () {
-									while (s < target) {
-										yield ++s;
-										await setTimeout(10);
-									}
-								}, target),
+								IO(
+									async function* () {
+										while (s < target) {
+											yield ++s;
+											await setTimeout(10);
+										}
+									},
+									() => target,
+								),
 						),
 					),
 			});

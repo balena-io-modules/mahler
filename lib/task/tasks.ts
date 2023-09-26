@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
-import { Effect, IO, when, pipe } from '../effects';
+import { Effect, IO, flatMap, pipe } from '../effects';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
@@ -58,7 +58,10 @@ export interface ActionTask<
 	 * the planner will wait for the observable to complete before continuing, but
 	 * use any state updates to communicate about state changes to its observers.
 	 */
-	action(s: TState, c: Context<TState, TPath, TOp>): Promise<TState>;
+	action(
+		s: TState,
+		c: Context<TState, TPath, TOp>,
+	): Promise<TState> | AsyncGenerator<TState, TState | void, void>;
 
 	/**
 	 * The task function grounds the task
@@ -146,17 +149,17 @@ function ground<
 			pipe(
 				state,
 				Effect.of,
-				when(
-					(s) => task.condition(s, context),
-					(s) => {
-						const e = task.effect(s, context);
-						if (Effect.is(e)) {
-							return e;
-						} else {
-							return IO(async () => task.action(s, context), e);
-						}
-					},
-				),
+				flatMap((s) => {
+					const e = task.effect(s, context);
+					if (Effect.is(e)) {
+						return e;
+					} else {
+						return IO(
+							() => task.action(s, context),
+							() => e,
+						);
+					}
+				}),
 			);
 		return Object.assign(fn, {
 			id,
@@ -252,7 +255,7 @@ export type ActionTaskWithEffectProps<
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > = Partial<
-	Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id' | 'action' | 'condition'>
+	Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id' | 'action'>
 > & {
 	effect(s: TState, c: Context<TState, TPath, TOp>): Effect<TState>;
 };

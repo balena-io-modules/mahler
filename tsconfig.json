@@ -21,6 +21,9 @@
 			"mahler/planner": [
 				"lib/planner/index.ts"
 			],
+			"mahler/effects": [
+				"lib/effects/index.ts"
+			],
 			"~/test-utils": [
 				"tests/index.ts"
 			]

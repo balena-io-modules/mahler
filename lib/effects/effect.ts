@@ -151,17 +151,10 @@ function of<T>(t: T): Effect<T> {
 }
 
 /**
- * Create a side effect from an async function and a fallback
+ * Create a side effect from an async and sync sides
  * value.
- *
- * This is equivalent to calling `Effect.from(async, () => t)` but it provides
- * a shorter syntax.
  */
-export function IO(async: Async<void>): Effect<void>;
-export function IO<T>(async: Async<T>, t: T): Effect<T>;
-export function IO<T>(async: Async<T>, t?: T): Effect<T> {
-	return from(async, of(t!));
-}
+export const IO = from;
 
 /**
  * Type guard to check if a given value is an effect

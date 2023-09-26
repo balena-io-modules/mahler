@@ -24,23 +24,13 @@ export function flatMap<T, U>(
 }
 
 /**
- * Chains two effects together.
- *
- * This returns a function on effects that can be used as
- * part of a pipe
- *
- * This is an alias of flatMap
- */
-export const bind = flatMap;
-
-/**
  * Creates a new IO effect from a async and sync
  * functions.
  *
  * If no sync function is used, then the identity function
  * will be used as the sync part.
  */
-export function bindIO<T, U extends T = T>(
+export function mapIO<T, U extends T = T>(
 	fa: (t: T) => AsyncReturn<U>,
 	// TODO: the `as U` cast is a potential source for bugs
 	// as the async side could return a value not in the sync side
@@ -48,7 +38,12 @@ export function bindIO<T, U extends T = T>(
 	// values match
 	fs: (t: T) => U = (t: T) => t as U,
 ): (et: Effect<T>) => Effect<U> {
-	return bind((t) => IO(() => fa(t), fs(t)));
+	return flatMap((t) =>
+		IO(
+			() => fa(t),
+			() => fs(t),
+		),
+	);
 }
 
 /**
@@ -62,7 +57,7 @@ export function when<T, U extends T = T>(
 	doIf: (t: T) => Effect<U>,
 	doElse: (t: T) => Effect<U> = (t) => Effect.of(t as U),
 ): (et: Effect<T>) => Effect<T> {
-	return bind((t) => (condition(t) ? doIf(t) : doElse(t)));
+	return flatMap((t) => (condition(t) ? doIf(t) : doElse(t)));
 }
 
 /**
@@ -114,19 +109,30 @@ export function tapIO<T, U = void>(
 ): (et: Effect<T>) => Effect<T> {
 	return (et: Effect<T>) =>
 		et.flatMap((t) =>
-			IO(async () => {
-				await f(t);
-				return t;
-			}, t),
+			IO(
+				async () => {
+					await f(t);
+					return t;
+				},
+				() => t,
+			),
 		);
 }
 
-/**
- * Set a property of an object in an effect.
- */
-export function set<T, K extends keyof T>(
-	key: K,
-	eu: Effect<T[K]>,
-): (et: Effect<T>) => Effect<T> {
-	return bind((t) => eu.map((u) => ({ ...t, [key]: u })));
+export function bind<N extends string | number | symbol, T, U>(
+	key: Exclude<N, keyof T>,
+	fn: (t: T) => Effect<U>,
+): (
+	et: Effect<T>,
+) => Effect<{ readonly [K in N | keyof T]: K extends keyof T ? T[K] : U }> {
+	return flatMap((t) => fn(t).map((u) => ({ ...t, [key]: u }) as any));
+}
+
+export function set<T, N extends string, U>(
+	key: Exclude<N, keyof T>,
+	fn: (t: T) => U,
+): (
+	et: Effect<T>,
+) => Effect<{ readonly [K in N | keyof T]: K extends keyof T ? T[K] : U }> {
+	return map((t) => ({ ...t, [key]: fn(t) }) as any);
 }
