@@ -2,6 +2,7 @@ import * as Docker from 'dockerode';
 import * as tar from 'tar-stream';
 
 import { Disposer, Initializer, Task } from 'mahler';
+import { Effect, bind, map, IO, set, flow } from 'mahler/effects';
 import { console } from '~/test-utils';
 import { App, Device, Service, ServiceStatus } from './state';
 import { getContainerName, getImageName, getRegistryAndName } from './utils';
@@ -32,89 +33,103 @@ const docker = new Docker();
 export const fetch = Task.of({
 	op: 'create',
 	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	// Only pull the image if it's not already present
 	condition: (device: Device, ctx) =>
 		!device.images.some((img) => img.name === getImageName(ctx)),
-	// The effect of this task is to add the image to the device
-	effect: (device, ctx) => {
-		const { digest } = getRegistryAndName(ctx.target.image);
-		return {
-			...device,
-			images: [
-				...device.images,
-				{
-					name: getImageName(ctx),
-					...(digest && { contentHash: digest }),
+	effect: flow(
+		// Flow pipes functions together.
+		// As the first function we lift the inputs to the Effect domain
+		(device: Device, ctx) => Effect.of({ device, ctx }),
+		// Set "assigns" a variable on the shared context, this allows the result
+		// to be used by subsequent functions on the sequence
+		set('imageName', ({ ctx }) => getImageName(ctx)),
+		set('imageParts', ({ ctx }) => getRegistryAndName(ctx.target.image)),
+		// Bind also assigns a variable, but it receives a function that returns an effect
+		// this allows us to chain async and sync computations
+		bind('image', ({ ctx, device, imageParts, imageName }) =>
+			// Here the effect is created by the call to `IO`. We need to provide a sync and an async side to this call
+			IO(
+				// This is the async behavior for this effect, it will only be executed
+				// at runtime
+				async () => {
+					const { registry, digest } = imageParts;
+
+					const pack = tar.pack(); // pack is a stream
+
+					// we use a dockerfile to add image metadata
+					pack.entry(
+						{ name: 'Dockerfile' },
+						[
+							`FROM ${ctx.target.image}`,
+							`LABEL io.balena.image="${ctx.target.image}"`,
+							...(digest ? [`LABEL io.balena.content-hash="${digest}"`] : []),
+						].join('\n'),
+					);
+
+					pack.finalize();
+
+					await new Promise((resolve, reject) =>
+						docker
+							.buildImage(pack, {
+								t: imageName,
+
+								// Add authentication to the registry if a key
+								// has been provided
+								...(registry &&
+									device.keys[registry] && {
+										authconfig: {
+											username: `d_${device.uuid}`,
+											password: device.keys[registry],
+											serverAddress: registry,
+										},
+									}),
+							} as Docker.ImageBuildOptions)
+							.then((stream) => {
+								stream.on('data', (b) => console.debug(b.toString()));
+								stream.on('error', reject);
+								stream.on('close', reject);
+								stream.on('end', resolve);
+							})
+							.catch(reject),
+					);
+
+					// Get the image using the name
+					const dockerImage = await docker.getImage(imageName).inspect();
+
+					// try to delete the parent image
+					await docker
+						.getImage(ctx.target.image)
+						.remove()
+						.catch((e) =>
+							console.warn(
+								`could not remove image tag '${ctx.target.image}'`,
+								e,
+							),
+						);
+
+					// This returns the actual image that will be used
+					return {
+						name: imageName,
+						imageId: dockerImage.Id,
+						...(digest && { contentHash: digest }),
+					};
 				},
-			],
-		};
-	},
-	action: async (device, ctx) => {
-		const { registry, digest } = getRegistryAndName(ctx.target.image);
-
-		const imageName = getImageName(ctx);
-		const pack = tar.pack(); // pack is a stream
-
-		// we use a dockerfile to add image metadata
-		pack.entry(
-			{ name: 'Dockerfile' },
-			[
-				`FROM ${ctx.target.image}`,
-				`LABEL io.balena.image="${ctx.target.image}"`,
-				...(digest ? [`LABEL io.balena.content-hash="${digest}"`] : []),
-			].join('\n'),
-		);
-
-		pack.finalize();
-
-		await new Promise((resolve, reject) =>
-			docker
-				.buildImage(pack, {
-					t: imageName,
-
-					// Add authentication to the registry if a key
-					// has been provided
-					...(registry &&
-						device.keys[registry] && {
-							authconfig: {
-								username: `d_${device.uuid}`,
-								password: device.keys[registry],
-								serverAddress: registry,
-							},
-						}),
-				} as Docker.ImageBuildOptions)
-				.then((stream) => {
-					stream.on('data', (b) => console.debug(b.toString()));
-					stream.on('error', reject);
-					stream.on('close', reject);
-					stream.on('end', resolve);
-				})
-				.catch(reject),
-		);
-
-		// Get the image using the name
-		const dockerImage = await docker.getImage(imageName).inspect();
-
-		// try to delete the parent image
-		await docker
-			.getImage(ctx.target.image)
-			.remove()
-			.catch((e) =>
-				console.warn(`could not remove image tag '${ctx.target.image}'`, e),
-			);
-
-		return {
-			...device,
-			images: [
-				...device.images,
-				{
-					name: imageName,
-					imageId: dockerImage.Id,
-					...(digest && { contentHash: digest }),
+				// This is the sync behavior for the task, it will be executed during planning
+				() => {
+					const { digest } = imageParts;
+					// This returns a "mocked" version of the image that will be used by the planner
+					return {
+						name: imageName,
+						...(digest && { contentHash: digest }),
+					};
 				},
-			],
-		};
-	},
+			),
+		),
+		// Finally we map the result back to a Device type, which is what the task expects
+		map(({ device, image }) => ({
+			...device,
+			images: [...device.images, image],
+		})),
+	),
 	description: (ctx) =>
 		`pull image '${ctx.target.image}' for service '${ctx.serviceName}' of app '${ctx.appUuid}'`,
 });

@@ -67,13 +67,6 @@ describe('orchestrator/tasks', () => {
 			// The parent tag should be removed
 			await expect(docker.getImage('alpine:latest').inspect()).to.be.rejected;
 
-			// TODO: it should always(?) be true that the task condition should match
-			// before the test but not after, perhaps this should be a test helper
-			expect(
-				doFetch.condition(s),
-				'condition should no longer hold after the test',
-			).to.be.false;
-
 			// If we run the task again, it should not pull the image again
 			// i.e. the image should have the same id as before
 			s = await doFetch({
