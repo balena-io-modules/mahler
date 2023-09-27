@@ -2,7 +2,6 @@ import { expect, console } from '~/test-utils';
 import { Agent } from './agent';
 import { Task, NoAction } from './task';
 import { Sensor, Subscriber } from './sensor';
-import { Observable } from './observable';
 
 import { setTimeout } from 'timers/promises';
 
@@ -24,7 +23,7 @@ describe('Agent', () => {
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
-			await agent.stop();
+			agent.stop();
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
@@ -64,18 +63,16 @@ describe('Agent', () => {
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 		});
 
-		it('it allows to use observables as actions', async () => {
+		it('allows to use observables as actions', async () => {
 			const counter = Task.of({
 				condition: (state: number, { target }) => state < target,
 				effect: (_: number, { target }) => target,
-				action: (state: number, { target }) =>
-					Observable.of(async (s) => {
-						while (state < target) {
-							state = state + 1;
-							s.next(state);
-							await setTimeout(10);
-						}
-					}),
+				action: async function* (state: number, { target }) {
+					while (state < target) {
+						yield ++state;
+						await setTimeout(10);
+					}
+				},
 			});
 			const agent = Agent.of({
 				initial: 0,

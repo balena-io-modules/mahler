@@ -1,4 +1,4 @@
-import { Observable } from '../observable';
+import { Effect } from './effect';
 import { Path } from '../path';
 import { TaskOp, Context } from '../context';
 
@@ -40,16 +40,9 @@ export interface Action<
 	readonly _tag: 'action';
 
 	/**
-	 * The effect on the state that the action
-	 * provides. If the effect returns none, then the task is not applicable
-	 * on the current state
-	 */
-	effect(s: TState): TState;
-
-	/**
 	 * Run the action
 	 */
-	(s: TState): Promise<TState> | Observable<TState>;
+	(s: TState): Effect<TState>;
 }
 
 /** A method task that has been applied to a specific context */
@@ -93,8 +86,6 @@ function isAction<TState = any>(
 	return (
 		(t as any).condition != null &&
 		typeof (t as any).condition === 'function' &&
-		(t as any).effect != null &&
-		typeof (t as any).effect === 'function' &&
 		typeof t === 'function' &&
 		(t as any)._tag === 'action'
 	);

@@ -2,12 +2,10 @@ import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Context, ContextAsArgs, TaskOp } from '../context';
-import { Observable } from '../observable';
+import { Effect, IO } from './effect';
 import { Path } from '../path';
 
 import { Action, Instruction, Method } from './instructions';
-
-export const NotImplemented = () => Promise.reject('Not implemented');
 
 interface TaskSpec<
 	TState = any,
@@ -63,7 +61,7 @@ export interface ActionTask<
 	action(
 		s: TState,
 		c: Context<TState, TPath, TOp>,
-	): Promise<TState> | Observable<TState>;
+	): Promise<TState> | AsyncGenerator<TState, TState | void, void>;
 
 	/**
 	 * The task function grounds the task
@@ -146,14 +144,22 @@ function ground<
 			: taskDescription;
 
 	if (isActionTask(task)) {
-		return Object.assign((s: TState) => task.action(s, context), {
+		// Convert the old style API into a function returning effects
+		const fn = (state: TState) =>
+			Effect.of(state).flatMap((s) => {
+				const e = task.effect(s, context);
+				return IO(
+					() => task.action(s, context),
+					() => e,
+				);
+			});
+		return Object.assign(fn, {
 			id,
 			path: context.path as any,
 			target: (ctx as any).target,
 			_tag: 'action' as const,
 			description,
 			condition: (s: TState) => task.condition(s, context),
-			effect: (s: TState) => task.effect(s, context),
 			toJSON() {
 				return {
 					id,
@@ -230,8 +236,9 @@ export type ActionTaskProps<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> &
-	Pick<ActionTask<TState, TPath, TOp>, 'effect'>;
+> = Partial<Omit<ActionTask<TState, TPath, TOp>, 'effect' | 'id'>> & {
+	effect(s: TState, c: Context<TState, TPath, TOp>): TState;
+};
 
 /**
  * Create a task
@@ -275,7 +282,7 @@ function of<
 		condition: () => true,
 		...(typeof (task as any).effect === 'function'
 			? {
-					action: NotImplemented,
+					action: async (s: TState) => s,
 					effect: (s: TState) => s,
 			  }
 			: {}),
