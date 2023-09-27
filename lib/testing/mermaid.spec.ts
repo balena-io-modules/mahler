@@ -365,50 +365,50 @@ describe('Mermaid', () => {
 				start(( ))
 				start -.- d0{ }
 				d0 -.- 588eea4[["increment counters"]]
-				588eea4 -.- de739bb("a + 1")
-				588eea4 -.- 5716ae8("b + 1")
-				de739bb -.- j17bab65
-				5716ae8 -.- j17bab65
-				j17bab65(( ))
-				j17bab65 -.- d1{ }
+				588eea4 -.- 0874e9a("a + 1")
+				588eea4 -.- ef61a3a("b + 1")
+				0874e9a -.- jf4ad1f3
+				ef61a3a -.- jf4ad1f3
+				jf4ad1f3(( ))
+				jf4ad1f3 -.- d1{ }
 				d1 -.- c5108a8[["increment counters"]]
-				c5108a8 -.- eef8f5d("a + 1")
-				c5108a8 -.- 1021e18("b + 1")
-				eef8f5d -.- j0270df9
-				1021e18 -.- j0270df9
-				j0270df9(( ))
-				j0270df9 -.- d2{ }
+				c5108a8 -.- 99bf28d("a + 1")
+				c5108a8 -.- bd9e0b4("b + 1")
+				99bf28d -.- j9ed3ea0
+				bd9e0b4 -.- j9ed3ea0
+				j9ed3ea0(( ))
+				j9ed3ea0 -.- d2{ }
 				d2 -.- ee9e70b[["increment counters"]]
 				ee9e70b -.- ee9e70b-err[ ]
 				ee9e70b-err:::error
-				d2 -.- 2627161("a + 1")
-				2627161 -.- stop(( ))
+				d2 -.- cea1c98("a + 1")
+				cea1c98 -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> fj17bab65(( ))
-				fj17bab65:::selected
-				fj17bab65 --> de739bb
-				de739bb:::selected
-				fj17bab65 --> 5716ae8
-				5716ae8:::selected
-				j17bab65(( ))
-				de739bb --> j17bab65
-				5716ae8 --> j17bab65
-				j17bab65:::selected
-				j17bab65 --> fj0270df9(( ))
-				fj0270df9:::selected
-				fj0270df9 --> eef8f5d
-				eef8f5d:::selected
-				fj0270df9 --> 1021e18
-				1021e18:::selected
-				j0270df9(( ))
-				eef8f5d --> j0270df9
-				1021e18 --> j0270df9
-				j0270df9:::selected
-				j0270df9 --> 2627161
-				2627161:::selected
-				2627161 --> stop
+				start --> fjf4ad1f3(( ))
+				fjf4ad1f3:::selected
+				fjf4ad1f3 --> 0874e9a
+				0874e9a:::selected
+				fjf4ad1f3 --> ef61a3a
+				ef61a3a:::selected
+				jf4ad1f3(( ))
+				0874e9a --> jf4ad1f3
+				ef61a3a --> jf4ad1f3
+				jf4ad1f3:::selected
+				jf4ad1f3 --> fj9ed3ea0(( ))
+				fj9ed3ea0:::selected
+				fj9ed3ea0 --> 99bf28d
+				99bf28d:::selected
+				fj9ed3ea0 --> bd9e0b4
+				bd9e0b4:::selected
+				j9ed3ea0(( ))
+				99bf28d --> j9ed3ea0
+				bd9e0b4 --> j9ed3ea0
+				j9ed3ea0:::selected
+				j9ed3ea0 --> cea1c98
+				cea1c98:::selected
+				cea1c98 --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`,
@@ -458,43 +458,43 @@ describe('Mermaid', () => {
 				start -.- d0{ }
 				d0 -.- 2396eea[["increment counters"]]
 				2396eea -.- 682aa0e[["increase 'a'"]]
-				682aa0e -.- 4b66884("a + 1")
-				4b66884 -.- 29aedf2("a + 1")
+				682aa0e -.- f900ff9("a + 1")
+				f900ff9 -.- 00e5bb0("a + 1")
 				2396eea -.- 5dd218c[["increase 'b'"]]
-				5dd218c -.- aafffea("b + 1")
-				aafffea -.- 17593a3("b + 1")
-				29aedf2 -.- j0270df9
-				17593a3 -.- j0270df9
-				j0270df9(( ))
-				j0270df9 -.- d1{ }
+				5dd218c -.- 22ef581("b + 1")
+				22ef581 -.- d11a32a("b + 1")
+				00e5bb0 -.- j9ed3ea0
+				d11a32a -.- j9ed3ea0
+				j9ed3ea0(( ))
+				j9ed3ea0 -.- d1{ }
 				d1 -.- 7de2726[["increment counters"]]
 				7de2726 -.- 7de2726-err[ ]
 				7de2726-err:::error
 				d1 -.- 976345d[["increase 'a'"]]
 				976345d -.- 976345d-err[ ]
 				976345d-err:::error
-				d1 -.- eb463ce("a + 1")
-				eb463ce -.- stop(( ))
+				d1 -.- 2f364fb("a + 1")
+				2f364fb -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> fj17bab65(( ))
-				fj17bab65:::selected
-				fj17bab65 --> 4b66884
-				4b66884:::selected
-				4b66884 --> 29aedf2
-				29aedf2:::selected
-				fj17bab65 --> aafffea
-				aafffea:::selected
-				aafffea --> 17593a3
-				17593a3:::selected
-				j17bab65(( ))
-				29aedf2 --> j17bab65
-				17593a3 --> j17bab65
-				j17bab65:::selected
-				j17bab65 --> eb463ce
-				eb463ce:::selected
-				eb463ce --> stop
+				start --> fjf4ad1f3(( ))
+				fjf4ad1f3:::selected
+				fjf4ad1f3 --> f900ff9
+				f900ff9:::selected
+				f900ff9 --> 00e5bb0
+				00e5bb0:::selected
+				fjf4ad1f3 --> 22ef581
+				22ef581:::selected
+				22ef581 --> d11a32a
+				d11a32a:::selected
+				jf4ad1f3(( ))
+				00e5bb0 --> jf4ad1f3
+				d11a32a --> jf4ad1f3
+				jf4ad1f3:::selected
+				jf4ad1f3 --> 2f364fb
+				2f364fb:::selected
+				2f364fb --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`,
@@ -575,26 +575,26 @@ describe('Mermaid', () => {
 				d0 -.- 16c4cee[["chunk"]]
 				16c4cee -.- 85de134[["increment multiple"]]
 				85de134 -.- f086833[["a + 2"]]
-				f086833 -.- 55f3eb4("a++")
-				55f3eb4 -.- c49ebf7("a++")
+				f086833 -.- b97653c("a++")
+				b97653c -.- fdd46f5("a++")
 				85de134 -.- 491551c[["b + 2"]]
-				491551c -.- 497f947("b++")
-				497f947 -.- f401546("b++")
+				491551c -.- 76d9b13("b++")
+				76d9b13 -.- 0d8a6c4("b++")
 				16c4cee -.- 14b5abe[["increment multiple"]]
 				14b5abe -.- a6594ae[["c + 2"]]
-				a6594ae -.- 7932f99("c++")
-				7932f99 -.- 6f42d9e("c++")
+				a6594ae -.- fb528c3("c++")
+				fb528c3 -.- d7c9a30("c++")
 				14b5abe -.- 9a04ffd[["d + 2"]]
-				9a04ffd -.- d8ec9ff("d++")
-				d8ec9ff -.- 9e0f26a("d++")
-				c49ebf7 -.- j7f6fe40
-				f401546 -.- j7f6fe40
-				j7f6fe40(( )) -.- 4d89b9e
-				6f42d9e -.- jad26c69
-				9e0f26a -.- jad26c69
-				jad26c69(( )) -.- 4d89b9e
-				4d89b9e(( ))
-				4d89b9e -.- d1{ }
+				9a04ffd -.- b0c761f("d++")
+				b0c761f -.- d970700("d++")
+				fdd46f5 -.- jef318f8
+				0d8a6c4 -.- jef318f8
+				jef318f8(( )) -.- 25e807e
+				d7c9a30 -.- j902d46d
+				d970700 -.- j902d46d
+				j902d46d(( )) -.- 25e807e
+				25e807e(( ))
+				25e807e -.- d1{ }
 				d1 -.- cb79260[["chunk"]]
 				cb79260 -.- cb79260-err[ ]
 				cb79260-err:::error
@@ -604,48 +604,48 @@ describe('Mermaid', () => {
 				d1 -.- 8923404[["a + 2"]]
 				8923404 -.- 8923404-err[ ]
 				8923404-err:::error
-				d1 -.- 4664fc1("a++")
-				4664fc1 -.- stop(( ))
+				d1 -.- 7a51307("a++")
+				7a51307 -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> ffbcbfff(( ))
-				ffbcbfff:::selected
-				ffbcbfff --> fj405808e(( ))
-				fj405808e:::selected
-				fj405808e --> 55f3eb4
-				55f3eb4:::selected
-				55f3eb4 --> c49ebf7
-				c49ebf7:::selected
-				fj405808e --> 497f947
-				497f947:::selected
-				497f947 --> f401546
-				f401546:::selected
-				j405808e(( ))
-				c49ebf7 --> j405808e
-				f401546 --> j405808e
-				j405808e:::selected
-				ffbcbfff --> fj6c9e279(( ))
-				fj6c9e279:::selected
-				fj6c9e279 --> 7932f99
-				7932f99:::selected
-				7932f99 --> 6f42d9e
-				6f42d9e:::selected
-				fj6c9e279 --> d8ec9ff
-				d8ec9ff:::selected
-				d8ec9ff --> 9e0f26a
-				9e0f26a:::selected
-				j6c9e279(( ))
-				6f42d9e --> j6c9e279
-				9e0f26a --> j6c9e279
-				j6c9e279:::selected
-				fbcbfff(( ))
-				j405808e --> fbcbfff
-				j6c9e279 --> fbcbfff
-				fbcbfff:::selected
-				fbcbfff --> 4664fc1
-				4664fc1:::selected
-				4664fc1 --> stop
+				start --> f3a3585e(( ))
+				f3a3585e:::selected
+				f3a3585e --> fjb462b59(( ))
+				fjb462b59:::selected
+				fjb462b59 --> b97653c
+				b97653c:::selected
+				b97653c --> fdd46f5
+				fdd46f5:::selected
+				fjb462b59 --> 76d9b13
+				76d9b13:::selected
+				76d9b13 --> 0d8a6c4
+				0d8a6c4:::selected
+				jb462b59(( ))
+				fdd46f5 --> jb462b59
+				0d8a6c4 --> jb462b59
+				jb462b59:::selected
+				f3a3585e --> fj47a9bc7(( ))
+				fj47a9bc7:::selected
+				fj47a9bc7 --> fb528c3
+				fb528c3:::selected
+				fb528c3 --> d7c9a30
+				d7c9a30:::selected
+				fj47a9bc7 --> b0c761f
+				b0c761f:::selected
+				b0c761f --> d970700
+				d970700:::selected
+				j47a9bc7(( ))
+				d7c9a30 --> j47a9bc7
+				d970700 --> j47a9bc7
+				j47a9bc7:::selected
+				3a3585e(( ))
+				jb462b59 --> 3a3585e
+				j47a9bc7 --> 3a3585e
+				3a3585e:::selected
+				3a3585e --> 7a51307
+				7a51307:::selected
+				7a51307 --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`,
@@ -694,30 +694,30 @@ describe('Mermaid', () => {
 				start(( ))
 				start -.- d0{ }
 				d0 -.- 817288c[["increment counters"]]
-				817288c -.- 1ebf911("a + 1")
-				1ebf911 -.- 29aedf2("a + 1")
-				29aedf2 -.- 2525149("b + 1")
-				2525149 -.- 17593a3("b + 1")
-				17593a3 -.- d1{ }
+				817288c -.- 570ec53("a + 1")
+				570ec53 -.- 00e5bb0("a + 1")
+				00e5bb0 -.- 78cc211("b + 1")
+				78cc211 -.- d11a32a("b + 1")
+				d11a32a -.- d1{ }
 				d1 -.- 4b2ca33[["increment counters"]]
 				4b2ca33 -.- 4b2ca33-err[ ]
 				4b2ca33-err:::error
-				d1 -.- eb463ce("a + 1")
-				eb463ce -.- stop(( ))
+				d1 -.- 2f364fb("a + 1")
+				2f364fb -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> 1ebf911
-				1ebf911:::selected
-				1ebf911 --> 29aedf2
-				29aedf2:::selected
-				29aedf2 --> 2525149
-				2525149:::selected
-				2525149 --> 17593a3
-				17593a3:::selected
-				17593a3 --> eb463ce
-				eb463ce:::selected
-				eb463ce --> stop
+				start --> 570ec53
+				570ec53:::selected
+				570ec53 --> 00e5bb0
+				00e5bb0:::selected
+				00e5bb0 --> 78cc211
+				78cc211:::selected
+				78cc211 --> d11a32a
+				d11a32a:::selected
+				d11a32a --> 2f364fb
+				2f364fb:::selected
+				2f364fb --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`,
