@@ -39,6 +39,7 @@ function instructionId(s: any, i: Method | Action): string {
 interface DiagramNode {
 	id: string;
 	toString(): string;
+	isAction(): boolean;
 }
 
 function fromNode<T>(n: EmptyNode<T> | null, map: DiagramAdjacency): undefined;
@@ -60,7 +61,7 @@ function fromNode<T>(
 
 	if (Node.isAction(node)) {
 		// Action nodes always have a parent on the diagram
-		const parent = map.get(node);
+		const parent = map.get(DiagramNode.fromId(node.id));
 		return DiagramNode.action(node, parent.id);
 	}
 
@@ -91,6 +92,9 @@ const DiagramNode = {
 			toString() {
 				return id;
 			},
+			isAction() {
+				return false;
+			},
 		};
 	},
 	start(): DiagramNode {
@@ -108,6 +112,9 @@ const DiagramNode = {
 				// The node representation in the diagram
 				// is dependent on the parent
 				return hash({ parent: parentId, action: n.id });
+			},
+			isAction() {
+				return true;
 			},
 		};
 	},
@@ -136,7 +143,7 @@ class DiagramAdjacency {
 		const p = this.map.get(child.id);
 		if (p == null) {
 			this.map.set(child.id, [parent]);
-		} else if (p.every((n) => n.id !== parent.id)) {
+		} else {
 			p.push(parent);
 		}
 	}
@@ -237,7 +244,7 @@ class Diagram {
 		}
 
 		if (Node.isAction(node)) {
-			const parent = this.adjacency.get(node);
+			const parent = this.adjacency.get(DiagramNode.fromId(node.id));
 			const child = DiagramNode.action(node, parent.id);
 			this.graph.push(`	${prev} --> ${child}`, `	${child}:::selected`);
 			return this.drawPlan(node.next, child);
@@ -310,15 +317,24 @@ class Diagram {
 
 			if (e.parent != null) {
 				parent = DiagramNode.instruction(e.state, e.parent);
+				// console.log(e.instruction.description, parent);
+
 				if (e.prev != null) {
 					const prevNode =
 						DiagramNode.fromNode(e.prev, this.adjacency) || parent;
 
-					// If this is the first child of the compound task
-					// the parent id and the previous node id will be the same
+					// We go up the adjacency map to find the first action
+					// node that links to the compound task. If that node is the
+					// same as the previous node id, then this is the first child
+					// of the compound task
+					let p = parent;
+					while (this.adjacency.has(p) && !this.adjacency.get(p).isAction()) {
+						p = this.adjacency.get(p);
+					}
+
 					if (
-						!this.adjacency.has(parent) ||
-						this.adjacency.get(parent).id !== prevNode.id
+						!this.adjacency.has(p) ||
+						this.adjacency.get(p).id !== prevNode.id
 					) {
 						parent = prevNode;
 					}
