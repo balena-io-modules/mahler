@@ -185,8 +185,8 @@ class Diagram {
 	// sequential
 	callStack = new Map<string, number>();
 
-	constructor(title: string) {
-		this.graph = ['---', `title: ${title}`, `---`];
+	constructor() {
+		this.graph = [];
 	}
 
 	private drawJoins(
@@ -444,11 +444,8 @@ export type MermaidOpts = {
  * Return a trace function that generates
  * a mermaid graph
  */
-export function mermaid(
-	title: string,
-	{ meta = false }: Partial<MermaidOpts> = {},
-) {
-	const diagram = new Diagram(title);
+export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
+	const diagram = new Diagram();
 
 	return Object.assign(
 		function (e: PlanningEvent<any> | PlanningError) {

@@ -6,16 +6,13 @@ import { Instruction, Task } from '../task';
 
 describe('Mermaid', () => {
 	it('empty plan', function () {
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({ tasks: [], config: { trace } });
 
 		planner.findPlan(0, 0);
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- stop(( ))
@@ -30,16 +27,13 @@ describe('Mermaid', () => {
 	});
 
 	it('failed plan', function () {
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({ tasks: [], config: { trace } });
 
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -57,16 +51,13 @@ describe('Mermaid', () => {
 			description: '+1',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({ tasks: [inc], config: { trace } });
 
 		planner.findPlan(0, 1);
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -99,7 +90,7 @@ describe('Mermaid', () => {
 			description: '-1',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({
 			tasks: [dec, inc],
 			config: { trace },
@@ -109,9 +100,6 @@ describe('Mermaid', () => {
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -140,16 +128,13 @@ describe('Mermaid', () => {
 			description: '+1',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({ tasks: [inc], config: { trace } });
 
 		planner.findPlan(0, 2);
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -186,7 +171,7 @@ describe('Mermaid', () => {
 			description: '-1',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({
 			tasks: [dec, inc],
 			config: { trace },
@@ -196,9 +181,6 @@ describe('Mermaid', () => {
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -240,7 +222,7 @@ describe('Mermaid', () => {
 			description: '+2',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({
 			tasks: [byTwo, inc],
 			config: { trace },
@@ -250,9 +232,6 @@ describe('Mermaid', () => {
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -287,7 +266,7 @@ describe('Mermaid', () => {
 			description: '+2',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of<number>({
 			tasks: [byTwo, inc],
 			config: { trace },
@@ -297,9 +276,6 @@ describe('Mermaid', () => {
 
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -358,7 +334,7 @@ describe('Mermaid', () => {
 			description: '+3',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of({
 			tasks: [plusThree, plusTwo, plusOne],
 			config: { trace },
@@ -367,9 +343,6 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 7);
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -438,7 +411,7 @@ describe('Mermaid', () => {
 			description: `increment counters`,
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of({
 			tasks: [multiIncrement, byOne],
 			config: { trace },
@@ -447,9 +420,6 @@ describe('Mermaid', () => {
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -531,7 +501,7 @@ describe('Mermaid', () => {
 			description: `increment counters`,
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of({
 			tasks: [multiIncrement, byTwo, byOne],
 			config: { trace },
@@ -539,9 +509,6 @@ describe('Mermaid', () => {
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -647,7 +614,7 @@ describe('Mermaid', () => {
 			description: 'chunk',
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of({
 			tasks: [chunker, multiIncrement, byTwo, byOne],
 			config: { trace },
@@ -655,9 +622,6 @@ describe('Mermaid', () => {
 		planner.findPlan({ a: 0, b: 0, c: 0, d: 0 }, { a: 3, b: 2, c: 2, d: 2 });
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
@@ -767,7 +731,7 @@ describe('Mermaid', () => {
 			description: `increment counters`,
 		});
 
-		const trace = mermaid(this.test!.title);
+		const trace = mermaid();
 		const planner = Planner.of({
 			tasks: [conflictingIncrement, byOne],
 			config: { trace },
@@ -776,9 +740,6 @@ describe('Mermaid', () => {
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.build()).to.deep.equal(
 			dedent`
-			---
-			title: ${this.test!.title}
-			---
 			graph TD
 				start(( ))
 				start -.- d0{ }
