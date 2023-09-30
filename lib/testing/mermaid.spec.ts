@@ -11,7 +11,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 0);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -32,7 +32,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 1);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -56,7 +56,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 1);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -98,7 +98,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 1);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -133,7 +133,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 2);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -179,7 +179,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 2);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -230,7 +230,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 1);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -274,7 +274,7 @@ describe('Mermaid', () => {
 
 		planner.findPlan(0, 3);
 
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -341,7 +341,7 @@ describe('Mermaid', () => {
 		});
 
 		planner.findPlan(0, 7);
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -418,7 +418,7 @@ describe('Mermaid', () => {
 		});
 
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -507,7 +507,7 @@ describe('Mermaid', () => {
 			config: { trace },
 		});
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -620,7 +620,7 @@ describe('Mermaid', () => {
 			config: { trace },
 		});
 		planner.findPlan({ a: 0, b: 0, c: 0, d: 0 }, { a: 3, b: 2, c: 2, d: 2 });
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))
@@ -738,7 +738,7 @@ describe('Mermaid', () => {
 		});
 
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
-		expect(trace.build()).to.deep.equal(
+		expect(trace.render()).to.deep.equal(
 			dedent`
 			graph TD
 				start(( ))

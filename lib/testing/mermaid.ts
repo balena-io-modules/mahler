@@ -494,7 +494,7 @@ export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
 			}
 		},
 		{
-			build() {
+			render() {
 				return diagram.render();
 			},
 		},
