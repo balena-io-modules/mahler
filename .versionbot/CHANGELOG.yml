@@ -1,4 +1,60 @@
 - commits:
+    - subject: Fix Node ids in Mermaid test suite
+      hash: 816f71e900536cdfbda9fcf12c2e0de9da30ebe6
+      body: |
+        Changing the task definition also changed the Ids defined for tasks,
+        thus breaking Mermaid tests. This fixes the test suite
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Modify Action definition to return an Effect
+      hash: 4337c6cfff8343d6737f12453c9dd29205aa55f7
+      body: |
+        Actions obtained from primitive tasks now return an Effect by default,
+        making them both awaitable and observable. This change is compatible
+        with the existing API
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Create the `Effect` type
+      hash: 61c4519766c58c333b2594b71c72e876c6284abd
+      body: |
+        The `Effect` type is a mix between a promise, a function and an
+        observable. It provides a way to combine an async computation with a
+        sync version which "simulates" the effect that the async computation
+        will have on the underlying system. These types are also composable via
+        `map` and `flatMap`, which would allow building more complex effects
+        from simpler ones, however this is outside the scope of the current PR
+        (see PR #33 for a use of those ideas).
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve Observable API.
+      hash: ca7f83fd86e3771f5dba9d1a93629b28bdfc4094
+      body: |
+        Observables now are composable via `map` and `flatMap`, they can also
+        now accept async iterators as input, which should simplify the way
+        sensors and action observables are defined.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Remove .eslintrc.json
+      hash: b311caa0529682eee90691307249a38eddd0d3eb
+      body: |
+        This is unrelated to the PR but the eslint LSP is buggy and slows down
+        my editor.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.19.0
+  title: ""
+  date: 2023-09-30T03:17:44.474Z
+- commits:
     - subject: Add local prettierrc/eslintrc for editor compat
       hash: a4d5ea1acf684e897ce0716bc3e8e43bfb5f50ac
       body: ""
