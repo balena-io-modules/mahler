@@ -1,4 +1,35 @@
 - commits:
+    - subject: Rename mermaid build method to `render`
+      hash: 94514bc4a095f24f716936e5c91d1adaacad3ae4
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Remove title as a mermaid graph argument
+      hash: 95be926b00f11cf412830799d7f2bd0218ed2548
+      body: |
+        Mermaid titles don't seem like a well supported feature, they cannot be
+        styled and the default style does not match the rest of the diagram.
+        Users of the mermaid helper can add their own if they chose.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix bug when diagraming nested method calls
+      hash: becb91b1f8692faf471119a090d3e889af627c71
+      body: |
+        Nested methods would only get drawn correctly if no actions preceeded
+        the method call. If a previous action had been chosen in the plan, the
+        parents would get chosen incorrectly.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.20.0
+  title: ""
+  date: 2023-09-30T21:38:57.076Z
+- commits:
     - subject: Fix Node ids in Mermaid test suite
       hash: 816f71e900536cdfbda9fcf12c2e0de9da30ebe6
       body: |
