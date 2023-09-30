@@ -267,12 +267,9 @@ function of<
 	// Check that the path is valid
 	Path.assert(path);
 
-	const prefix =
-		typeof (task as any).method === 'function'
-			? '[method] '
-			: typeof (task as any).parallel === 'function'
-			? '[parallel] '
-			: '';
+	const prefix = typeof (task as any).method === 'function' ? '[method] ' : '';
+
+	const { effect = (s: TState) => s } = task as any;
 
 	const spec = {
 		description: (ctx: Context<TState, TPath, TOp>) =>
@@ -282,8 +279,8 @@ function of<
 		condition: () => true,
 		...(typeof (task as any).effect === 'function'
 			? {
-					action: async (s: TState) => s,
-					effect: (s: TState) => s,
+					action: async (s: TState) => effect(s),
+					effect,
 			  }
 			: {}),
 		...task,
