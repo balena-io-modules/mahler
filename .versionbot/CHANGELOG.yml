@@ -1,4 +1,20 @@
 - commits:
+    - subject: Make task action default to the value of the effect
+      hash: 4ec57f1bebd8a9c83b11e2ee0f02b56e883fee67
+      body: >
+        Actions until now would default to throwing a NotImplemented exception,
+        however it may be generally useful to have tasks without side effects
+        combined with tasks that perform side effects for more clean code. For
+        this reason, if undefined, the action property will take the value of
+        the effect property from now on.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 0.21.0
+  title: ""
+  date: 2023-10-03T21:00:28.821Z
+- commits:
     - subject: Rename mermaid build method to `render`
       hash: 94514bc4a095f24f716936e5c91d1adaacad3ae4
       body: ""
