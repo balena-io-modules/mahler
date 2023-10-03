@@ -1,4 +1,17 @@
 - commits:
+    - subject: Fix bug with loop detection.
+      hash: 07ae04ebbdb377f31e364b65969263f7dc252eed
+      body: |
+        Fixes an issue where loop detection would stop after the first action
+        was tested.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.21.1
+  title: ""
+  date: 2023-10-03T21:11:19.259Z
+- commits:
     - subject: Make task action default to the value of the effect
       hash: 4ec57f1bebd8a9c83b11e2ee0f02b56e883fee67
       body: >
