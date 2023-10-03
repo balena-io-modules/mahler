@@ -40,7 +40,7 @@ function findLoop<T>(id: string, node: Node<T> | null): boolean {
 	}
 
 	if (Node.isAction(node)) {
-		return node.id === id;
+		return node.id === id || findLoop(id, node.next);
 	}
 
 	if (Node.isFork(node)) {
