@@ -1,4 +1,17 @@
 - commits:
+    - subject: Fix bug when mapping effects
+      hash: 52636d4304c013edc3f1855aa6a51e2ee01cfdd2
+      body: |
+        Mapping effects would lead to the synchronous side to always be
+        executed. This is most noticeable when mapping `void` effects
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 0.21.2
+  title: ""
+  date: 2023-10-04T22:09:13.469Z
+- commits:
     - subject: Fix bug with loop detection.
       hash: 07ae04ebbdb377f31e364b65969263f7dc252eed
       body: |
