@@ -28,6 +28,39 @@ describe('Effect', () => {
 		expect(await effect).to.equal(4);
 	});
 
+	it('allows void effects', async () => {
+		const effect = (x: number) =>
+			Effect.of(void 0)
+				.map(() => {
+					x += 1;
+				})
+				.flatMap(() =>
+					Effect.from(
+						async () => {
+							console.log('yes');
+							x += 2;
+						},
+						() => {
+							console.log('no');
+							x += 1;
+						},
+					),
+				)
+				.flatMap(() =>
+					Effect.from(
+						async () => {
+							x += 1;
+						},
+						() => {
+							x += 1;
+						},
+					),
+				)
+				.map(() => x);
+		// expect(effect(0)()).to.equal(3);
+		expect(await effect(0)).to.equal(4);
+	});
+
 	it('propagates errors in a promise', async () => {
 		const effect = Effect.of(0)
 			.map((x) => x + 1)
