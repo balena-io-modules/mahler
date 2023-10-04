@@ -42,7 +42,7 @@ describe('README examples', () => {
 
 		it('counter Planner', () => {
 			// Create a new planner
-			const planner = Planner.of({ tasks: [plusOne] });
+			const planner = Planner.from({ tasks: [plusOne] });
 
 			// Find a plan from 0 to 3
 			const res = planner.findPlan(0, 3);
@@ -200,7 +200,7 @@ describe('README examples', () => {
 		});
 
 		it('with needsWrite as target', async () => {
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne, read, store],
 				config: { trace: logger.trace },
 			});
@@ -216,7 +216,7 @@ describe('README examples', () => {
 		});
 
 		it('without needsWrite as target', async () => {
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne, read, store],
 				config: { trace: logger.trace },
 			});
@@ -264,7 +264,7 @@ describe('README examples', () => {
 		it('plan using plusTwo', () => {
 			// Create a tracer using the mermaid tool. The argument is the diagram title
 			const trace = mermaid();
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne, plusTwo],
 				config: { trace },
 			});
@@ -286,7 +286,7 @@ describe('README examples', () => {
 
 			// Create a tracer using the mermaid tool. The argument is the diagram title
 			const trace = mermaid();
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne, plusThree, plusTwo],
 				config: { trace },
 			});
@@ -323,7 +323,7 @@ describe('README examples', () => {
 				description: '+1',
 			});
 
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne],
 			});
 
@@ -352,7 +352,7 @@ describe('README examples', () => {
 
 		it('multiple plusOne', () => {
 			const trace = mermaid();
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne],
 				config: { trace },
 			});
@@ -380,7 +380,7 @@ describe('README examples', () => {
 			});
 
 			const trace = mermaid();
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [plusOne, nPlusOne],
 				config: { trace },
 			});

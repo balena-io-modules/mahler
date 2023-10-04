@@ -15,7 +15,7 @@ import {
 	removeApp,
 } from './tasks';
 
-export const planner = Planner.of<Device>({
+export const planner = Planner.from<Device>({
 	tasks: [
 		fetch,
 		createApp,

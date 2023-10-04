@@ -109,7 +109,7 @@ describe('Planner', () => {
 					'find blocks that can be moved to the final location or to the table',
 			});
 
-			const planner = Planner.of<State>({
+			const planner = Planner.from<State>({
 				tasks: [take, put, move],
 				config: { trace: console.trace },
 			});
@@ -306,7 +306,7 @@ describe('Planner', () => {
 				description: `find a block that can be moved to the final location or to the table`,
 			});
 
-			const planner = Planner.of<State>({
+			const planner = Planner.from<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
 				config: { trace: console.trace },
 			});
@@ -351,7 +351,7 @@ describe('Planner', () => {
 				description: `increment counters`,
 			});
 
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [multiIncrement, byOne],
 				config: { trace: console.trace },
 			});
@@ -393,7 +393,7 @@ describe('Planner', () => {
 				description: `increment counters`,
 			});
 
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
 				config: { trace: console.trace },
 			});
@@ -465,7 +465,7 @@ describe('Planner', () => {
 				description: 'chunk',
 			});
 
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [chunker, multiIncrement, byTwo, byOne],
 				config: { trace: console.trace },
 			});
@@ -511,7 +511,7 @@ describe('Planner', () => {
 				description: `increment counters`,
 			});
 
-			const planner = Planner.of({
+			const planner = Planner.from({
 				tasks: [conflictingIncrement, byOne],
 				config: { trace: console.trace },
 			});

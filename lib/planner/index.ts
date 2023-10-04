@@ -79,7 +79,7 @@ function reversePlan<T>(
 	return [prev, curr.next];
 }
 
-function of<TState = any>({
+function from<TState = any>({
 	tasks = [],
 	config = {},
 }: {
@@ -136,5 +136,5 @@ function of<TState = any>({
 }
 
 export const Planner = {
-	of,
+	from,
 };

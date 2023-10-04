@@ -82,7 +82,7 @@ function of<TState>({
 	tasks = [],
 	sensors = [],
 	opts: userOpts = {},
-	planner = Planner.of({
+	planner = Planner.from({
 		tasks,
 		config: { trace: userOpts.logger?.trace ?? NullLogger.trace },
 	}),

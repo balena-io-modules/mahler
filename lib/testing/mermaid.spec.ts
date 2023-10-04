@@ -7,7 +7,7 @@ import { Instruction, Task } from '../task';
 describe('Mermaid', () => {
 	it('empty plan', function () {
 		const trace = mermaid();
-		const planner = Planner.of<number>({ tasks: [], config: { trace } });
+		const planner = Planner.from<number>({ tasks: [], config: { trace } });
 
 		planner.findPlan(0, 0);
 
@@ -28,7 +28,7 @@ describe('Mermaid', () => {
 
 	it('failed plan', function () {
 		const trace = mermaid();
-		const planner = Planner.of<number>({ tasks: [], config: { trace } });
+		const planner = Planner.from<number>({ tasks: [], config: { trace } });
 
 		planner.findPlan(0, 1);
 
@@ -52,7 +52,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({ tasks: [inc], config: { trace } });
+		const planner = Planner.from<number>({ tasks: [inc], config: { trace } });
 
 		planner.findPlan(0, 1);
 
@@ -91,7 +91,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({
+		const planner = Planner.from<number>({
 			tasks: [dec, inc],
 			config: { trace },
 		});
@@ -129,7 +129,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({ tasks: [inc], config: { trace } });
+		const planner = Planner.from<number>({ tasks: [inc], config: { trace } });
 
 		planner.findPlan(0, 2);
 
@@ -172,7 +172,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({
+		const planner = Planner.from<number>({
 			tasks: [dec, inc],
 			config: { trace },
 		});
@@ -223,7 +223,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({
+		const planner = Planner.from<number>({
 			tasks: [byTwo, inc],
 			config: { trace },
 		});
@@ -267,7 +267,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of<number>({
+		const planner = Planner.from<number>({
 			tasks: [byTwo, inc],
 			config: { trace },
 		});
@@ -335,7 +335,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of({
+		const planner = Planner.from({
 			tasks: [plusThree, plusTwo, plusOne],
 			config: { trace },
 		});
@@ -412,7 +412,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of({
+		const planner = Planner.from({
 			tasks: [multiIncrement, byOne],
 			config: { trace },
 		});
@@ -501,7 +501,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of({
+		const planner = Planner.from({
 			tasks: [multiIncrement, byTwo, byOne],
 			config: { trace },
 		});
@@ -613,7 +613,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of({
+		const planner = Planner.from({
 			tasks: [chunker, multiIncrement, byTwo, byOne],
 			config: { trace },
 		});
@@ -729,7 +729,7 @@ describe('Mermaid', () => {
 		});
 
 		const trace = mermaid();
-		const planner = Planner.of({
+		const planner = Planner.from({
 			tasks: [conflictingIncrement, byOne],
 			config: { trace },
 		});
