@@ -33,7 +33,7 @@ const Pure = {
 		effect,
 		...props
 	}: PureTaskProps<TState, TPath, TOp>) =>
-		Task.of({
+		Task.from({
 			effect,
 			...props,
 			action: (s, c) => Promise.resolve(effect(s, c)),

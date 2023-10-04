@@ -44,7 +44,7 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
@@ -76,14 +76,14 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan with branching', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
 			description: '+1',
 		});
 
-		const dec = Task.of({
+		const dec = Task.from({
 			condition: (state: number, { target }) => state > target,
 			effect: (state: number) => state - 1,
 			action: async (state: number) => state - 1,
@@ -121,7 +121,7 @@ describe('Mermaid', () => {
 	});
 
 	it('two action plan', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
@@ -157,14 +157,14 @@ describe('Mermaid', () => {
 	});
 
 	it('two action plan with branching', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
 			description: '+1',
 		});
 
-		const dec = Task.of({
+		const dec = Task.from({
 			condition: (state: number, { target }) => state > target,
 			effect: (state: number) => state - 1,
 			action: async (state: number) => state - 1,
@@ -209,14 +209,14 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan with unused method', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
 			description: '+1',
 		});
 
-		const byTwo = Task.of({
+		const byTwo = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
@@ -253,14 +253,14 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan with used method', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
 			description: '+1',
 		});
 
-		const byTwo = Task.of({
+		const byTwo = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
@@ -305,7 +305,7 @@ describe('Mermaid', () => {
 	});
 
 	it('nested methods', function () {
-		const plusOne = Task.of({
+		const plusOne = Task.from({
 			// This means the task can only be triggered
 			// if the system state is below the target
 			condition: (state: number, { target }) => state < target,
@@ -316,7 +316,7 @@ describe('Mermaid', () => {
 			description: '+1',
 		});
 
-		const plusTwo = Task.of({
+		const plusTwo = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [
 				plusOne({ target }),
@@ -325,7 +325,7 @@ describe('Mermaid', () => {
 			description: '+2',
 		});
 
-		const plusThree = Task.of({
+		const plusThree = Task.from({
 			condition: (state: number, { target }) => target - state > 2,
 			method: (_: number, { target }) => [
 				plusTwo({ target }),
@@ -393,14 +393,14 @@ describe('Mermaid', () => {
 	it('parallel tasks without methods', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.of({
+		const byOne = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 			description: ({ counter }) => `${counter} + 1`,
 		});
 
-		const multiIncrement = Task.of({
+		const multiIncrement = Task.from({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0).length >
 				1,
@@ -476,21 +476,21 @@ describe('Mermaid', () => {
 	it('parallel tasks with methods', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.of({
+		const byOne = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 			description: ({ counter }) => `${counter} + 1`,
 		});
 
-		const byTwo = Task.of({
+		const byTwo = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
 			method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
 			description: ({ counter }) => `increase '${counter}'`,
 		});
 
-		const multiIncrement = Task.of({
+		const multiIncrement = Task.from({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 			method: (state: Counters, ctx) =>
@@ -558,21 +558,21 @@ describe('Mermaid', () => {
 	it('parallel tasks with nested forks', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.of({
+		const byOne = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 			description: ({ counter }) => `${counter}++`,
 		});
 
-		const byTwo = Task.of({
+		const byTwo = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
 			method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
 			description: ({ counter }) => `${counter} + 2`,
 		});
 
-		const multiIncrement = Task.of({
+		const multiIncrement = Task.from({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 			method: (state: Counters, ctx) =>
@@ -582,7 +582,7 @@ describe('Mermaid', () => {
 			description: `increment multiple`,
 		});
 
-		const chunker = Task.of({
+		const chunker = Task.from({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 			method: (state: Counters, ctx) => {
@@ -705,14 +705,14 @@ describe('Mermaid', () => {
 	it('draws sequential plan when backtracking is reported', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.of({
+		const byOne = Task.from({
 			path: '/:counter',
 			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 			description: ({ counter }) => `${counter} + 1`,
 		});
 
-		const conflictingIncrement = Task.of({
+		const conflictingIncrement = Task.from({
 			condition: (state: Counters, ctx) =>
 				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1).length >
 				1,

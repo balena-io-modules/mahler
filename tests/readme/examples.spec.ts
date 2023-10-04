@@ -8,7 +8,7 @@ import { stub } from 'sinon';
 
 describe('README examples', () => {
 	describe('Basic Usage', () => {
-		const plusOne = Task.of({
+		const plusOne = Task.from({
 			// This means the task can only be triggered
 			// if the system state is below the target
 			condition: (state: number, { target }) => state < target,
@@ -53,7 +53,7 @@ describe('README examples', () => {
 		it('using storeCounter', async () => {
 			const storeCounter = stub().callsFake((x) => x);
 
-			const plusOne = Task.of({
+			const plusOne = Task.from({
 				condition: (state: number, { target }) => state < target,
 				effect: (state: number) => state + 1,
 				action: async (state: number) => {
@@ -92,7 +92,7 @@ describe('README examples', () => {
 			});
 			const readCounter = stub().callsFake(() => fakeCounter);
 
-			const plusOne = Task.of({
+			const plusOne = Task.from({
 				condition: (state: number, { target }) => state < target,
 				effect: (state: number) => state + 1,
 				action: async (_: number, { target }) => {
@@ -154,7 +154,7 @@ describe('README examples', () => {
 		// This is the maximum time allowed between reads
 		const MAX_READ_DELAY_MS = 1000;
 
-		const read = Task.of({
+		const read = Task.from({
 			// We only read if the state is out of date.
 			condition: (state: System) =>
 				state.lastRead == null ||
@@ -169,7 +169,7 @@ describe('README examples', () => {
 			description: 'readCounter',
 		});
 
-		const store = Task.of({
+		const store = Task.from({
 			// We only write if the system counter has reached the target
 			condition: (state: System, { target }) =>
 				state.counter === target.counter && state.needsWrite,
@@ -182,7 +182,7 @@ describe('README examples', () => {
 			description: 'storeCounter',
 		});
 
-		const plusOne = Task.of({
+		const plusOne = Task.from({
 			condition: (state: System, { target }) =>
 				state.counter < target.counter &&
 				// We'll only update the counter if we know the internal counter is
@@ -233,7 +233,7 @@ describe('README examples', () => {
 	});
 
 	describe('Methods', () => {
-		const plusOne = Task.of({
+		const plusOne = Task.from({
 			// This means the task can only be triggered
 			// if the system state is below the target
 			condition: (state: number, { target }) => state < target,
@@ -244,7 +244,7 @@ describe('README examples', () => {
 			description: '+1',
 		});
 
-		const plusTwo = Task.of({
+		const plusTwo = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [
 				plusOne({ target }),
@@ -275,7 +275,7 @@ describe('README examples', () => {
 		});
 
 		it('plan using plusThree', () => {
-			const plusThree = Task.of({
+			const plusThree = Task.from({
 				condition: (state: number, { target }) => target - state > 2,
 				method: (_: number, { target }) => [
 					plusTwo({ target }),
@@ -301,7 +301,7 @@ describe('README examples', () => {
 		type System = { counters: { [key: string]: number } };
 
 		it('multi counter plusOne', () => {
-			const plusOne = Task.of({
+			const plusOne = Task.from({
 				// This task will be chosen only if one of the keys is smaller than the target
 				condition: (state: System, { target }) =>
 					Object.keys(state.counters).some(
@@ -343,7 +343,7 @@ describe('README examples', () => {
 	describe('Parallelism', () => {
 		type System = { counters: { [key: string]: number } };
 
-		const plusOne = Task.of({
+		const plusOne = Task.from({
 			path: '/counters/:counterId',
 			condition: (state: System, ctx) => ctx.get(state) < ctx.target,
 			effect: (state: System, ctx) => ctx.set(state, ctx.get(state) + 1),
@@ -366,7 +366,7 @@ describe('README examples', () => {
 		});
 
 		it('parallel plusOne', () => {
-			const nPlusOne = Task.of({
+			const nPlusOne = Task.from({
 				path: '/counters',
 				condition: (state: System, ctx) =>
 					Object.keys(ctx.get(state)).some(

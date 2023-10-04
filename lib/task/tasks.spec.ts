@@ -3,7 +3,7 @@ import { Task } from './tasks';
 
 describe('Tasks', () => {
 	it('tasks with the same specification should have the same id', function () {
-		const inc = Task.of({
+		const inc = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
@@ -13,7 +13,7 @@ describe('Tasks', () => {
 			'cc0947a66cd46dd2569628559ff7d57818b57d5bdbbf2d5167a6397a32acf175',
 		);
 
-		const inc2 = Task.of({
+		const inc2 = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
@@ -21,7 +21,7 @@ describe('Tasks', () => {
 		});
 		expect(inc.id).to.equal(inc2.id);
 
-		const inc3 = Task.of({
+		const inc3 = Task.from({
 			condition: (state: number, { target }) => state < target,
 			effect: (state: number) => state + 1,
 			action: async (state: number) => state + 1,
@@ -29,7 +29,7 @@ describe('Tasks', () => {
 		});
 		expect(inc.id).to.not.equal(inc3.id);
 
-		const dec = Task.of({
+		const dec = Task.from({
 			condition: (state: number, { target }) => state > target,
 			effect: (state: number) => state - 1,
 			action: async (state: number) => state - 1,
@@ -37,7 +37,7 @@ describe('Tasks', () => {
 		});
 		expect(inc.id).to.not.equal(dec.id);
 
-		const byTwo = Task.of({
+		const byTwo = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
@@ -47,7 +47,7 @@ describe('Tasks', () => {
 		);
 		expect(dec.id).to.not.equal(byTwo.id);
 
-		const byTwo2 = Task.of({
+		const byTwo2 = Task.from({
 			condition: (state: number, { target }) => target - state > 1,
 			method: (_: number, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',

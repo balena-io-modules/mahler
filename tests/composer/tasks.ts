@@ -25,7 +25,7 @@ const docker = new Docker();
  * Effect: add the image to the list of images
  * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
  */
-export const fetch = Task.of({
+export const fetch = Task.from({
 	op: 'create',
 	path: '/services/:serviceName',
 	condition: (app: App, service) =>
@@ -74,7 +74,7 @@ export const fetch = Task.of({
  * Effect: add the service to the `services` object, with a `status` of `created`
  * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
  */
-export const install = Task.of({
+export const install = Task.from({
 	op: 'create',
 	path: '/services/:name',
 	condition: (app: App, service) =>
@@ -154,7 +154,7 @@ export const install = Task.of({
  * Effect: set the service status to `running`
  * Action: start the container using the docker API
  */
-export const start = Task.of({
+export const start = Task.from({
 	path: '/services/:name',
 	condition: (app: App, service) =>
 		service.get(app)?.containerId != null &&
@@ -187,7 +187,7 @@ export const start = Task.of({
  * Effect: set the service status to `stopped`
  * Action: stop the container using the docker API
  */
-export const stop = Task.of({
+export const stop = Task.from({
 	op: '*',
 	path: '/services/:name',
 	condition: (app: App, service) =>
@@ -228,7 +228,7 @@ export const stop = Task.of({
  * Effect: remove the service from the app
  * Action: remove the container using the docker API
  */
-export const remove = Task.of({
+export const remove = Task.from({
 	op: '*',
 	path: '/services/:name',
 	condition: (app: App, service) =>

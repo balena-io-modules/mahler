@@ -36,7 +36,7 @@ describe('Agent', () => {
 		});
 
 		it('it allows to subscribe to the agent state', async () => {
-			const inc = Task.of({
+			const inc = Task.from({
 				condition: (state: number, { target }) => state < target,
 				effect: (state: number) => state + 1,
 				action: async (state: number) => state + 1,
@@ -64,7 +64,7 @@ describe('Agent', () => {
 		});
 
 		it('allows to use observables as actions', async () => {
-			const counter = Task.of({
+			const counter = Task.from({
 				condition: (state: number, { target }) => state < target,
 				effect: (_: number, { target }) => target,
 				action: async function* (state: number, { target }) {
@@ -98,7 +98,7 @@ describe('Agent', () => {
 		it('runs parallel plans', async () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
+			const byOne = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
@@ -109,14 +109,14 @@ describe('Agent', () => {
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const byTwo = Task.of({
+			const byTwo = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
 				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
 				description: ({ counter }) => `increase '${counter}'`,
 			});
 
-			const multiIncrement = Task.of({
+			const multiIncrement = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 				method: (state: Counters, ctx) =>
@@ -146,7 +146,7 @@ describe('Agent', () => {
 
 	describe('heater', () => {
 		type Heater = { roomTemp: number; resistorOn: boolean };
-		const turnOn = Task.of({
+		const turnOn = Task.from({
 			condition: (state: Heater, { target }) =>
 				state.roomTemp < target.roomTemp && !state.resistorOn,
 			effect: (state: Heater, { target }) => ({
@@ -164,7 +164,7 @@ describe('Agent', () => {
 			description: 'turn resistor ON',
 		});
 
-		const turnOff = Task.of({
+		const turnOff = Task.from({
 			condition: (state: Heater, { target }) =>
 				state.roomTemp > target.roomTemp && !!state.resistorOn,
 			effect: (state: Heater, { target }) => ({
@@ -179,7 +179,7 @@ describe('Agent', () => {
 			description: 'turn resistor OFF',
 		});
 
-		const wait = Task.of({
+		const wait = Task.from({
 			condition: (state: Heater, { target }) =>
 				// We have not reached the target but the resistor is already off
 				(state.roomTemp > target.roomTemp && !state.resistorOn) ||

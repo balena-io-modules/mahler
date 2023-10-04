@@ -27,7 +27,7 @@ describe('Planner', () => {
 				return true;
 			};
 
-			const take = Task.of({
+			const take = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) && s.hand == null,
@@ -40,7 +40,7 @@ describe('Planner', () => {
 				description: (location) => `take block ${location.block}`,
 			});
 
-			const put = Task.of({
+			const put = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					location.get(s) === 'hand' &&
@@ -77,7 +77,7 @@ describe('Planner', () => {
 			 *
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
-			const move = Task.of({
+			const move = Task.from({
 				path: '/blocks',
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
@@ -154,7 +154,7 @@ describe('Planner', () => {
 				return true;
 			};
 
-			const pickup = Task.of({
+			const pickup = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					isClear(s.blocks, location.block) &&
@@ -169,7 +169,7 @@ describe('Planner', () => {
 				description: (location) => `pickup block ${location.block}`,
 			});
 
-			const unstack = Task.of({
+			const unstack = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					// The block has no other blocks on top
@@ -187,7 +187,7 @@ describe('Planner', () => {
 				description: (location) => `unstack block ${location.block}`,
 			});
 
-			const putdown = Task.of({
+			const putdown = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) => location.get(s) === 'hand',
 				effect: (s: State, location) => {
@@ -200,7 +200,7 @@ describe('Planner', () => {
 				description: (location) => `put down block ${location.block}`,
 			});
 
-			const stack = Task.of({
+			const stack = Task.from({
 				path: '/blocks/:block',
 				condition: (s: State, location) =>
 					// The target has no other blocks on top
@@ -217,7 +217,7 @@ describe('Planner', () => {
 					`stack block ${location.block} on top of block ${location.target}`,
 			});
 
-			const take = Task.of({
+			const take = Task.from({
 				path: '/blocks/:block',
 				method: (s: State, location) => {
 					if (isClear(s.blocks, location.get(s))) {
@@ -237,7 +237,7 @@ describe('Planner', () => {
 
 			// There is really not that much of a difference between putdown and stack
 			// this is just to test that the planner can work with nested methods
-			const put = Task.of({
+			const put = Task.from({
 				path: '/blocks/:block',
 				method: (s: State, location) => {
 					const { block, target } = location;
@@ -275,7 +275,7 @@ describe('Planner', () => {
 			 *
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
-			const move = Task.of({
+			const move = Task.from({
 				path: '/blocks',
 				method: (s: State, blocks) => {
 					for (const b of allClearBlocks(s.blocks)) {
@@ -333,14 +333,14 @@ describe('Planner', () => {
 		it('solves parallel problems', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
+			const byOne = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const multiIncrement = Task.of({
+			const multiIncrement = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0)
 						.length > 1,
@@ -369,21 +369,21 @@ describe('Planner', () => {
 		it('solves parallel problems with methods', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
+			const byOne = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const byTwo = Task.of({
+			const byTwo = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
 				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
 				description: ({ counter }) => `increase '${counter}'`,
 			});
 
-			const multiIncrement = Task.of({
+			const multiIncrement = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 				method: (state: Counters, ctx) =>
@@ -411,21 +411,21 @@ describe('Planner', () => {
 		it('Finds parallel plans with nested forks', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
+			const byOne = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 				description: ({ counter }) => `${counter}++`,
 			});
 
-			const byTwo = Task.of({
+			const byTwo = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
 				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
 				description: ({ counter }) => `${counter} + 2`,
 			});
 
-			const multiIncrement = Task.of({
+			const multiIncrement = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 				method: (state: Counters, ctx) =>
@@ -435,7 +435,7 @@ describe('Planner', () => {
 				description: `increment multiple`,
 			});
 
-			const chunker = Task.of({
+			const chunker = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
 				method: (state: Counters, ctx) => {
@@ -488,14 +488,14 @@ describe('Planner', () => {
 		it('reverts to sequential execution if branches have conflicts', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
+			const byOne = Task.from({
 				path: '/:counter',
 				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
 				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const conflictingIncrement = Task.of({
+			const conflictingIncrement = Task.from({
 				condition: (state: Counters, ctx) =>
 					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1)
 						.length > 1,

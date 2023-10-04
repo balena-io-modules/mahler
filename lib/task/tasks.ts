@@ -243,17 +243,17 @@ export type ActionTaskProps<
 /**
  * Create a task
  */
-function of<
+function from<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 >(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
-function of<
+function from<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 >(t: MethodTaskProps<TState, TPath, TOp>): MethodTask<TState, TPath, TOp>;
-function of<
+function from<
 	TState = any,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
@@ -310,7 +310,7 @@ function of<
 }
 
 export const Task = {
-	of,
+	from,
 	isMethod: isMethodTask,
 	isAction: isActionTask,
 };
