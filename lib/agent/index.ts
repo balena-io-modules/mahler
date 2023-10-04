@@ -62,7 +62,7 @@ type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
  * @param config.sensors 	- List of sensors to use for monitoring the state
  * @param config.opts 		- The agent runtime options
  */
-function of<TState>(
+function from<TState>(
 	config:
 		| {
 				initial: TState;
@@ -77,7 +77,7 @@ function of<TState>(
 				opts?: DeepPartial<AgentOpts>;
 		  },
 ): Agent<TState>;
-function of<TState>({
+function from<TState>({
 	initial: state,
 	tasks = [],
 	sensors = [],
@@ -177,5 +177,5 @@ function of<TState>({
 }
 
 export const Agent = {
-	of,
+	from,
 };

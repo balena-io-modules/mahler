@@ -32,7 +32,7 @@ describe('composer/agent', () => {
 	});
 
 	it('can execute a single service plan', async () => {
-		const agent = Agent.of<App>({
+		const agent = Agent.from<App>({
 			initial: { name: appname, services: {}, images: [] },
 			planner,
 			opts: { minWaitMs: 1000, logger: console },

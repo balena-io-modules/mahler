@@ -20,7 +20,7 @@ describe('README examples', () => {
 		});
 
 		it('counter Agent', async () => {
-			const counter = Agent.of({
+			const counter = Agent.from({
 				initial: 0,
 				tasks: [plusOne],
 				opts: {
@@ -63,7 +63,7 @@ describe('README examples', () => {
 				description: '+1',
 			});
 
-			const counter = Agent.of({
+			const counter = Agent.from({
 				initial: 0,
 				tasks: [plusOne],
 				opts: {
@@ -110,7 +110,7 @@ describe('README examples', () => {
 				description: '+1',
 			});
 
-			const counter = Agent.of({
+			const counter = Agent.from({
 				initial: 0,
 				tasks: [plusOne],
 				opts: {

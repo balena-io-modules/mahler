@@ -8,7 +8,7 @@ import { setTimeout } from 'timers/promises';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.of({ initial: 0, opts: { logger: console } });
+			const agent = Agent.from({ initial: 0, opts: { logger: console } });
 			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
@@ -17,7 +17,7 @@ describe('Agent', () => {
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: {},
 				opts: { minWaitMs: 10, logger: console },
 			});
@@ -27,7 +27,7 @@ describe('Agent', () => {
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: {},
 				opts: { minWaitMs: 10, maxRetries: 2, logger: console },
 			});
@@ -42,7 +42,7 @@ describe('Agent', () => {
 				action: async (state: number) => state + 1,
 				description: 'increment',
 			});
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: 0,
 				opts: { logger: console, minWaitMs: 10 },
 				tasks: [inc],
@@ -74,7 +74,7 @@ describe('Agent', () => {
 					}
 				},
 			});
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: 0,
 				opts: { logger: console },
 				tasks: [counter],
@@ -126,7 +126,7 @@ describe('Agent', () => {
 				description: `increment counters`,
 			});
 
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: { a: 0, b: 0 },
 				opts: { logger: console, minWaitMs: 1 * 1000 },
 				tasks: [multiIncrement, byTwo, byOne],
@@ -214,7 +214,7 @@ describe('Agent', () => {
 		});
 
 		it('it should turn on the heater if temperature is below the target', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: { roomTemp: 10, resistorOn: false },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
@@ -229,7 +229,7 @@ describe('Agent', () => {
 		});
 
 		it('it should turn off the heater if temperature is above the target', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: { roomTemp: 30, resistorOn: true },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
@@ -244,7 +244,7 @@ describe('Agent', () => {
 		});
 
 		it('it should allow observers to subcribe to the agent state', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: { roomTemp: 18, resistorOn: false },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],

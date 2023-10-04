@@ -32,7 +32,7 @@ describe('orchestrator/agent', () => {
 	});
 
 	it('can execute a single service plan', async () => {
-		const agent = Agent.of<Device>({
+		const agent = Agent.from<Device>({
 			initial: {
 				name: 'test-device',
 				uuid: 'd0',
