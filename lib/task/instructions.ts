@@ -1,6 +1,6 @@
-import { Effect } from './effect';
 import { Path } from '../path';
 import { TaskOp, Context } from '../context';
+import { Ref } from './ref';
 
 interface Instance<TState, TPath extends Path, TOp extends TaskOp> {
 	/**
@@ -39,10 +39,12 @@ export interface Action<
 > extends Instance<TState, TPath, TOp> {
 	readonly _tag: 'action';
 
+	effect(s: Ref<TState>): void;
+
 	/**
 	 * Run the action
 	 */
-	(s: TState): Effect<TState>;
+	(s: Ref<TState>): Promise<void>;
 }
 
 /** A method task that has been applied to a specific context */

@@ -18,7 +18,7 @@ export function isTaskApplicable<
 		return false;
 	}
 
-	const taskParts = Path.elems(t.path);
+	const taskParts = Path.elems(t.lens);
 	const opParts = Path.elems(o.path);
 
 	if (taskParts.length !== opParts.length) {

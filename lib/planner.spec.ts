@@ -27,33 +27,30 @@ describe('Planner', () => {
 				return true;
 			};
 
-			const take = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) =>
-					isClear(s.blocks, location.block) && s.hand == null,
-				effect: (s: State, location) => {
+			const take = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (_, { system, block }) =>
+					isClear(system.blocks, block) && system.hand == null,
+				effect: (location, { system, block }) => {
 					// Update the block
-					s = location.set(s, 'hand');
-					s.hand = location.block;
-					return s;
+					location._ = 'hand';
+					system.hand = block;
 				},
-				description: (location) => `take block ${location.block}`,
+				description: ({ block }) => `take block ${block}`,
 			});
 
-			const put = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) =>
-					location.get(s) === 'hand' &&
-					location.target !== location.block &&
-					isClear(s.blocks, location.target),
-				effect: (s: State, location) => {
+			const put = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (location, { system, target, block }) =>
+					location === 'hand' &&
+					target !== block &&
+					isClear(system.blocks, target),
+				effect: (location, { system, target }) => {
 					// Update the block
-					s = location.set(s, location.target);
-					s.hand = null;
-					return s;
+					location._ = target;
+					system.hand = null;
 				},
-				description: (location) =>
-					`put ${location.block} on ${location.target}`,
+				description: ({ target, block }) => `put ${block} on ${target}`,
 			});
 
 			const allClearBlocks = (blocks: State['blocks']) => {
@@ -77,27 +74,27 @@ describe('Planner', () => {
 			 *
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
-			const move = Task.from({
-				path: '/blocks',
-				method: (s: State, blocks) => {
-					for (const b of allClearBlocks(s.blocks)) {
+			const move = Task.of<State>().from({
+				lens: '/blocks',
+				method: (blocks, { target }) => {
+					for (const b of allClearBlocks(blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
-						if (isClear(s.blocks, blocks.target[b])) {
+						if (isClear(blocks, target[b])) {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
-								take({ block: b, target: blocks.target[b] }),
-								put({ block: b, target: blocks.target[b] }),
+								take({ block: b, target: target[b] }),
+								put({ block: b, target: target[b] }),
 							];
 						}
 					}
 
 					// If we get here, no blocks can be moved to the final location so
 					// we move it to the table
-					for (const b of allClearBlocks(s.blocks)) {
+					for (const b of allClearBlocks(blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
 						return [
-							take({ block: b, target: blocks.target[b] }),
+							take({ block: b, target: target[b] }),
 							put({ block: b, target: 'table' }),
 						];
 					}
@@ -154,75 +151,70 @@ describe('Planner', () => {
 				return true;
 			};
 
-			const pickup = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) =>
-					isClear(s.blocks, location.block) &&
-					location.get(s) === 'table' &&
-					s.hand == null,
-				effect: (s: State, location) => {
+			const pickup = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (location, { system, block }) =>
+					isClear(system.blocks, block) &&
+					location === 'table' &&
+					system.hand == null,
+				effect: (location, { system, block }) => {
 					// Update the block
-					s = location.set(s, 'hand');
-					s.hand = location.block;
-					return s;
+					location._ = 'hand';
+					system.hand = block;
 				},
-				description: (location) => `pickup block ${location.block}`,
+				description: ({ block }) => `pickup block ${block}`,
 			});
 
-			const unstack = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) =>
+			const unstack = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (location, { system, block }) =>
 					// The block has no other blocks on top
-					isClear(s.blocks, location.block) &&
+					isClear(system.blocks, block) &&
 					// The block is on top of other block (not in the hand or the table)
-					!['table', 'hand'].includes(location.get(s)) &&
+					!['table', 'hand'].includes(location) &&
 					// The hand is not holding any other block
-					s.hand == null,
-				effect: (s: State, location) => {
+					system.hand == null,
+				effect: (location, { system, block }) => {
 					// Update the block
-					s = location.set(s, 'hand');
-					s.hand = location.block;
-					return s;
+					location._ = 'hand';
+					system.hand = block;
 				},
-				description: (location) => `unstack block ${location.block}`,
+				description: ({ block }) => `unstack block ${block}`,
 			});
 
-			const putdown = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) => location.get(s) === 'hand',
-				effect: (s: State, location) => {
+			const putdown = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (location) => location === 'hand',
+				effect: (location, { system }) => {
 					// Update the block
-					s = location.set(s, 'table');
+					location._ = 'table';
 					// Mark the hand as free
-					s.hand = null;
-					return s;
+					system.hand = null;
 				},
-				description: (location) => `put down block ${location.block}`,
+				description: ({ block }) => `put down block ${block}`,
 			});
 
-			const stack = Task.from({
-				path: '/blocks/:block',
-				condition: (s: State, location) =>
+			const stack = Task.of<State>().from({
+				lens: '/blocks/:block',
+				condition: (location, { system, target }) =>
 					// The target has no other blocks on top
-					isClear(s.blocks, location.target) &&
+					isClear(system.blocks, target) &&
 					// The hand is holding the block
-					location.get(s) === 'hand',
-				effect: (s: State, location) => {
+					location === 'hand',
+				effect: (location, { system, target }) => {
 					// Update the block
-					s = location.set(s, location.target);
-					s.hand = null;
-					return s;
+					location._ = target;
+					system.hand = null;
 				},
-				description: (location) =>
-					`stack block ${location.block} on top of block ${location.target}`,
+				description: ({ block, target }) =>
+					`stack block ${block} on top of block ${target}`,
 			});
 
-			const take = Task.from({
-				path: '/blocks/:block',
-				method: (s: State, location) => {
-					if (isClear(s.blocks, location.get(s))) {
-						const { block, target } = location;
-						if (location.get(s) === 'table') {
+			const take = Task.of<State>().from({
+				lens: '/blocks/:block',
+				method: (location, { system, block, target }) => {
+					if (isClear(system.blocks, location)) {
+						if (location === 'table') {
 							// If the block is on the table we need to run the pickup task
 							return [pickup({ block, target })];
 						} else {
@@ -232,16 +224,15 @@ describe('Planner', () => {
 					}
 					return [];
 				},
-				description: (location) => `take block ${location.block}`,
+				description: ({ block }) => `take block ${block}`,
 			});
 
 			// There is really not that much of a difference between putdown and stack
 			// this is just to test that the planner can work with nested methods
-			const put = Task.from({
-				path: '/blocks/:block',
-				method: (s: State, location) => {
-					const { block, target } = location;
-					if (location.get(s) === 'hand') {
+			const put = Task.of<State>().from({
+				lens: '/blocks/:block',
+				method: (location, { block, target }) => {
+					if (location === 'hand') {
 						if (target === 'table') {
 							return [putdown({ block, target })];
 						} else {
@@ -250,8 +241,7 @@ describe('Planner', () => {
 					}
 					return [];
 				},
-				description: (location) =>
-					`put block ${location.block} on ${location.target}`,
+				description: ({ block, target }) => `put block ${block} on ${target}`,
 			});
 
 			const allClearBlocks = (blocks: State['blocks']) => {
@@ -275,27 +265,27 @@ describe('Planner', () => {
 			 *
 			 * Source: https://github.com/dananau/GTPyhop/blob/main/Examples/blocks_hgn/methods.py
 			 */
-			const move = Task.from({
-				path: '/blocks',
-				method: (s: State, blocks) => {
-					for (const b of allClearBlocks(s.blocks)) {
+			const move = Task.of<State>().from({
+				lens: '/blocks',
+				method: (blocks, { target }) => {
+					for (const b of allClearBlocks(blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
-						if (isClear(s.blocks, blocks.target[b])) {
+						if (isClear(blocks, target[b])) {
 							return [
 								// TODO: take doesn't really need a target. The grounding function might
 								// be able to infer if the target is needed depending on the operation?
-								take({ block: b, target: blocks.target[b] }),
-								put({ block: b, target: blocks.target[b] }),
+								take({ block: b, target: target[b] }),
+								put({ block: b, target: target[b] }),
 							];
 						}
 					}
 
 					// If we get here, no blocks can be moved to the final location so
 					// we move it to the table
-					for (const b of allClearBlocks(s.blocks)) {
+					for (const b of allClearBlocks(blocks)) {
 						// The block is free and it can be moved to the final target (another block or the table)
 						return [
-							take({ block: b, target: blocks.target[b] }),
+							take({ block: b, target: target[b] }),
 							take({ block: b, target: 'table' }),
 						];
 					}
@@ -333,18 +323,18 @@ describe('Planner', () => {
 		it('solves parallel problems', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const multiIncrement = Task.from({
-				condition: (state: Counters, ctx) =>
+			const multiIncrement = Task.from<Counters>({
+				condition: (state, ctx) =>
 					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0)
 						.length > 1,
-				method: (state: Counters, ctx) =>
+				method: (state, ctx) =>
 					Object.keys(state)
 						.filter((k) => ctx.target[k] - state[k] > 0)
 						.map((k) => byOne({ counter: k, target: ctx.target[k] })),
@@ -369,27 +359,27 @@ describe('Planner', () => {
 		it('solves parallel problems with methods', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const byTwo = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+			const byTwo = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => target - state > 1,
+				method: (_, ctx) => [byOne(ctx), byOne(ctx)],
 				description: ({ counter }) => `increase '${counter}'`,
 			});
 
-			const multiIncrement = Task.from({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				method: (state: Counters, ctx) =>
-					Object.keys(state)
-						.filter((k) => ctx.target[k] - state[k] > 1)
-						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+			const multiIncrement = Task.from<Counters>({
+				condition: (counters, ctx) =>
+					Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
+						.map((k) => byTwo({ counter: k, target: target[k] })),
 				description: `increment counters`,
 			});
 
@@ -411,36 +401,36 @@ describe('Planner', () => {
 		it('Finds parallel plans with nested forks', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: ({ counter }) => `${counter}++`,
 			});
 
-			const byTwo = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+			const byTwo = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => target - state > 1,
+				method: (_, ctx) => [byOne(ctx), byOne(ctx)],
 				description: ({ counter }) => `${counter} + 2`,
 			});
 
-			const multiIncrement = Task.from({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				method: (state: Counters, ctx) =>
-					Object.keys(state)
-						.filter((k) => ctx.target[k] - state[k] > 1)
-						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+			const multiIncrement = Task.from<Counters>({
+				condition: (counters, { target }) =>
+					Object.keys(counters).some((k) => target[k] - counters[k] > 1),
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
+						.map((k) => byTwo({ counter: k, target: target[k] })),
 				description: `increment multiple`,
 			});
 
-			const chunker = Task.from({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				method: (state: Counters, ctx) => {
-					const toUpdate = Object.keys(state).filter(
-						(k) => ctx.target[k] - state[k] > 1,
+			const chunker = Task.from<Counters>({
+				condition: (counters, ctx) =>
+					Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+				method: (counters, { target }) => {
+					const toUpdate = Object.keys(counters).filter(
+						(k) => target[k] - counters[k] > 1,
 					);
 
 					const chunkSize = 2;
@@ -450,11 +440,8 @@ describe('Planner', () => {
 						tasks.push(
 							multiIncrement({
 								target: {
-									...state,
-									...chunk.reduce(
-										(acc, k) => ({ ...acc, [k]: ctx.target[k] }),
-										{},
-									),
+									...counters,
+									...chunk.reduce((acc, k) => ({ ...acc, [k]: target[k] }), {}),
 								},
 							}),
 						);
@@ -488,25 +475,25 @@ describe('Planner', () => {
 		it('reverts to sequential execution if branches have conflicts', () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: ({ counter }) => `${counter} + 1`,
 			});
 
-			const conflictingIncrement = Task.from({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1)
+			const conflictingIncrement = Task.from<Counters>({
+				condition: (counters, { target }) =>
+					Object.keys(counters).filter((k) => target[k] - counters[k] > 1)
 						.length > 1,
-				method: (state: Counters, ctx) =>
-					Object.keys(state)
-						.filter((k) => ctx.target[k] - state[k] > 1)
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
 						.flatMap((k) => [
 							// We create parallel steps to increase the same element of the state
 							// concurrently
-							byOne({ counter: k, target: ctx.target[k] }),
-							byOne({ counter: k, target: ctx.target[k] }),
+							byOne({ counter: k, target: target[k] }),
+							byOne({ counter: k, target: target[k] }),
 						]),
 				description: `increment counters`,
 			});

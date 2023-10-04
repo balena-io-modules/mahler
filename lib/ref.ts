@@ -20,12 +20,25 @@ export interface Ref<T> {
  * ref._++;
  * ```
  */
-function from<T>(t: T): Ref<T> {
+function of<T>(t: T): Ref<T> {
 	return {
 		_: t,
 	};
 }
 
+function is<T>(x: unknown): x is Ref<T> {
+	return typeof x === 'object' && x != null && '_' in x;
+}
+
+/**
+ * Map a function over a reference
+ */
+function map<T, U>(ref: Ref<T>, f: (t: T) => U): Ref<U> {
+	return of(f(ref._));
+}
+
 export const Ref = {
-	from,
+	is,
+	of,
+	map,
 };

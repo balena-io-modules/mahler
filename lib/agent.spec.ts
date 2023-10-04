@@ -36,10 +36,9 @@ describe('Agent', () => {
 		});
 
 		it('it allows to subscribe to the agent state', async () => {
-			const inc = Task.from({
-				condition: (state: number, { target }) => state < target,
-				effect: (state: number) => state + 1,
-				action: async (state: number) => state + 1,
+			const inc = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: 'increment',
 			});
 			const agent = Agent.from({
@@ -64,12 +63,14 @@ describe('Agent', () => {
 		});
 
 		it('allows to use observables as actions', async () => {
-			const counter = Task.from({
-				condition: (state: number, { target }) => state < target,
-				effect: (_: number, { target }) => target,
-				action: async function* (state: number, { target }) {
-					while (state < target) {
-						yield ++state;
+			const counter = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state, { target }) => {
+					state._ = target;
+				},
+				action: async (state, { target }) => {
+					while (state._ < target) {
+						state._++;
 						await setTimeout(10);
 					}
 				},

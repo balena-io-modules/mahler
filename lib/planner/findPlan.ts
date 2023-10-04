@@ -4,11 +4,12 @@ import {
 	Operation as PatchOperation,
 } from 'mahler-wasm';
 
-import { Context } from '../context';
+import { Lens } from '../lens';
 import { Diff } from '../diff';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
+import { Ref } from '../ref';
 import { Action, Instruction, Method, Task } from '../task';
 import { Plan } from './plan';
 import { EmptyNode, Node } from './node';
@@ -67,7 +68,11 @@ function tryAction<TState = any>(
 	if (findLoop(id, initialPlan.start)) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
-	const state = action(initialPlan.state)();
+
+	// Because the effect mutates the state, we need to create a copy here
+	const ref = Ref.of(structuredClone(initialPlan.state));
+	action.effect(ref);
+	const state = ref._;
 
 	// We calculate the changes only at the action level
 	const changes = createPatch(initialPlan.state, state);
@@ -382,8 +387,8 @@ export function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Context.of<TState, any, any>(
-				task.path,
+			const ctx = Lens.context<TState, any>(
+				task.lens,
 				path,
 				Pointer.of(diff.target, path)!,
 			);

@@ -23,7 +23,7 @@ type PointerWithSinglePath<O, H extends string> = O extends any[]
 	? O[H]
 	: never;
 
-export class PointerIsUndefined extends Error {
+export class InvalidPointer extends Error {
 	constructor(path: Path, obj: unknown) {
 		super(
 			`Path ${path} is not a valid pointer for object ${JSON.stringify(obj)}`,
@@ -41,7 +41,7 @@ function of<O = any, P extends Path = '/'>(
 	let o = obj as any;
 	for (const p of parts) {
 		if (!Array.isArray(o) && typeof o !== 'object') {
-			return undefined;
+			throw new InvalidPointer(path, obj);
 		}
 
 		if (!(p in o)) {
