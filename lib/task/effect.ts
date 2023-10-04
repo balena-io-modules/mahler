@@ -113,7 +113,10 @@ function build<T>(
 			);
 		},
 		flatMap<U>(fu: (t: T) => Effect<U>): Effect<U> {
-			return build<U>(() => obs().flatMap((t) => fu(t)), fu(sync()));
+			return build<U>(
+				() => obs().flatMap((t) => fu(t)),
+				() => fu(sync())(),
+			);
 		},
 	});
 }
