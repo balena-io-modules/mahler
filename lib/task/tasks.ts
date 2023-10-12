@@ -232,7 +232,7 @@ function ground<
 	}
 
 	const method = (s: TState) =>
-		task.method(prism.get(s), { ...context, system: s });
+		task.method(Lens.from(s, context.path as TPath), { ...context, system: s });
 
 	return Object.assign(method, {
 		id,

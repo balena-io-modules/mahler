@@ -1,7 +1,9 @@
 import { expect, console } from '~/test-utils';
 import { Agent } from './agent';
-import { Task, NoAction } from './task';
-import { Sensor, Subscriber } from './sensor';
+import { NoAction, Task } from './task';
+import { Sensor } from './sensor';
+
+import { stub } from 'sinon';
 
 import { setTimeout } from 'timers/promises';
 
@@ -70,6 +72,7 @@ describe('Agent', () => {
 				},
 				action: async (state, { target }) => {
 					while (state._ < target) {
+						// Each time the state is modified, the agent should emit the new state
 						state._++;
 						await setTimeout(10);
 					}
@@ -99,31 +102,31 @@ describe('Agent', () => {
 		it('runs parallel plans', async () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-				action: async (state: Counters, ctx) => {
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counterId',
+				condition: (counter, { target }) => counter < target,
+				effect: (counter) => ++counter._,
+				action: async (counter) => {
 					await setTimeout(100 * Math.random());
-					return ctx.set(state, ctx.get(state) + 1);
+					counter._++;
 				},
-				description: ({ counter }) => `${counter} + 1`,
+				description: ({ counterId }) => `${counterId} + 1`,
 			});
 
-			const byTwo = Task.from({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
-				description: ({ counter }) => `increase '${counter}'`,
+			const byTwo = Task.of<Counters>().from({
+				lens: '/:counterId',
+				condition: (counter, { target }) => target - counter > 1,
+				method: (_, ctx) => [byOne(ctx), byOne(ctx)],
+				description: ({ counterId }) => `increase '${counterId}'`,
 			});
 
-			const multiIncrement = Task.from({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				method: (state: Counters, ctx) =>
-					Object.keys(state)
-						.filter((k) => ctx.target[k] - state[k] > 1)
-						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+			const multiIncrement = Task.from<Counters>({
+				condition: (counters, { target }) =>
+					Object.keys(counters).some((k) => target[k] - counters[k] > 1),
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
+						.map((k) => byTwo({ counterId: k, target: target[k] })),
 				description: `increment counters`,
 			});
 
@@ -147,76 +150,81 @@ describe('Agent', () => {
 
 	describe('heater', () => {
 		type Heater = { roomTemp: number; resistorOn: boolean };
-		const turnOn = Task.from({
-			condition: (state: Heater, { target }) =>
+
+		// This emulates the target state of the heater hardware
+		let resistorOn = false;
+		const toggleResistorOn = stub().callsFake(() => {
+			resistorOn = true;
+		});
+		const toggleResistorOff = stub().callsFake(() => {
+			resistorOn = false;
+		});
+		let roomTemp = 10;
+
+		const turnOn = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				state.roomTemp < target.roomTemp && !state.resistorOn,
-			effect: (state: Heater, { target }) => ({
-				...state,
+			effect: (state, { target }) => {
 				// Turning the resistor on does not change the temperature
 				// immediately, but the effect is that the temperature eventually
 				// will reach that point
-				roomTemp: target.roomTemp,
-				resistorOn: true,
-			}),
-			action: async (state: Heater) => ({
-				...state,
-				resistorOn: true,
-			}),
+				state._.roomTemp = target.roomTemp;
+				state._.resistorOn = true;
+			},
+			action: async (state) => {
+				state._.resistorOn = true;
+				toggleResistorOn();
+			},
 			description: 'turn resistor ON',
 		});
 
-		const turnOff = Task.from({
-			condition: (state: Heater, { target }) =>
+		const turnOff = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				state.roomTemp > target.roomTemp && !!state.resistorOn,
-			effect: (state: Heater, { target }) => ({
-				...state,
-				roomTemp: target.roomTemp,
-				resistorOn: false,
-			}),
-			action: async (state: Heater) => ({
-				...state,
-				resistorOn: false,
-			}),
+			effect: (state, { target }) => {
+				state._.roomTemp = target.roomTemp;
+				state._.resistorOn = false;
+			},
+			action: async (state) => {
+				state._.resistorOn = false;
+				toggleResistorOff();
+			},
 			description: 'turn resistor OFF',
 		});
 
-		const wait = Task.from({
-			condition: (state: Heater, { target }) =>
+		const wait = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				// We have not reached the target but the resistor is already off
 				(state.roomTemp > target.roomTemp && !state.resistorOn) ||
 				// We have not reached the target but the resistor is already on
 				(state.roomTemp < target.roomTemp && !!state.resistorOn),
-			effect: (state: Heater, { target }) => ({
-				...state,
-				roomTemp: target.roomTemp,
-			}),
+			effect: (state, { target }) => {
+				state._.roomTemp = target.roomTemp;
+			},
 			action: NoAction,
 			description: 'wait for temperature to reach target',
 		});
 
-		const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
-			while (subscriber) {
-				subscriber.next((state) => {
-					// For this test we assume the temperature source of truth comes
-					// from the agent, but that won't be true in a real system,
-					// where the termometer would be the source of truth
-					const roomTemp = state.roomTemp;
-					if (state.resistorOn) {
-						// The heater is on, so the temperature increases
-						return { ...state, roomTemp: roomTemp + 1 };
+		const termometer = Sensor.of<Heater>().from({
+			lens: '/roomTemp',
+			sensor: async function* () {
+				// We return the global temperature value as the sensor value
+				while (true) {
+					// The heater is on, so the temperature increases
+					if (resistorOn) {
+						yield ++roomTemp;
 					} else {
-						return { ...state, roomTemp: roomTemp - 1 };
+						yield --roomTemp;
 					}
-				});
-
-				// Temperature increases/decreases 1 degree every 10ms
-				await setTimeout(10);
-			}
+					// Temperature increases/decreases 1 degree every 10ms
+					await setTimeout(10);
+				}
+			},
 		});
 
 		it('it should turn on the heater if temperature is below the target', async () => {
 			const agent = Agent.from({
-				initial: { roomTemp: 10, resistorOn: false },
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
@@ -230,8 +238,10 @@ describe('Agent', () => {
 		});
 
 		it('it should turn off the heater if temperature is above the target', async () => {
+			roomTemp = 30;
+			resistorOn = true;
 			const agent = Agent.from({
-				initial: { roomTemp: 30, resistorOn: true },
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
@@ -245,8 +255,10 @@ describe('Agent', () => {
 		});
 
 		it('it should allow observers to subcribe to the agent state', async () => {
+			roomTemp = 18;
+			resistorOn = false;
 			const agent = Agent.from({
-				initial: { roomTemp: 18, resistorOn: false },
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer],
 				opts: { minWaitMs: 10, logger: console },
@@ -262,6 +274,10 @@ describe('Agent', () => {
 			// The observable should return all the state changes
 			expect(states).to.deep.equal([
 				{ roomTemp: 18, resistorOn: false },
+				{ roomTemp: 18, resistorOn: true },
+				// Because the termometer is started with the agent, the temperature
+				// drops a degree before it can be increased by turning the resistor on
+				{ roomTemp: 17, resistorOn: true },
 				{ roomTemp: 18, resistorOn: true },
 				{ roomTemp: 19, resistorOn: true },
 				{ roomTemp: 20, resistorOn: true },

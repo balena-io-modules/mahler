@@ -30,15 +30,7 @@ function is<T>(x: unknown): x is Ref<T> {
 	return typeof x === 'object' && x != null && '_' in x;
 }
 
-/**
- * Map a function over a reference
- */
-function map<T, U>(ref: Ref<T>, f: (t: T) => U): Ref<U> {
-	return of(f(ref._));
-}
-
 export const Ref = {
 	is,
 	of,
-	map,
 };

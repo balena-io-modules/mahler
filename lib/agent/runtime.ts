@@ -1,10 +1,10 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import { assert } from '../assert';
-import { Observer } from '../observable';
+import { Observer, Subscription } from '../observable';
 import { EmptyNode, Node, Planner } from '../planner';
 import { Ref } from '../ref';
-import { Sensor, Subscription } from '../sensor';
+import { Sensor } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
 import { observe } from './observe';
@@ -70,17 +70,18 @@ export class Runtime<TState> {
 	) {
 		this.stateRef = Ref.of(state);
 		// add subscribers to sensors
-		this.subscribed = sensors.map((s) =>
-			s.subscribe((next: (s: TState) => TState) => {
-				// QUESTION: do we need to handle concurrency
-				this.stateRef._ = next(this.stateRef._);
-
+		this.subscribed = sensors.map((sensor) =>
+			sensor(this.stateRef).subscribe((s) => {
+				// There is no need to update the state reference as the sensor already
+				// modifies the state. We don't handle concurrency as we expect that whatever
+				// value modified by sensologrs does not conflict with the value modified by
+				// actions
 				if (opts.follow) {
 					// Trigger a re-plan to see if the state is still on target
 					this.start();
 				} else {
 					// Notify the observer of the new state
-					this.observer.next(this.stateRef._);
+					this.observer.next(s);
 				}
 			}),
 		);
@@ -191,7 +192,7 @@ export class Runtime<TState> {
 			let found = false;
 
 			// Send the initial state to the observer
-			this.observer.next(this.stateRef._);
+			this.observer.next(structuredClone(this.stateRef._));
 			while (!this.stopped) {
 				try {
 					logger.debug('finding a plan to the target');
