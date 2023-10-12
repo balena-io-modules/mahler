@@ -6,7 +6,7 @@ import { Lens, View } from '../lens';
 import { Path } from '../path';
 import { Ref } from '../ref';
 
-import { Action, Instruction, Method } from './instructions';
+import { Action, Instruction, Method, MethodExpansion } from './instructions';
 
 type TaskContext<
 	TState = unknown,
@@ -102,6 +102,15 @@ export interface MethodSpec<
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
+	/**
+	 * The method expansion. The default is 'detect', meaning the planner will try to execute
+	 * the instructions returned by the method in parallel and go back to sequential expansion
+	 * if conflicts are detected. If sequential is chosen, the planner will jump straight to
+	 * sequential expansion. This is a workaround to handle those cases where detection may fail
+	 * due to instructios that read data handled by a parallel branch.
+	 */
+	readonly expansion: MethodExpansion;
+
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means there are no
@@ -231,6 +240,7 @@ function ground<
 		});
 	}
 
+	const { expansion } = task;
 	const method = (s: TState) =>
 		task.method(Lens.from(s, context.path as TPath), { ...context, system: s });
 
@@ -241,6 +251,7 @@ function ground<
 		_tag: 'method' as const,
 		description,
 		condition,
+		expansion,
 		toJSON() {
 			return {
 				id,
@@ -385,6 +396,7 @@ function from<
 				lens: lens as TPath,
 				op: op as TOp,
 				condition: () => true,
+				expansion: MethodExpansion.DETECT,
 				...taskProps,
 			};
 		}

@@ -398,6 +398,50 @@ describe('Planner', () => {
 			);
 		});
 
+		it('allows sequential expansion to be forced', () => {
+			type Counters = { [k: string]: number };
+
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
+				description: ({ counter }) => `${counter} + 1`,
+			});
+
+			const byTwo = Task.of<Counters>().from({
+				lens: '/:counter',
+				condition: (state, { target }) => target - state > 1,
+				method: (_, ctx) => [byOne(ctx), byOne(ctx)],
+				description: ({ counter }) => `increase '${counter}'`,
+			});
+
+			const multiIncrement = Task.from<Counters>({
+				expansion: 'sequential',
+				condition: (counters, ctx) =>
+					Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
+						.map((k) => byTwo({ counter: k, target: target[k] })),
+				description: `increment counters`,
+			});
+
+			const planner = Planner.from({
+				tasks: [multiIncrement, byTwo, byOne],
+				config: { trace: console.trace },
+			});
+
+			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
+
+			expect(stringify(result)).to.deep.equal(
+				plan()
+					.actions('a + 1', 'a + 1')
+					.actions('b + 1', 'b + 1')
+					.action('a + 1')
+					.end(),
+			);
+		});
+
 		it('Finds parallel plans with nested forks', () => {
 			type Counters = { [k: string]: number };
 

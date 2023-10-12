@@ -1,6 +1,6 @@
 import { Path } from '../path';
-import { TaskOp, Context } from '../context';
-import { Ref } from './ref';
+import { TaskOp, Context } from './context';
+import { Ref } from '../ref';
 
 interface Instance<TState, TPath extends Path, TOp extends TaskOp> {
 	/**
@@ -47,6 +47,13 @@ export interface Action<
 	(s: Ref<TState>): Promise<void>;
 }
 
+export const MethodExpansion = {
+	SEQUENTIAL: 'sequential' as const,
+	DETECT: 'detect' as const,
+};
+export type MethodExpansion =
+	(typeof MethodExpansion)[keyof typeof MethodExpansion];
+
 /** A method task that has been applied to a specific context */
 export interface Method<
 	TState = any,
@@ -54,6 +61,16 @@ export interface Method<
 	TOp extends TaskOp = any,
 > extends Instance<TState, TPath, TOp> {
 	readonly _tag: 'method';
+
+	/**
+	 * The method expansion. The default is 'detect', meaning the planner will try to execute
+	 * the instructions returned by the method in parallel and go back to sequential expansion
+	 * if conflicts are detected. If sequential is chosen, the planner will jump straight to
+	 * sequential expansion. This is a workaround to handle those cases where detection may fail
+	 * due to instructios that read data handled by a parallel branch.
+	 */
+	readonly expansion: MethodExpansion;
+
 	/**
 	 * The method to be called when the task is executed
 	 * if the method returns an empty list, this means the procedure is not applicable

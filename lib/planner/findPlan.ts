@@ -10,7 +10,7 @@ import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
 import { Ref } from '../ref';
-import { Action, Instruction, Method, Task } from '../task';
+import { Action, Instruction, Method, Task, MethodExpansion } from '../task';
 import { Plan } from './plan';
 import { EmptyNode, Node } from './node';
 import {
@@ -321,9 +321,25 @@ function tryInstruction<TState = any>(
 
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
-		// We try methods in parallel first. If conflicts are found then we'll try
-		// running them in sequence
-		res = tryParallel(instruction, { ...state, trace, initialPlan, callStack });
+		// If sequential expansion was chosen, then we go straight to
+		// evaluating the method in a sequential manner
+		if (instruction.expansion === MethodExpansion.SEQUENTIAL) {
+			res = trySequential(instruction, {
+				...state,
+				trace,
+				initialPlan,
+				callStack,
+			});
+		} else {
+			// Otherwise. We try methods in parallel first. If conflicts are found then we'll try
+			// running them in sequence
+			res = tryParallel(instruction, {
+				...state,
+				trace,
+				initialPlan,
+				callStack,
+			});
+		}
 	} else {
 		res = tryAction(instruction, { ...state, trace, initialPlan, callStack });
 	}
