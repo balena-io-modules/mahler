@@ -1,5 +1,4 @@
-import { Task } from '../task';
-import { TaskOp } from '../context';
+import { Task, TaskOp } from '../task';
 import { Path } from '../path';
 import { Operation } from '../operation';
 

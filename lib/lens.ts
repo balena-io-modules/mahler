@@ -222,7 +222,7 @@ function createView<TState, TPath extends Path>(
 		parent = parent[p];
 	}
 
-	const pointer = last !== undefined ? parent[last] : parent;
+	const pointer = last != null ? parent[last] : parent;
 
 	const view = {
 		_: pointer,

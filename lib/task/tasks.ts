@@ -176,18 +176,34 @@ function ground<
 			? taskDescription(context)
 			: taskDescription;
 
-	const condition = (s: TState) =>
-		task.condition(Lens.from(s, path as TPath), {
+	const condition = (s: TState) => {
+		const lens = Lens.from(s, path as TPath);
+
+		// A create operation always requires that the value does
+		// not exist on the state
+		if (task.op === 'create' && lens !== undefined) {
+			return false;
+		}
+
+		// A delete operation always requires that the value exists on the
+		// state
+		if (['delete', 'update'].includes(task.op) && lens === undefined) {
+			return false;
+		}
+
+		// Otherwise we check the condition
+		return task.condition(lens, {
 			...context,
 			system: s,
 		});
+	};
 
 	if (isActionSpec(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
 		const effect = (s: Ref<TState>) => {
 			const view = View.from(s, path as TPath);
 
-			if (task.op === 'create' && view._ === undefined) {
+			if (task.op === 'create') {
 				// TODO: the {} will not fit every type so we need to assume that
 				// the task will initialize the sub-state in a proper way. If we had
 				// some sort of validation model from the state we could validate after
@@ -209,7 +225,7 @@ function ground<
 		const action = async (s: Ref<TState>) => {
 			const view = View.from(s, path as TPath);
 
-			if (task.op === 'create' && view._ === undefined) {
+			if (task.op === 'create') {
 				view._ = {} as Lens<TState, TPath>;
 			}
 
@@ -328,8 +344,11 @@ export type ActionTaskProps<
 	TState = unknown,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<ActionSpec<TState, TPath, TOp>, 'effect' | 'id'>> &
-	Pick<ActionSpec<TState, TPath, TOp>, 'effect'>;
+> =
+	| (Partial<Omit<ActionSpec<TState, TPath, TOp>, 'effect' | 'id'>> &
+			Pick<ActionSpec<TState, TPath, TOp>, 'effect'>)
+	| (Partial<Omit<ActionSpec<TState, TPath, TOp>, 'action' | 'id'>> &
+			Pick<ActionSpec<TState, TPath, TOp>, 'action'>);
 
 function isActionProps<
 	TState = unknown,
@@ -338,7 +357,10 @@ function isActionProps<
 >(
 	x: ActionTaskProps<TState, TPath, TOp> | MethodTaskProps<TState, TPath, TOp>,
 ): x is ActionTaskProps<TState, TPath, TOp> {
-	return typeof (x as any).effect === 'function';
+	return (
+		typeof (x as any).effect === 'function' ||
+		typeof (x as any).action === 'function'
+	);
 }
 
 /**
@@ -369,24 +391,26 @@ function from<
 	Path.assert(lens);
 
 	const opLabel = op === '*' ? 'process' : op;
-	let prefix = '[method]';
+	let prefix = '[method] ';
 
 	// The default description is
 	// update /a/b/c or
 	// [method] update /a/b/c
 	const description = (ctx: Context<TState, TPath, TOp>) =>
-		`${prefix} ${opLabel} ${ctx.path}`;
+		`${prefix}${opLabel} ${ctx.path}`;
 
 	// The task properties
 	const tProps = (() => {
 		if (isActionProps(taskProps)) {
 			prefix = '';
-			const { effect, action = async (s, c) => effect(s, c) } = taskProps;
+			const { effect = () => void 0, action = async (s, c) => effect(s, c) } =
+				taskProps;
 			return {
 				description,
 				lens: lens as TPath,
 				op: op as TOp,
 				condition: () => true,
+				effect,
 				action,
 				...taskProps,
 			};
