@@ -3,53 +3,49 @@ import { Task } from './tasks';
 
 describe('Tasks', () => {
 	it('tasks with the same specification should have the same id', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.from<number>({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 		expect(inc.id).to.equal(
-			'cc0947a66cd46dd2569628559ff7d57818b57d5bdbbf2d5167a6397a32acf175',
+			'9d73c72d26c1bbb33a4ee484e399129fcab792122a52a5816f1e0ef20dfc47ec',
 		);
 
-		const inc2 = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc2 = Task.from<number>({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 		expect(inc.id).to.equal(inc2.id);
 
-		const inc3 = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc3 = Task.from<number>({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: 'increment',
 		});
 		expect(inc.id).to.not.equal(inc3.id);
 
-		const dec = Task.from({
-			condition: (state: number, { target }) => state > target,
-			effect: (state: number) => state - 1,
-			action: async (state: number) => state - 1,
+		const dec = Task.from<number>({
+			condition: (state, { target }) => state > target,
+			effect: (state) => --state._,
 			description: '-1',
 		});
 		expect(inc.id).to.not.equal(dec.id);
 
-		const byTwo = Task.from({
-			condition: (state: number, { target }) => target - state > 1,
-			method: (_: number, { target }) => [inc({ target }), inc({ target })],
+		const byTwo = Task.from<number>({
+			condition: (state, { target }) => target - state > 1,
+			method: (_, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
 		});
 		expect(byTwo.id).to.equal(
-			'e1d9844f32893ee573638dd171ba475bba93e4bb0d5797a654e3f5c43f8d0f46',
+			'e6ae37e6ef05cc2ee70493842cd1799aeeec8867c6efd15b1b1f1bca96436a48',
 		);
 		expect(dec.id).to.not.equal(byTwo.id);
 
-		const byTwo2 = Task.from({
-			condition: (state: number, { target }) => target - state > 1,
-			method: (_: number, { target }) => [inc({ target }), inc({ target })],
+		const byTwo2 = Task.from<number>({
+			condition: (state, { target }) => target - state > 1,
+			method: (_, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
 		});
 		expect(byTwo.id).to.equal(byTwo2.id);
