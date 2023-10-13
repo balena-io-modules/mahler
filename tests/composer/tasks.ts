@@ -18,31 +18,20 @@ const docker = new Docker();
 
 /**
  * Pull an image from the registry, this task is applicable to
- * the creation of a service, as pulling an image is only needed
- * in that case.
+ * the creation of a new image
  *
  * Condition: the image is not already present in the device
  * Effect: add the image to the list of images
- * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
+ * Action: pull the image from the registry and add it to the images local registry
  */
-export const fetch = Task.from({
+export const fetchImage = Task.of<App>().from({
 	op: 'create',
-	path: '/services/:serviceName',
-	condition: (app: App, service) =>
-		!app.images.some((img) => img.name === service.target.image),
-	effect: (state: App, service) => ({
-		...state,
-		images: [
-			...state.images,
-			{
-				name: service.target.image,
-			},
-		],
-	}),
-	action: async (app: App, service) => {
+	lens: '/images/:imageName',
+	// The effect is inferred from the operation
+	action: async (image, { imageName }) => {
 		await new Promise((resolve, reject) =>
 			docker
-				.pull(service.target.image)
+				.pull(imageName)
 				.catch(reject)
 				.then((stream) => {
 					stream.on('data', () => void 0);
@@ -53,15 +42,27 @@ export const fetch = Task.from({
 		);
 
 		// Get the image using the name
-		const dockerImage = await docker.getImage(service.target.image).inspect();
+		const dockerImage = await docker.getImage(imageName).inspect();
 
-		return {
-			...app,
-			images: [
-				...app.images,
-				{ name: service.target.image, imageId: dockerImage.Id },
-			],
-		};
+		image._.imageId = dockerImage.Id;
+	},
+	description: ({ imageName }) => `pull image '${imageName}'`,
+});
+
+/**
+ * Pull an image from the registry, this task is applicable to
+ * the creation of a service, as pulling an image is only needed
+ * in that case.
+ *
+ * Condition: the image is not already present in the device (checked by the fetchImage action)
+ * Effect: add the image to the list of images
+ * Action: pull the image from the registry
+ */
+export const fetchServiceImage = Task.of<App>().from({
+	op: 'create',
+	lens: '/services/:serviceName',
+	method: (_, { target }) => {
+		return fetchImage({ imageName: target.image, target: {} });
 	},
 	description: (service) =>
 		`pull image '${service.target.image}' for service '${service.serviceName}'`,
@@ -74,26 +75,22 @@ export const fetch = Task.from({
  * Effect: add the service to the `services` object, with a `status` of `created`
  * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
  */
-export const install = Task.from({
+export const installService = Task.of<App>().from({
 	op: 'create',
-	path: '/services/:name',
-	condition: (app: App, service) =>
-		app.images.some((img) => img.name === service.target.image) &&
-		service.get(app)?.status == null,
-	effect: (app: App, service) =>
-		service.set(app, {
-			...service.target,
-			...service.get(app),
-			status: 'created',
-			// We just need a random string here
-			containerId: 'deadbeef',
-		}),
-	action: async (app: App, service) => {
+	lens: '/services/:serviceName',
+	condition: (_, { system, target }) => target.image in system.images,
+	effect: (service, { target }) => {
+		service._.image = target.image;
+		service._.command = target.command;
+		service._.status = 'created';
+		service._.containerId = 'deadbeef';
+	},
+	action: async (service, { target, serviceName, system: app }) => {
 		// This is our way to update the internal agent state, we look for
 		// the service before we do anything, and if it exists, we update
 		// the state with the service metadata.
 		const existing = await docker
-			.getContainer(`${app.name}_${service.name}`)
+			.getContainer(`${app.name}_${serviceName}`)
 			.inspect()
 			.catch((e) => {
 				if (isStatusError(e) && e.statusCode === 404) {
@@ -125,26 +122,27 @@ export const install = Task.from({
 
 			// If the service has a different config to what we are expecting
 			// the service start step will fail and we'll need to re-plan
-			return service.set(app, s);
+			service._ = s;
 		}
 
 		const container = await docker.createContainer({
-			name: `${app.name}_${service.name}`,
-			Image: service.target.image,
-			Cmd: service.target.command || [],
+			name: `${app.name}_${serviceName}`,
+			Image: target.image,
+			Cmd: target.command || [],
 		});
 
 		const { Id: containerId, Created } = await container.inspect();
 
-		return service.set(app, {
-			...service.target,
-			...service.get(app),
-			status: 'created',
-			containerId,
-			createdAt: new Date(Created),
-		});
+		// TODO: here we should get the configuration from the container as docker
+		// sometimes ignores configurations that are unsupported by the underlying OS
+		service._.image = target.image;
+		service._.command = target.command;
+		service._.status = 'created';
+		service._.containerId = containerId;
+		service._.createdAt = new Date(Created);
 	},
-	description: ({ name }) => `installing container for service '${name}'`,
+	description: ({ serviceName }) =>
+		`installing container for service '${serviceName}'`,
 });
 
 /**
@@ -154,30 +152,26 @@ export const install = Task.from({
  * Effect: set the service status to `running`
  * Action: start the container using the docker API
  */
-export const start = Task.from({
-	path: '/services/:name',
-	condition: (app: App, service) =>
-		service.get(app)?.containerId != null &&
-		isEqualConfig(service.get(app), service.target) &&
-		service.get(app)?.status !== 'running',
-	effect: (app: App, service) =>
-		service.set(app, {
-			...service.get(app),
-			status: 'running',
-		}),
-	action: async (app: App, service) => {
-		const container = docker.getContainer(service.get(app).containerId!);
+export const startService = Task.of<App>().from({
+	lens: '/services/:serviceName',
+	condition: (service, { target }) =>
+		service.containerId != null &&
+		isEqualConfig(service, target) &&
+		service.status !== 'running',
+	effect: (service) => {
+		service._.status = 'running';
+	},
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.start();
 
 		const { State } = await container.inspect();
 
-		return service.set(app, {
-			...service.get(app),
-			status: 'running',
-			startedAt: new Date(State.StartedAt),
-		});
+		service._.status = 'running';
+		service._.startedAt = new Date(State.StartedAt);
 	},
-	description: ({ name }) => `starting container for service '${name}'`,
+	description: ({ serviceName }) =>
+		`starting container for service '${serviceName}'`,
 });
 
 /**
@@ -187,19 +181,16 @@ export const start = Task.from({
  * Effect: set the service status to `stopped`
  * Action: stop the container using the docker API
  */
-export const stop = Task.from({
+export const stopService = Task.of<App>().from({
 	op: '*',
-	path: '/services/:name',
-	condition: (app: App, service) =>
-		service.get(app)?.containerId != null &&
-		service.get(app)?.status === 'running',
-	effect: (app: App, service) =>
-		service.set(app, {
-			...service.get(app),
-			status: 'stopped',
-		}),
-	action: async (app: App, service) => {
-		const container = docker.getContainer(service.get(app).containerId!);
+	lens: '/services/:serviceName',
+	condition: (service) =>
+		service?.containerId != null && service?.status === 'running',
+	effect: (service) => {
+		service._.status = 'stopped';
+	},
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.stop().catch((e) => {
 			if (isStatusError(e)) {
 				if (e.statusCode !== 304 && e.statusCode !== 404) {
@@ -212,13 +203,11 @@ export const stop = Task.from({
 
 		const { State } = await container.inspect();
 
-		return service.set(app, {
-			...service.get(app),
-			status: 'stopped',
-			finishedAt: new Date(State.FinishedAt),
-		});
+		service._.status = 'stopped';
+		service._.finishedAt = new Date(State.FinishedAt);
 	},
-	description: ({ name }) => `stopping container for service '${name}'`,
+	description: ({ serviceName }) =>
+		`stopping container for service '${serviceName}'`,
 });
 
 /**
@@ -228,22 +217,24 @@ export const stop = Task.from({
  * Effect: remove the service from the app
  * Action: remove the container using the docker API
  */
-export const remove = Task.from({
+export const uninstallService = Task.of<App>().from({
+	// Recreating the service also requires that the container is uninstalled first
+	// so this needs to apply to a service update or a service removal
 	op: '*',
-	path: '/services/:name',
-	condition: (app: App, service) =>
-		service.get(app)?.containerId != null &&
-		service.get(app)?.status !== 'running',
-	effect: (app: App, service) => {
-		const { [service.name]: _, ...services } = app.services;
-		return { ...app, services };
+	lens: '/services/:serviceName',
+	condition: (service) =>
+		service.containerId != null && service.status !== 'running',
+	effect: (service) => {
+		// We need to purposely delete the service here, as the task
+		// operation is '*'
+		service.delete();
 	},
-	action: async (app: App, service) => {
-		const container = docker.getContainer(service.get(app).containerId!);
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.remove({ v: true });
 
-		const { [service.name]: _, ...services } = app.services;
-		return { ...app, services };
+		service.delete();
 	},
-	description: ({ name }) => `removing container for service '${name}'`,
+	description: ({ serviceName }) =>
+		`removing container for service '${serviceName}'`,
 });

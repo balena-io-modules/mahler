@@ -1,27 +1,31 @@
 import * as Docker from 'dockerode';
 import { expect } from '~/test-utils';
 
-import { Image } from './state';
-import { fetch } from './tasks';
+import { zip } from 'mahler/testing';
+import { fetchServiceImage } from './tasks';
 
 const docker = new Docker();
 
 describe('composer/tasks', () => {
 	describe('fetch', () => {
-		const doFetch = fetch({
-			serviceName: 'my-service',
-			target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
-		});
+		const doFetch = zip(
+			fetchServiceImage({
+				serviceName: 'my-service',
+				target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
+			}),
+		);
 
-		it('should pull an image', async () => {
+		it('should pull the service image if it does not exist yet', async () => {
 			const s = await doFetch({
 				name: 'test-app',
-				images: [] as Image[],
+				images: {},
 				services: {},
 			});
-			expect(s.images.map((i) => i.name)).to.include('alpine:latest');
-			expect(s.images[0]!.imageId!).to.not.be.undefined;
-			expect(await docker.getImage(s.images[0]!.imageId!).inspect())
+			expect(s.images).to.have.property('alpine:latest');
+			expect(s.images['alpine:latest']!.imageId!).to.not.be.undefined;
+			expect(
+				await docker.getImage(s.images['alpine:latest']!.imageId!).inspect(),
+			)
 				.to.have.property('RepoTags')
 				.that.contains('alpine:latest');
 		});
