@@ -190,7 +190,7 @@ export const Lens = {
 	from: createLens,
 };
 
-export interface View<TState, TPath extends Path>
+export interface View<TState, TPath extends Path = '/'>
 	extends Ref<Lens<TState, TPath>> {
 	delete(): void;
 }
@@ -226,17 +226,6 @@ function createView<TState, TPath extends Path>(
 
 	const view = {
 		_: pointer,
-		update() {
-			if (last != null) {
-				if (Array.isArray(parent)) {
-					parent.splice(+last, 1, view._);
-				} else {
-					parent[last] = view._;
-				}
-			} else {
-				ref._ = view._;
-			}
-		},
 		delete() {
 			if (last != null) {
 				if (Array.isArray(parent)) {
@@ -248,13 +237,25 @@ function createView<TState, TPath extends Path>(
 		},
 	};
 
+	function update() {
+		if (last != null) {
+			if (Array.isArray(parent)) {
+				parent.splice(+last, 1, view._);
+			} else {
+				parent[last] = view._;
+			}
+		} else {
+			ref._ = view._;
+		}
+	}
+
 	// We return a proxy so changes to the view._ value change
 	// the parent's value
 	return new Proxy(view, {
 		set(target, prop, value) {
 			const res = Reflect.set(target, prop, value);
 			if (res) {
-				view.update();
+				update();
 			}
 			return res;
 		},

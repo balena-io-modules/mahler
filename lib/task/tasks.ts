@@ -64,7 +64,7 @@ interface ActionSpec<
 	 * the effect to mutate the state. The effect function should not return
 	 * anything.
 	 */
-	effect(s: Ref<Lens<TState, TPath>>, c: TaskContext<TState, TPath, TOp>): void;
+	effect(s: View<TState, TPath>, c: TaskContext<TState, TPath, TOp>): void;
 
 	/**
 	 * The actual action the task performs.
@@ -73,7 +73,7 @@ interface ActionSpec<
 	 * action to mutate the state. The action function should not return anything.
 	 */
 	action(
-		s: Ref<Lens<TState, TPath>>,
+		s: View<TState, TPath>,
 		c: TaskContext<TState, TPath, TOp>,
 	): Promise<void>;
 }
@@ -179,18 +179,6 @@ function ground<
 	const condition = (s: TState) => {
 		const lens = Lens.from(s, path as TPath);
 
-		// A create operation always requires that the value does
-		// not exist on the state
-		if (task.op === 'create' && lens !== undefined) {
-			return false;
-		}
-
-		// A delete operation always requires that the value exists on the
-		// state
-		if (['delete', 'update'].includes(task.op) && lens === undefined) {
-			return false;
-		}
-
 		// Otherwise we check the condition
 		return task.condition(lens, {
 			...context,
@@ -200,43 +188,10 @@ function ground<
 
 	if (isActionSpec(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
-		const effect = (s: Ref<TState>) => {
-			const view = View.from(s, path as TPath);
-
-			if (task.op === 'create') {
-				// TODO: the {} will not fit every type so we need to assume that
-				// the task will initialize the sub-state in a proper way. If we had
-				// some sort of validation model from the state we could validate after
-				// applying the effect or avoid the need for initializer tasks as the
-				// initial state of an entity would be knowable
-				view._ = {} as Lens<TState, TPath>;
-			}
-
-			// Apply the effect over the view
-			taskEffect(view, { ...context, system: s._ });
-
-			// If the task defines a delete operation for the value pointed by
-			// the lens, then we need to delete the property
-			if (task.op === 'delete') {
-				view.delete();
-			}
-		};
-
-		const action = async (s: Ref<TState>) => {
-			const view = View.from(s, path as TPath);
-
-			if (task.op === 'create') {
-				view._ = {} as Lens<TState, TPath>;
-			}
-
-			// Apply the effect over the view
-			await taskAction(view, { ...context, system: s._ });
-
-			if (task.op === 'delete') {
-				view.delete();
-			}
-		};
-
+		const effect = (s: Ref<TState>) =>
+			taskEffect(View.from(s, path as TPath), { ...context, system: s._ });
+		const action = async (s: Ref<TState>) =>
+			taskAction(View.from(s, path as TPath), { ...context, system: s._ });
 		return Object.assign(action, {
 			id,
 			path: context.path as TPath,
@@ -385,7 +340,11 @@ function from<
 		| ActionTaskProps<TState, TPath, TOp>
 		| MethodTaskProps<TState, TPath, TOp>,
 ) {
-	const { lens = '/', op = 'update' } = taskProps;
+	const {
+		lens = '/',
+		op = 'update',
+		condition: taskCondition = () => true,
+	} = taskProps;
 
 	// Check that the path is valid
 	Path.assert(lens);
@@ -399,29 +358,80 @@ function from<
 	const description = (ctx: Context<TState, TPath, TOp>) =>
 		`${prefix}${opLabel} ${ctx.path}`;
 
+	// Create operations require that the sub-element pointed by the value
+	// does not exist yet
+	let condition = taskCondition;
+	if (op === 'create') {
+		condition = (v, c) => v === undefined && taskCondition(v, c);
+	}
+
+	// Delete and update operations require that the sub-element pointed by the value
+	// exists
+	if (['delete', 'update'].includes(op)) {
+		condition = (v, c) => v !== undefined && taskCondition(v, c);
+	}
+
 	// The task properties
 	const tProps = (() => {
 		if (isActionProps(taskProps)) {
 			prefix = '';
-			const { effect = () => void 0, action = async (s, c) => effect(s, c) } =
-				taskProps;
+			const {
+				effect: taskEffect = () => void 0,
+				action: taskAction = async (v, c) => taskEffect(v, c),
+			} = taskProps;
+
+			let effect = taskEffect;
+			let action = taskAction;
+			if (op === 'create') {
+				effect = (v, c) => {
+					// TODO: the {} will not fit every type so we need to assume that
+					// the task will initialize the sub-state in a proper way. If we had
+					// some sort of validation model from the state we could validate after
+					// applying the effect or avoid the need for initializer tasks as the
+					// initial state of an entity would be knowable
+					v._ = {} as Lens<TState, TPath>;
+
+					return taskEffect(v, c);
+				};
+
+				action = async (v, c) => {
+					v._ = {} as Lens<TState, TPath>;
+
+					return await taskAction(v, c);
+				};
+			} else if (op === 'delete') {
+				// If the task defines a delete operation for the value pointed by
+				// the lens, then we need to delete the property after the action succeeds
+				effect = (v, c) => {
+					const res = taskEffect(v, c);
+					v.delete();
+					return res;
+				};
+
+				action = async (v, c) => {
+					const res = await taskAction(v, c);
+					v.delete();
+					return res;
+				};
+			}
+
 			return {
 				description,
 				lens: lens as TPath,
 				op: op as TOp,
-				condition: () => true,
+				...taskProps,
+				condition,
 				effect,
 				action,
-				...taskProps,
 			};
 		} else {
 			return {
 				description,
 				lens: lens as TPath,
 				op: op as TOp,
-				condition: () => true,
 				expansion: MethodExpansion.DETECT,
 				...taskProps,
+				condition,
 			};
 		}
 	})();
