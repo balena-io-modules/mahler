@@ -379,15 +379,13 @@ class Diagram {
 		const node = DiagramNode.fromId(`${this.parent}-err`);
 		// Go up the stack to the level the search can continue
 		if (e.cause === 'search-failed') {
-			if (this.depth > 1) {
-				this.parent = DiagramNode.level(this.depth - 2);
+			if (this.depth > 0) {
+				this.parent = DiagramNode.level(this.depth - 1);
+				this.depth -= 1;
 			} else {
 				this.parent = DiagramNode.start();
 			}
 
-			if (this.depth > 0) {
-				this.depth -= 1;
-			}
 			return node;
 		}
 
@@ -445,7 +443,7 @@ export type MermaidOpts = {
  * a mermaid graph
  */
 export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
-	const diagram = new Diagram();
+	let diagram = new Diagram();
 
 	return Object.assign(
 		function (e: PlanningEvent<any> | PlanningError) {
@@ -453,6 +451,7 @@ export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
 			let node: DiagramNode | null = null;
 			switch (e.event) {
 				case 'start':
+					diagram = new Diagram();
 					node = diagram.onStart();
 
 					break;
