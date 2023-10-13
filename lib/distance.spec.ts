@@ -1,14 +1,14 @@
 import { expect } from '~/test-utils';
-import { DELETED } from './target';
-import { Diff } from './diff';
+import { UNDEFINED } from './target';
+import { Distance } from './distance';
 
-describe('Diff', () => {
+describe('Distance', () => {
 	describe('patched', () => {
 		it('applies the target operations to the given object', () => {
 			type S = { a?: number; b: string; c?: { [k: string]: string } };
 
 			expect(
-				Diff.of<S>(
+				Distance.from<S>(
 					{
 						a: 1,
 						b: 'one',
@@ -22,7 +22,7 @@ describe('Diff', () => {
 				c: { k: 'v' },
 			});
 			expect(
-				Diff.of<S>(
+				Distance.from<S>(
 					{
 						a: 0,
 						b: 'one',
@@ -32,31 +32,33 @@ describe('Diff', () => {
 				).target,
 			).to.deep.equal({ a: 2, b: 'one', c: { k: 'v' } });
 
-			expect(Diff.of<S>({ a: 0, b: 'two' }, { a: 2 }).target).to.deep.equal({
+			expect(
+				Distance.from<S>({ a: 0, b: 'two' }, { a: 2 }).target,
+			).to.deep.equal({
 				a: 2,
 				b: 'two',
 			});
 			expect(
-				Diff.of<S>(
+				Distance.from<S>(
 					{
 						a: 1,
 						b: 'one',
 						c: { k: 'v' },
 					},
-					{ c: DELETED },
+					{ c: UNDEFINED },
 				).target,
 			).to.deep.equal({
 				a: 1,
 				b: 'one',
 			});
 			expect(
-				Diff.of<S>(
+				Distance.from<S>(
 					{
 						a: 1,
 						b: 'one',
 						c: { k: 'v' },
 					},
-					{ a: 2, c: { k: DELETED } },
+					{ a: 2, c: { k: UNDEFINED } },
 				).target,
 			).to.deep.equal({ a: 2, b: 'one', c: {} });
 		});
@@ -71,7 +73,7 @@ describe('Diff', () => {
 				c: { k: 'v' },
 			};
 
-			const diff = Diff.of(src, { a: 2, c: { k: DELETED } });
+			const diff = Distance.from(src, { a: 2, c: { k: UNDEFINED } });
 			expect(
 				diff({
 					a: 1,
@@ -124,7 +126,7 @@ describe('Diff', () => {
 				a: {},
 			};
 
-			const diff = Diff.of(src, { a: { b: { c: 'd' } } });
+			const diff = Distance.from(src, { a: { b: { c: 'd' } } });
 			expect(
 				diff({
 					a: {},
@@ -142,7 +144,7 @@ describe('Diff', () => {
 				a: {},
 			};
 
-			const diff = Diff.of(src, { a: { b: DELETED } });
+			const diff = Distance.from(src, { a: { b: UNDEFINED } });
 			expect(diff({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
 				{ op: 'update', path: '/', value: { a: {} } },
 				{ op: 'update', path: '/a', value: {} },

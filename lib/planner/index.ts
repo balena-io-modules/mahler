@@ -1,4 +1,4 @@
-import { Diff } from '../diff';
+import { Distance } from '../distance';
 import { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
@@ -115,7 +115,7 @@ function from<TState = any>({
 					stats: { iterations: 0, maxDepth: 0, time: 0 },
 					pendingChanges: [],
 				},
-				diff: Diff.of(current, target),
+				distance: Distance.from(current, target),
 				tasks,
 				trace,
 			});

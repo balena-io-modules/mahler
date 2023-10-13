@@ -1,14 +1,14 @@
 import { Operation } from './operation';
 import { Pointer } from './pointer';
 import { Path } from './path';
-import { Target, DELETED } from './target';
+import { Target, UNDEFINED } from './target';
 import { equals } from './json';
 
 /**
  * A diff is a function that allows to find a list of pending operations to a
  * target.
  */
-export interface Diff<S> {
+export interface Distance<S> {
 	/**
 	 * Return the list of operations that need to be applied to the given object
 	 * to meet the target.
@@ -31,7 +31,7 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	if (t != null && !Array.isArray(t) && typeof t === 'object') {
 		const result = { ...s } as any;
 		for (const [key, value] of Object.entries(t)) {
-			if (value === DELETED) {
+			if (value === UNDEFINED) {
 				delete result[key];
 			} else {
 				result[key] = applyPatch(result[key], value);
@@ -60,9 +60,9 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 
 		// If the target is DELETED, and the source value still
 		// exists we need to add a delete operation
-		if (tgt === DELETED && sValue != null) {
+		if (tgt === UNDEFINED && sValue != null) {
 			yield { op: 'delete', path };
-		} else if (tgt !== DELETED) {
+		} else if (tgt !== UNDEFINED) {
 			// If the source value does not exist, then we add a `create`
 			// operation
 			if (sValue == null) {
@@ -97,20 +97,20 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 		// if tgt is DELETE, then we should also add rules to delete the current
 		// properties recursively
 		if (
-			tgt === DELETED &&
+			tgt === UNDEFINED &&
 			sValue != null &&
 			!Array.isArray(sValue) &&
 			typeof sValue === 'object'
 		) {
 			for (const key of Object.keys(sValue)) {
 				const newPath = `${path}/${key}`;
-				queue.push({ tgt: DELETED, path: newPath });
+				queue.push({ tgt: UNDEFINED, path: newPath });
 			}
 		}
 	}
 }
 
-function of<S>(src: S, tgt: Target<S>): Diff<S> {
+function from<S>(src: S, tgt: Target<S>): Distance<S> {
 	const target = applyPatch(src, tgt);
 
 	return Object.assign(
@@ -127,6 +127,6 @@ function of<S>(src: S, tgt: Target<S>): Diff<S> {
 	);
 }
 
-export const Diff = {
-	of,
+export const Distance = {
+	from,
 };

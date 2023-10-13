@@ -5,7 +5,7 @@ import {
 } from 'mahler-wasm';
 
 import { Lens } from '../lens';
-import { Diff } from '../diff';
+import { Distance } from '../distance';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
@@ -26,7 +26,7 @@ import { isTaskApplicable } from './utils';
 import assert from '../assert';
 
 interface PlanningState<TState = any> {
-	diff: Diff<TState>;
+	distance: Distance<TState>;
 	tasks: Array<Task<TState>>;
 	depth?: number;
 	operation?: Operation<TState, any>;
@@ -348,7 +348,7 @@ function tryInstruction<TState = any>(
 }
 
 export function findPlan<TState = any>({
-	diff,
+	distance,
 	tasks,
 	trace,
 	depth = 0,
@@ -360,7 +360,7 @@ export function findPlan<TState = any>({
 	assert(initialPlan.success);
 
 	// Get the list of operations from the patch
-	const ops = diff(initialPlan.state);
+	const ops = distance(initialPlan.state);
 
 	const { stats } = initialPlan;
 
@@ -406,12 +406,12 @@ export function findPlan<TState = any>({
 			const ctx = Lens.context<TState, any>(
 				task.lens,
 				path,
-				Pointer.of(diff.target, path)!,
+				Pointer.of(distance.target, path)!,
 			);
 
 			const taskPlan = tryInstruction(task(ctx as any), {
 				depth,
-				diff,
+				distance: distance,
 				tasks,
 				trace,
 				operation,
@@ -440,7 +440,7 @@ export function findPlan<TState = any>({
 
 				const res = findPlan({
 					depth: depth + 1,
-					diff,
+					distance: distance,
 					tasks,
 					trace,
 					initialPlan: { ...taskPlan, state, pendingChanges: [] },
