@@ -1,19 +1,19 @@
 export type ServiceStatus = 'created' | 'stopped' | 'running';
 
 export interface Service {
-	readonly image: string;
-	readonly status?: ServiceStatus;
-	readonly createdAt?: Date;
-	readonly startedAt?: Date;
-	readonly finishedAt?: Date;
-	readonly containerId?: string;
-	readonly command: string[];
+	image: string;
+	status?: ServiceStatus;
+	createdAt?: Date;
+	startedAt?: Date;
+	finishedAt?: Date;
+	containerId?: string;
+	command: string[];
 }
 
 export interface Image {
-	readonly name: string;
-	readonly contentHash?: string;
-	readonly imageId?: string;
+	name: string;
+	contentHash?: string;
+	dockerId?: string;
 }
 
 export type UUID = string;
@@ -34,5 +34,5 @@ export type Device = {
 	uuid: string;
 	keys: { [url: string]: string };
 	apps: Record<UUID, App>;
-	images: Image[];
+	images: Record<string, Image>;
 };

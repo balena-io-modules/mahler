@@ -1,9 +1,9 @@
 import * as Docker from 'dockerode';
 import * as tar from 'tar-stream';
 
-import { Disposer, Initializer, Task } from 'mahler';
+import { Task } from 'mahler';
 import { console } from '~/test-utils';
-import { App, Device, Service, ServiceStatus } from './state';
+import { Device, Service, ServiceStatus } from './state';
 import { getContainerName, getImageName, getRegistryAndName } from './utils';
 
 interface StatusError extends Error {
@@ -20,57 +20,36 @@ function isEqualConfig(s1: Service, s2: Service) {
 
 const docker = new Docker();
 
-/**
- * Pull an image from the registry, this task is applicable to
- * the creation of a service, as pulling an image is only needed
- * in that case.
- *
- * Condition: the image is not already present in the device
- * Effect: add the image to the list of images
- * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
- */
-export const fetch = Task.from({
+export const fetchImage = Task.of<Device>().from({
 	op: 'create',
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	// Only pull the image if it's not already present
-	condition: (device: Device, ctx) =>
-		!device.images.some((img) => img.name === getImageName(ctx)),
-	// The effect of this task is to add the image to the device
-	effect: (device, ctx) => {
-		const { digest } = getRegistryAndName(ctx.target.image);
-		return {
-			...device,
-			images: [
-				...device.images,
-				{
-					name: getImageName(ctx),
-					...(digest && { contentHash: digest }),
-				},
-			],
-		};
+	lens: '/images/:imageTag',
+	effect: (image, { target }) => {
+		const { digest } = getRegistryAndName(target.name);
+		image._.name = target.name;
+		if (digest) {
+			image._.contentHash = digest;
+		}
 	},
-	action: async (device, ctx) => {
-		const { registry, digest } = getRegistryAndName(ctx.target.image);
+	action: async (image, { target, imageTag, system: device }) => {
+		const { registry, digest } = getRegistryAndName(target.name);
 
-		const imageName = getImageName(ctx);
 		const pack = tar.pack(); // pack is a stream
 
 		// we use a dockerfile to add image metadata
 		pack.entry(
 			{ name: 'Dockerfile' },
 			[
-				`FROM ${ctx.target.image}`,
-				`LABEL io.balena.image="${ctx.target.image}"`,
+				`FROM ${target.name}`,
+				`LABEL io.balena.image="${target.name}"`,
 				...(digest ? [`LABEL io.balena.content-hash="${digest}"`] : []),
 			].join('\n'),
 		);
 
 		pack.finalize();
-
 		await new Promise((resolve, reject) =>
 			docker
 				.buildImage(pack, {
-					t: imageName,
+					t: imageTag,
 
 					// Add authentication to the registry if a key
 					// has been provided
@@ -93,28 +72,44 @@ export const fetch = Task.from({
 		);
 
 		// Get the image using the name
-		const dockerImage = await docker.getImage(imageName).inspect();
+		const dockerImage = await docker.getImage(imageTag).inspect();
 
 		// try to delete the parent image
 		await docker
-			.getImage(ctx.target.image)
+			.getImage(target.name)
 			.remove()
 			.catch((e) =>
-				console.warn(`could not remove image tag '${ctx.target.image}'`, e),
+				console.warn(`could not remove image tag '${target.name}'`, e),
 			);
 
-		return {
-			...device,
-			images: [
-				...device.images,
-				{
-					name: imageName,
-					imageId: dockerImage.Id,
-					...(digest && { contentHash: digest }),
-				},
-			],
-		};
+		image._.name = target.name;
+		image._.dockerId = dockerImage.Id;
+		if (digest) {
+			image._.contentHash = digest;
+		}
 	},
+	description: ({ imageTag, target }) =>
+		`pull image '${target.name}' with tag '${imageTag}'`,
+});
+
+/**
+ * Pull an image from the registry, this task is applicable to
+ * the creation of a service, as pulling an image is only needed
+ * in that case.
+ *
+ * Condition: the image is not already present in the device
+ * Effect: add the image to the list of images
+ * Action: pull the image from the registry and set the image tag to match the app uuid and release before adding it to the list of images
+ */
+export const fetch = Task.of<Device>().from({
+	op: 'create',
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	// Only pull the image if it's not already present
+	method: (_, ctx) =>
+		fetchImage({
+			imageTag: getImageName(ctx),
+			target: { name: ctx.target.image },
+		}),
 	description: (ctx) =>
 		`pull image '${ctx.target.image}' for service '${ctx.serviceName}' of app '${ctx.appUuid}'`,
 });
@@ -122,33 +117,43 @@ export const fetch = Task.from({
 /**
  * Initialize an app
  *
- * This task uses the Initializer task helper that already checks that the object is not already present.
+ * The planner cannot infer what is an "empty" app, so we need to define
+ * an initializer task that creates an empty app object in the state.
  *
- * This task has no actual effect on the system, it only creates the object in the state.
+ * Because we are using the `create` operation, the task condition automatically
+ * checks that the object is not already present in the state.
  */
-export const createApp = Initializer.of({
-	path: '/apps/:appUuid',
-	// Return an empty app
-	create: (app: App) => ({ name: app.name, releases: {} }),
-	// Without a description the initializer will default to "initialize '/apps/a0'"
+export const createApp = Task.of<Device>().from({
+	op: 'create',
+	lens: '/apps/:appUuid',
+	effect: (app, { target }) => {
+		app._.name = target.name;
+		app._.releases = {};
+	},
+	// Without a description the initializer will default to "create '/apps/a0'"
 });
 
 /**
  * Initialize release
  *
- * This task uses the Initializer task helper that already checks that the object is not already present.
+ * The planner cannot infer what is an "empty" release, so we need to define
+ * an initializer task that creates an empty object in the state.
  *
- * This task has no actual effect on the system, it only creates the object in the state.
+ * Because we are using the `create` operation, the task condition automatically
+ * checks that the object is not already present in the state.
  */
-export const createRelease = Initializer.of({
-	path: '/apps/:appUuid/releases/:releaseUuid',
+export const createRelease = Task.of<Device>().from({
+	op: 'create',
+	lens: '/apps/:appUuid/releases/:releaseUuid',
 	// Return an empty release
-	create: () => ({ services: {} }),
+	effect: (release) => {
+		release._.services = {};
+	},
 	// Without a function definition that defines what the parent 'State'
 	// object is, the compiler cannot infer the type of `ctx` so we just use
 	// any here
-	description: (ctx: any) =>
-		`initialize release '${ctx.releaseUuid}' for app '${ctx.appUuid}'`,
+	description: ({ releaseUuid, appUuid }) =>
+		`initialize release '${releaseUuid}' for app '${appUuid}'`,
 });
 
 /**
@@ -158,23 +163,19 @@ export const createRelease = Initializer.of({
  * Effect: add the service to the `services` object, with a `status` of `created`
  * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
  */
-export const installService = Task.from({
+export const installService = Task.of<Device>().from({
 	op: 'create',
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	condition: (device: Device, ctx) =>
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	condition: (_, { system, ...ctx }) =>
 		// The image has already been downloaded
-		device.images.some((img) => img.name === getImageName(ctx)) &&
-		// The service has not been created yet
-		ctx.get(device) == null,
-	effect: (device: Device, ctx) => {
-		return ctx.set(device, {
-			...ctx.target,
-			...ctx.get(device),
-			status: 'created',
-			containerId: 'deadbeef',
-		});
+		getImageName(ctx) in system.images,
+	effect: (service, { target }) => {
+		service._.image = target.image;
+		service._.command = target.command || [];
+		service._.status = 'created';
+		service._.containerId = 'deadbeef';
 	},
-	action: async (device: Device, ctx) => {
+	action: async (service, { target, ...ctx }) => {
 		const containerName = getContainerName(ctx);
 
 		// This is our way to update the internal agent state, we look for
@@ -208,7 +209,7 @@ export const installService = Task.from({
 				// service image has the same image name in the label?
 				// that should only happen if someone is trying to mess with
 				// the engine state so we would need to abort
-				image: ctx.target.image,
+				image: target.image,
 				startedAt: new Date(existing.State.StartedAt),
 				createdAt: new Date(existing.Created),
 				containerId: existing.Id,
@@ -218,13 +219,15 @@ export const installService = Task.from({
 
 			// If the service has a different config to what we are expecting
 			// the service start step will fail and we'll need to re-plan
-			return ctx.set(device, s);
+			service._ = s;
+
+			return;
 		}
 
 		const container = await docker.createContainer({
 			name: containerName,
 			Image: getImageName(ctx),
-			Cmd: ctx.target.command || [],
+			Cmd: target.command || [],
 			Labels: {
 				'io.balena.app-uuid': ctx.appUuid,
 			},
@@ -232,16 +235,14 @@ export const installService = Task.from({
 
 		const { Id: containerId, Created } = await container.inspect();
 
-		return ctx.set(device, {
-			...ctx.target,
-			...ctx.get(device),
-			status: 'created',
-			containerId,
-			createdAt: new Date(Created),
-		});
+		service._.image = target.image;
+		service._.command = target.command || [];
+		service._.status = 'created';
+		service._.containerId = containerId;
+		service._.createdAt = new Date(Created);
 	},
-	description: (ctx) =>
-		`create container for service '${ctx.serviceName}' of app '${ctx.appUuid}' and release '${ctx.releaseUuid}'`,
+	description: ({ serviceName, appUuid, releaseUuid }) =>
+		`create container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
 });
 
 /**
@@ -252,37 +253,36 @@ export const installService = Task.from({
  * Effect: set the service status to `running`
  * Action: start the container using the docker API
  */
-export const startService = Task.from({
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+export const startService = Task.of<Device>().from({
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	// Because we are dealing with releases, this has a more
 	// complex condition than the composer example
-	condition: (device: Device, ctx) => {
-		const { releases } = device.apps[ctx.appUuid];
+	condition: (
+		service,
+		{ releaseUuid, appUuid, serviceName, system: device, target },
+	) => {
+		const { releases } = device.apps[appUuid];
 
 		// The task can be applied if the following conditions are met:
 		return (
-			// The container has been created (the state has a containerId)
-			ctx.get(device)?.containerId != null &&
+			// The container has been created
+			service.containerId != null &&
 			// The configuration of the existing container matches the target
-			isEqualConfig(ctx.get(device), ctx.target) &&
+			isEqualConfig(service, target) &&
 			// The container is not running yet
-			ctx.get(device)?.status !== 'running' &&
+			service.status !== 'running' &&
 			// And if there is a service with the same name from other release, that
 			// service cannot be running
 			Object.keys(releases)
-				.filter((u) => u !== ctx.releaseUuid)
-				.every(
-					(u) => releases[u].services[ctx.serviceName]?.status !== 'running',
-				)
+				.filter((u) => u !== releaseUuid)
+				.every((u) => releases[u].services[serviceName]?.status !== 'running')
 		);
 	},
-	effect: (device: Device, service) =>
-		service.set(device, {
-			...service.get(device),
-			status: 'running',
-		}),
-	action: async (device: Device, service) => {
-		const container = docker.getContainer(service.get(device).containerId!);
+	effect: (service) => {
+		service._.status = 'running';
+	},
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.start().catch((e) => {
 			if (isStatusError(e) && e.statusCode === 304) {
 				return;
@@ -292,15 +292,11 @@ export const startService = Task.from({
 
 		const { State } = await container.inspect();
 		// TODO: perhaps check if the container is actually running and fail if not?
-
-		return service.set(device, {
-			...service.get(device),
-			status: 'running',
-			startedAt: new Date(State.StartedAt),
-		});
+		service._.status = 'running';
+		service._.startedAt = new Date(State.StartedAt);
 	},
-	description: (ctx) =>
-		`start container for service '${ctx.serviceName}' of app '${ctx.appUuid}' and release '${ctx.releaseUuid}'`,
+	description: ({ serviceName, appUuid, releaseUuid }) =>
+		`start container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
 });
 
 /**
@@ -311,88 +307,52 @@ export const startService = Task.from({
  * Effect: move the service from the source release to the target release
  * Action: rename the container using the docker API
  */
-export const migrateService = Task.from({
+export const migrateService = Task.of<Device>().from({
 	op: 'create',
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	condition: (device: Device, ctx) => {
-		const { releases } = device.apps[ctx.appUuid];
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	condition: (
+		_,
+		{ appUuid, releaseUuid, serviceName, system: device, target },
+	) => {
+		const { releases } = device.apps[appUuid];
 		const [currentRelease] = Object.keys(releases).filter(
-			(u) => u !== ctx.releaseUuid,
+			(u) => u !== releaseUuid,
 		);
-		const currentService = releases[currentRelease]?.services[ctx.serviceName];
+		const currService = releases[currentRelease]?.services[serviceName];
 		return (
-			ctx.get(device) == null &&
-			currentService != null &&
-			isEqualConfig(currentService, ctx.target) &&
-			ctx.target.image === currentService.image
+			currService != null &&
+			isEqualConfig(currService, target) &&
+			target.image === currService.image
 		);
 	},
-	effect: (device: Device, ctx) => {
-		const { releases } = device.apps[ctx.appUuid];
-		const [currentRelease] = Object.keys(releases).filter(
-			(u) => u !== ctx.releaseUuid,
-		)!;
+	effect: (service, { system: device, appUuid, serviceName, releaseUuid }) => {
+		const { releases } = device.apps[appUuid];
+		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
+		const currService = releases[currRelease]?.services[serviceName];
 
-		const { [ctx.serviceName]: service, ...currentServices } =
-			releases[currentRelease].services;
+		// Remove the release from the current release
+		delete releases[currRelease].services[serviceName];
 
-		// Remove the service from the source release
-		// and move it to the target release
-		return ctx.set(
-			{
-				...device,
-				apps: {
-					...device.apps,
-					[ctx.appUuid]: {
-						...device.apps[ctx.appUuid],
-						releases: {
-							...device.apps[ctx.appUuid].releases,
-							[currentRelease]: {
-								...releases[currentRelease],
-								services: currentServices,
-							},
-						},
-					},
-				},
-			},
-			service,
-		);
+		// Move the service to the new release
+		service._ = currService;
 	},
-	action: async (device: Device, ctx) => {
-		const { releases } = device.apps[ctx.appUuid];
-		const [currentRelease] = Object.keys(releases).filter(
-			(u) => u !== ctx.releaseUuid,
-		)!;
+	action: async (
+		service,
+		{ system: device, appUuid, serviceName, releaseUuid },
+	) => {
+		const { releases } = device.apps[appUuid];
+		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
 
-		const { [ctx.serviceName]: service, ...currentServices } =
-			releases[currentRelease].services;
+		const currService = releases[currRelease]?.services[serviceName];
+		delete releases[currRelease].services[serviceName];
 
 		// Rename the container
-		await docker.getContainer(service.containerId!).rename({
-			name: getContainerName(ctx),
+		await docker.getContainer(service._.containerId!).rename({
+			name: getContainerName({ releaseUuid, serviceName }),
 		});
 
-		// Remove the service from the source release
-		// and move it to the target release
-		return ctx.set(
-			{
-				...device,
-				apps: {
-					...device.apps,
-					[ctx.appUuid]: {
-						...device.apps[ctx.appUuid],
-						releases: {
-							...device.apps[ctx.appUuid].releases,
-							[currentRelease]: {
-								...releases[currentRelease],
-								services: currentServices,
-							},
-						},
-					},
-				},
-			},
-			service,
-		);
+		// Move the container to the new release
+		service._ = currService;
 	},
 	description: (ctx) =>
 		`migrate unchanged service '${ctx.serviceName}' of app '${ctx.appUuid} to release '${ctx.releaseUuid}' '`,
@@ -410,30 +370,31 @@ export const migrateService = Task.from({
  * Effect: set the service status to `stopped`
  * Action: stop the container using the docker API
  */
-export const stopService = Task.from({
+export const stopService = Task.of<Device>().from({
 	// Stop is applicable to a service delete or update
 	op: '*',
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	condition: (device: Device, ctx) => {
-		const { releases } = device.apps[ctx.appUuid];
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	condition: (
+		service,
+		{ system: device, appUuid, releaseUuid, serviceName },
+	) => {
+		const { releases } = device.apps[appUuid];
 		return (
-			ctx.get(device)?.containerId != null &&
-			ctx.get(device)?.status === 'running' &&
+			service?.containerId != null &&
+			service?.status === 'running' &&
 			Object.keys(releases)
-				.filter((u) => u !== ctx.releaseUuid)
+				.filter((u) => u !== releaseUuid)
 				.every(
 					// If there are equivalent services from other releases they should at least have a container
-					(u) => releases[u].services[ctx.serviceName]?.containerId != null,
+					(u) => releases[u].services[serviceName]?.containerId != null,
 				)
 		);
 	},
-	effect: (device: Device, service) =>
-		service.set(device, {
-			...service.get(device),
-			status: 'stopped',
-		}),
-	action: async (device: Device, service) => {
-		const container = docker.getContainer(service.get(device).containerId!);
+	effect: (service) => {
+		service._.status = 'stopped';
+	},
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.stop().catch((e) => {
 			if (isStatusError(e)) {
 				if (e.statusCode !== 304 && e.statusCode !== 404) {
@@ -446,11 +407,8 @@ export const stopService = Task.from({
 
 		const { State } = await container.inspect();
 
-		return service.set(device, {
-			...service.get(device),
-			status: 'stopped',
-			finishedAt: new Date(State.FinishedAt),
-		});
+		service._.status = 'stopped';
+		service._.finishedAt = new Date(State.FinishedAt);
 	},
 	description: ({ serviceName, appUuid, releaseUuid }) =>
 		`stop container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
@@ -466,18 +424,17 @@ export const stopService = Task.from({
  * Effect: remove the service from the device state
  * Action: remove the container using the docker API
  */
-export const removeService = Task.from({
+export const removeService = Task.of<Device>().from({
 	op: '*',
-	path: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
-	condition: (device: Device, service) =>
-		service.get(device)?.containerId != null &&
-		service.get(device)?.status !== 'running',
-	effect: (device: Device, ctx) => ctx.del(device),
-	action: async (device: Device, ctx) => {
-		const container = docker.getContainer(ctx.get(device).containerId!);
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	condition: (service) =>
+		service?.containerId != null && service?.status !== 'running',
+	effect: (service) => service.delete(),
+	action: async (service) => {
+		const container = docker.getContainer(service._.containerId!);
 		await container.remove({ v: true });
 
-		return ctx.del(device);
+		service.delete();
 	},
 	description: ({ serviceName, appUuid, releaseUuid }) =>
 		`remove container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
@@ -494,10 +451,13 @@ export const removeService = Task.from({
  * Condition: the release has not been deleted yet and the release has no services
  * Effect: cleanup the release from the device state
  */
-export const removeRelease = Disposer.of({
-	path: '/apps/:appUuid/releases/:releaseUuid',
-	condition: (device: Device, ctx) =>
-		Object.keys(ctx.get(device).services).length === 0,
+export const removeRelease = Task.of<Device>().from({
+	op: 'delete',
+	lens: '/apps/:appUuid/releases/:releaseUuid',
+	condition: (release) => Object.keys(release.services).length === 0,
+	effect: () => {
+		/* void */
+	},
 	description: (ctx) => `remove release '${ctx.releaseUuid}'`,
 });
 
@@ -512,9 +472,10 @@ export const removeRelease = Disposer.of({
  * Condition: the app has not been deleted yet and all releases have been uninstalled
  * Effect: remove the app from the device state
  */
-export const removeApp = Disposer.of({
-	path: '/apps/:appUuid',
-	condition: (device: Device, ctx) =>
-		Object.keys(ctx.get(device).releases).length === 0,
+export const removeApp = Task.of<Device>().from({
+	op: 'delete',
+	lens: '/apps/:appUuid',
+	effect: () => void 0,
+	condition: (app) => Object.keys(app.releases).length === 0,
 	description: (ctx) => `remove app '${ctx.appUuid}'`,
 });

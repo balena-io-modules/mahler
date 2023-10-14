@@ -3,6 +3,7 @@ import { expect } from '~/test-utils';
 
 import { Device } from './state';
 import { fetch, installService, startService } from './tasks';
+import { zip } from 'mahler/testing';
 
 const docker = new Docker();
 
@@ -26,13 +27,15 @@ describe('orchestrator/tasks', () => {
 		await docker.pruneImages({ filters: { dangling: { false: true } } });
 	};
 
-	describe('fetch', () => {
-		const doFetch = fetch({
-			appUuid: 'a0',
-			releaseUuid: 'r0',
-			serviceName: 'my-service',
-			target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
-		});
+	describe('fetchService', () => {
+		const doFetch = zip(
+			fetch({
+				appUuid: 'a0',
+				releaseUuid: 'r0',
+				serviceName: 'my-service',
+				target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
+			}),
+		);
 
 		afterEach(async () => {
 			await cleanup('a0');
@@ -49,16 +52,13 @@ describe('orchestrator/tasks', () => {
 						releases: {},
 					},
 				},
-				images: [],
+				images: {},
 			};
-
-			expect(doFetch.condition(s), 'condition should hold before the test').to
-				.be.true;
 
 			s = await doFetch(s);
 			expect(s.apps['a0']).to.not.be.undefined;
-			expect(s.images.map((i) => i.name)).to.include('a0_my-service:r0');
-			const { imageId } = s.images[0];
+			expect(s.images).to.have.property('a0_my-service:r0');
+			const { dockerId: imageId } = s.images['a0_my-service:r0'];
 			expect(imageId).to.not.be.undefined;
 			expect(await docker.getImage(imageId!).inspect())
 				.to.have.property('RepoTags')
@@ -66,13 +66,6 @@ describe('orchestrator/tasks', () => {
 
 			// The parent tag should be removed
 			await expect(docker.getImage('alpine:latest').inspect()).to.be.rejected;
-
-			// TODO: it should always(?) be true that the task condition should match
-			// before the test but not after, perhaps this should be a test helper
-			expect(
-				doFetch.condition(s),
-				'condition should no longer hold after the test',
-			).to.be.false;
 
 			// If we run the task again, it should not pull the image again
 			// i.e. the image should have the same id as before
@@ -86,14 +79,16 @@ describe('orchestrator/tasks', () => {
 						releases: {},
 					},
 				},
-				images: [],
+				images: {},
 			});
 
 			expect(s.apps['a0']).to.not.be.undefined;
-			expect(s.images.map((i) => i.name)).to.include('a0_my-service:r0');
-			expect(s.images[0].imageId).to.not.be.undefined;
-			expect(s.images[0].imageId).to.equal(imageId);
-			expect(await docker.getImage(s.images[0].imageId!).inspect())
+			expect(s.images).to.have.property('a0_my-service:r0');
+			expect(s.images['a0_my-service:r0'].dockerId).to.not.be.undefined;
+			expect(s.images['a0_my-service:r0'].dockerId).to.equal(imageId);
+			expect(
+				await docker.getImage(s.images['a0_my-service:r0'].dockerId!).inspect(),
+			)
 				.to.have.property('RepoTags')
 				.that.contains('a0_my-service:r0');
 		});
@@ -114,43 +109,38 @@ describe('orchestrator/tasks', () => {
 					},
 				},
 			},
-			images: [],
+			images: {},
 		};
 
 		beforeEach(async () => {
-			s0 = await fetch({
-				appUuid: 'a0',
-				releaseUuid: 'r0',
-				serviceName: 'my-service',
-				target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
-			})(s0);
+			s0 = await zip(
+				fetch({
+					appUuid: 'a0',
+					releaseUuid: 'r0',
+					serviceName: 'my-service',
+					target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
+				}),
+			)(s0);
 		});
 
 		afterEach(async () => {
 			await cleanup('a0');
 		});
 
-		const doInstall = installService({
-			appUuid: 'a0',
-			releaseUuid: 'r0',
-			serviceName: 'my-service',
-			target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
-		});
+		const doInstall = zip(
+			installService({
+				appUuid: 'a0',
+				releaseUuid: 'r0',
+				serviceName: 'my-service',
+				target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
+			}),
+		);
 
 		it('should create a container', async () => {
-			// The condition should hold now
-			expect(doInstall.condition(s0), 'condition should hold before the test')
-				.to.be.true;
-
 			let s = await doInstall(s0);
 			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
 			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
 				.undefined;
-
-			expect(
-				doInstall.condition(s),
-				'condition should no longer hold after the test',
-			).to.be.false;
 
 			const { containerId } =
 				s.apps['a0'].releases['r0'].services['my-service'];
@@ -188,48 +178,50 @@ describe('orchestrator/tasks', () => {
 					},
 				},
 			},
-			images: [],
+			images: {},
 		};
 
 		beforeEach(async () => {
-			s0 = await fetch({
-				appUuid: 'a0',
-				releaseUuid: 'r0',
-				serviceName: 'my-service',
-				target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
-			})(s0);
-			s0 = await installService({
+			s0 = await zip(
+				fetch({
+					appUuid: 'a0',
+					releaseUuid: 'r0',
+					serviceName: 'my-service',
+					target: { image: 'alpine:latest', command: ['sleep', 'infinity'] },
+				}),
+			)(s0);
+			s0 = await zip(
+				installService({
+					appUuid: 'a0',
+					releaseUuid: 'r0',
+					serviceName: 'my-service',
+					target: {
+						image: 'alpine:latest',
+						command: ['sleep', 'infinity'],
+						status: 'created',
+					},
+				}),
+			)(s0);
+		});
+
+		const doStart = zip(
+			startService({
 				appUuid: 'a0',
 				releaseUuid: 'r0',
 				serviceName: 'my-service',
 				target: {
 					image: 'alpine:latest',
 					command: ['sleep', 'infinity'],
-					status: 'created',
+					status: 'running',
 				},
-			})(s0);
-		});
-
-		const doStart = startService({
-			appUuid: 'a0',
-			releaseUuid: 'r0',
-			serviceName: 'my-service',
-			target: {
-				image: 'alpine:latest',
-				command: ['sleep', 'infinity'],
-				status: 'running',
-			},
-		});
+			}),
+		);
 
 		afterEach(async () => {
 			await cleanup('a0');
 		});
 
 		it('should start a container', async () => {
-			// The condition should hold now
-			expect(doStart.condition(s0), 'condition should hold before the test').to
-				.be.true;
-
 			let s = await doStart(s0);
 			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
 			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
@@ -237,11 +229,6 @@ describe('orchestrator/tasks', () => {
 			expect(
 				s.apps['a0'].releases['r0'].services['my-service'].status,
 			).to.equal('running');
-
-			expect(
-				doStart.condition(s),
-				'condition should no longer hold after the test',
-			).to.be.false;
 
 			const { containerId } =
 				s.apps['a0'].releases['r0'].services['my-service'];

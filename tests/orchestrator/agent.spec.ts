@@ -1,7 +1,7 @@
 import * as Docker from 'dockerode';
 import { console, expect } from '~/test-utils';
 
-import { Agent, DELETED } from 'mahler';
+import { Agent, UNDEFINED } from 'mahler';
 import { planner } from './planner';
 import { Device } from './state';
 
@@ -38,7 +38,7 @@ describe('orchestrator/agent', () => {
 				uuid: 'd0',
 				apps: {},
 				keys: {},
-				images: [],
+				images: {},
 			},
 			planner,
 			opts: { minWaitMs: 1000, logger: console },
@@ -147,7 +147,7 @@ describe('orchestrator/agent', () => {
 				a0: {
 					name: 'test-app',
 					releases: {
-						r0: DELETED,
+						r0: UNDEFINED,
 						r1: {
 							services: {
 								main: {
@@ -182,7 +182,7 @@ describe('orchestrator/agent', () => {
 		console.info('Uninstall app');
 		agent.seek({
 			apps: {
-				a0: DELETED,
+				a0: UNDEFINED,
 			},
 		});
 		expect(await agent.wait(), 'delete the release should succeed')
