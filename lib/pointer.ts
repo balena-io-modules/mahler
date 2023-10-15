@@ -1,4 +1,5 @@
 import { Path } from './path';
+import { isArrayIndex } from './is-array-index';
 
 export type Pointer<O, P extends Path> = PointerWithSlash<O, P>;
 
@@ -31,7 +32,7 @@ export class InvalidPointer extends Error {
 	}
 }
 
-function of<O = any, P extends Path = '/'>(
+function from<O = any, P extends Path = '/'>(
 	obj: O,
 	path: P,
 ): Pointer<O, P> | undefined {
@@ -44,6 +45,12 @@ function of<O = any, P extends Path = '/'>(
 			throw new InvalidPointer(path, obj);
 		}
 
+		if (Array.isArray(o) && !isArrayIndex(p)) {
+			throw new InvalidPointer(path, obj);
+		}
+
+		// Pointer is permissive, if the object does not exist in the type,
+		// it doesn't mean it cannot exist so we return undefined
 		if (!(p in o)) {
 			return undefined;
 		}
@@ -54,5 +61,5 @@ function of<O = any, P extends Path = '/'>(
 }
 
 export const Pointer = {
-	of,
+	from: from,
 };

@@ -406,7 +406,7 @@ export function findPlan<TState = any>({
 			const ctx = Lens.context<TState, any>(
 				task.lens,
 				path,
-				Pointer.of(distance.target, path)!,
+				Pointer.from(distance.target, path)!,
 			);
 
 			const taskPlan = tryInstruction(task(ctx as any), {

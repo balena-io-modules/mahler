@@ -1,7 +1,8 @@
 import assert from './assert';
 import { Identity } from './identity';
+import { isArrayIndex } from './is-array-index';
 import { Path } from './path';
-import { Pointer, InvalidPointer } from './pointer';
+import { InvalidPointer, Pointer } from './pointer';
 import { Ref } from './ref';
 
 export type Lens<TState, TPath extends Path> = LensContext<
@@ -125,16 +126,6 @@ type LensOnArray<
 		: never
 	: never;
 
-export function isArrayIndex(x: unknown): x is number {
-	return (
-		x != null &&
-		typeof x === 'string' &&
-		!isNaN(+x) &&
-		+x === parseInt(x, 10) &&
-		+x >= 0
-	);
-}
-
 function params(template: Path, path: Path) {
 	const templateParts = Path.elems(template);
 	const parts = Path.elems(path);
@@ -182,7 +173,7 @@ function createLens<TState, TPath extends Path>(
 	s: TState,
 	p: TPath,
 ): Lens<TState, TPath> {
-	return Pointer.of(s, p) as Lens<TState, TPath>;
+	return Pointer.from(s, p) as Lens<TState, TPath>;
 }
 
 export const Lens = {
@@ -215,6 +206,10 @@ function createView<TState, TPath extends Path>(
 			throw new InvalidPointer(path, obj);
 		}
 
+		if (Array.isArray(parent) && !isArrayIndex(p)) {
+			throw new InvalidPointer(path, obj);
+		}
+
 		if (!(p in parent)) {
 			// Cannot create a view if the path does not exist
 			throw new InvalidPointer(path, obj);
@@ -222,7 +217,17 @@ function createView<TState, TPath extends Path>(
 		parent = parent[p];
 	}
 
-	const pointer = last != null ? parent[last] : parent;
+	let pointer = parent;
+	if (last != null) {
+		if (!Array.isArray(parent) && typeof parent !== 'object') {
+			throw new InvalidPointer(path, obj);
+		}
+
+		if (Array.isArray(parent) && !isArrayIndex(last)) {
+			throw new InvalidPointer(path, obj);
+		}
+		pointer = parent[last];
+	}
 
 	const view = {
 		_: pointer,

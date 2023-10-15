@@ -55,8 +55,8 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 	while (queue.length > 0) {
 		const { tgt, path } = queue.shift()!;
 
-		const sValue = Pointer.of(s, path);
-		const tValue = Pointer.of(patched, path);
+		const sValue = Pointer.from(s, path);
+		const tValue = Pointer.from(patched, path);
 
 		// If the target is DELETED, and the source value still
 		// exists we need to add a delete operation
