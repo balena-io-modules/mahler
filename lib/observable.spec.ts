@@ -1,15 +1,16 @@
 import { expect } from '~/test-utils';
 import { Observable } from './observable';
+import { promisify } from 'util';
 
-import { setTimeout } from 'timers/promises';
-import { stub } from 'sinon';
+import { stub, useFakeTimers } from 'sinon';
 
 const interval = (period: number): Observable<number> => {
+	const sleep = promisify(setTimeout);
 	return Observable.from(
 		(async function* () {
 			let i = 0;
 			while (true) {
-				await setTimeout(period);
+				await sleep(period);
 				yield i++;
 			}
 		})(),
@@ -17,6 +18,16 @@ const interval = (period: number): Observable<number> => {
 };
 
 describe('Observable', () => {
+	let clock: sinon.SinonFakeTimers;
+
+	beforeEach(() => {
+		clock = useFakeTimers();
+	});
+
+	afterEach(() => {
+		clock.restore();
+	});
+
 	it('creates observables from promises', async () => {
 		const o = Observable.from(Promise.resolve(42));
 
@@ -70,7 +81,7 @@ describe('Observable', () => {
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await setTimeout(39);
+		await clock.tickAsync(30);
 
 		// Only now the sensor function should be called
 		expect(read).to.have.been.calledThrice;
@@ -79,14 +90,14 @@ describe('Observable', () => {
 		subscriber.unsubscribe();
 	});
 
-	it('it returns a stream of values', async () => {
+	it('returns a stream of values', async () => {
 		const o = interval(10);
 
 		// Add a subscriber
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await setTimeout(39);
+		await clock.tickAsync(39);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledThrice;
@@ -101,7 +112,7 @@ describe('Observable', () => {
 		// Testing unsubcribe
 		next.reset();
 		const subscriber2 = o.subscribe(next2);
-		await setTimeout(39);
+		await clock.tickAsync(39);
 
 		expect(next2).to.have.been.calledThrice;
 		expect(next2).to.have.been.calledWith(4);
@@ -112,7 +123,7 @@ describe('Observable', () => {
 		subscriber2.unsubscribe();
 	});
 
-	it('it shares values between subscribers', async () => {
+	it('shares values between subscribers', async () => {
 		// The current implementation makes it so values
 		// produced by async generators will be shared by
 		// multiple observers, which is probably not what we
@@ -125,7 +136,7 @@ describe('Observable', () => {
 		const subscriber = o.subscribe(next);
 		const subscriber2 = o.subscribe(next2);
 
-		await setTimeout(45);
+		await clock.tickAsync(49);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledTwice;
@@ -139,14 +150,14 @@ describe('Observable', () => {
 		subscriber2.unsubscribe();
 	});
 
-	it('it allows mapping over values', async () => {
+	it('allows mapping over values', async () => {
 		const o = interval(10).map((x) => x * 2);
 
 		// Add a subscriber
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await setTimeout(39);
+		await clock.tickAsync(39);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledThrice;
@@ -165,7 +176,7 @@ describe('Observable', () => {
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await setTimeout(55);
+		await clock.tickAsync(55);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledWith('a0');
@@ -232,7 +243,7 @@ describe('Observable', () => {
 		expect(next).to.have.been.calledTwice;
 	});
 
-	it('it ignores the error if no error handler is provided', async () => {
+	it('ignores the error if no error handler is provided', async () => {
 		const letters = Observable.from(
 			(function* () {
 				yield 'a';
@@ -248,8 +259,10 @@ describe('Observable', () => {
 		process.once('unhandledRejection', rejection);
 
 		const subscriber = letters.subscribe(next);
-		await setTimeout(10);
-		expect(next).to.have.been.calledTwice;
+		// There is no clock here, but observable promisifies the called function
+		// whether it is async or not so we need
+		// to await something in order for the observable to get a chance to complete
+		await clock.tickAsync(10);
 		expect(rejection).to.have.been.called;
 		subscriber.unsubscribe();
 	});
