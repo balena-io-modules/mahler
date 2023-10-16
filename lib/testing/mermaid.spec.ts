@@ -44,10 +44,9 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
@@ -61,14 +60,14 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- 496e8a2("+1")
-				496e8a2 -.- stop(( ))
+				d0 -.- 1b61d85("+1")
+				1b61d85 -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> 496e8a2
-				496e8a2:::selected
-				496e8a2 --> stop
+				start --> 1b61d85
+				1b61d85:::selected
+				1b61d85 --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`.trim(),
@@ -76,17 +75,15 @@ describe('Mermaid', () => {
 	});
 
 	it('single action plan with branching', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
-		const dec = Task.from({
-			condition: (state: number, { target }) => state > target,
-			effect: (state: number) => state - 1,
-			action: async (state: number) => state - 1,
+		const dec = Task.of<number>().from({
+			condition: (state, { target }) => state > target,
+			effect: (state) => --state._,
 			description: '-1',
 		});
 
@@ -100,31 +97,30 @@ describe('Mermaid', () => {
 
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- 3f11921("-1")
-				3f11921 -.- 3f11921-err[ ]
-				3f11921-err:::error
-				d0 -.- 496e8a2("+1")
-				496e8a2 -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> 496e8a2
-				496e8a2:::selected
-				496e8a2 --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 430b5ac("-1")
+					430b5ac -.- 430b5ac-err[ ]
+					430b5ac-err:::error
+					d0 -.- 1b61d85("+1")
+					1b61d85 -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 1b61d85
+					1b61d85:::selected
+					1b61d85 --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 				`.trim(),
 		);
 	});
 
 	it('two action plan', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
@@ -135,39 +131,37 @@ describe('Mermaid', () => {
 
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- c897673("+1")
-				c897673 -.- d1{ }
-				d1 -.- e87399f("+1")
-				e87399f -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> c897673
-				c897673:::selected
-				c897673 --> e87399f
-				e87399f:::selected
-				e87399f --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 32215d7("+1")
+					32215d7 -.- d1{ }
+					d1 -.- bb43ece("+1")
+					bb43ece -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 32215d7
+					32215d7:::selected
+					32215d7 --> bb43ece
+					bb43ece:::selected
+					bb43ece --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 			`.trim(),
 		);
 	});
 
 	it('two action plan with branching', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
-		const dec = Task.from({
+		const dec = Task.of<number>().from({
 			condition: (state: number, { target }) => state > target,
-			effect: (state: number) => state - 1,
-			action: async (state: number) => state - 1,
+			effect: (state) => --state._,
 			description: '-1',
 		});
 
@@ -181,44 +175,43 @@ describe('Mermaid', () => {
 
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- a12d4dc("-1")
-				a12d4dc -.- a12d4dc-err[ ]
-				a12d4dc-err:::error
-				d0 -.- c897673("+1")
-				c897673 -.- d1{ }
-				d1 -.- 8bf512f("-1")
-				8bf512f -.- 8bf512f-err[ ]
-				8bf512f-err:::error
-				d1 -.- e87399f("+1")
-				e87399f -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> c897673
-				c897673:::selected
-				c897673 --> e87399f
-				e87399f:::selected
-				e87399f --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 90d01a4("-1")
+					90d01a4 -.- 90d01a4-err[ ]
+					90d01a4-err:::error
+					d0 -.- 32215d7("+1")
+					32215d7 -.- d1{ }
+					d1 -.- 3f3fe30("-1")
+					3f3fe30 -.- 3f3fe30-err[ ]
+					3f3fe30-err:::error
+					d1 -.- bb43ece("+1")
+					bb43ece -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 32215d7
+					32215d7:::selected
+					32215d7 --> bb43ece
+					bb43ece:::selected
+					bb43ece --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 				`.trim(),
 		);
 	});
 
 	it('single action plan with unused method', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
-		const byTwo = Task.from({
-			condition: (state: number, { target }) => target - state > 1,
-			method: (_: number, { target }) => [inc({ target }), inc({ target })],
+		const byTwo = Task.of<number>().from({
+			condition: (state, { target }) => target - state > 1,
+			method: (_, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
 		});
 
@@ -232,37 +225,36 @@ describe('Mermaid', () => {
 
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- 826b197[["+2"]]
-				826b197 -.- 826b197-err[ ]
-				826b197-err:::error
-				d0 -.- 496e8a2("+1")
-				496e8a2 -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> 496e8a2
-				496e8a2:::selected
-				496e8a2 --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 85ff46f[["+2"]]
+					85ff46f -.- 85ff46f-err[ ]
+					85ff46f-err:::error
+					d0 -.- 1b61d85("+1")
+					1b61d85 -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 1b61d85
+					1b61d85:::selected
+					1b61d85 --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 				`.trim(),
 		);
 	});
 
 	it('single action plan with used method', function () {
-		const inc = Task.from({
-			condition: (state: number, { target }) => state < target,
-			effect: (state: number) => state + 1,
-			action: async (state: number) => state + 1,
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
 			description: '+1',
 		});
 
-		const byTwo = Task.from({
-			condition: (state: number, { target }) => target - state > 1,
-			method: (_: number, { target }) => [inc({ target }), inc({ target })],
+		const byTwo = Task.of<number>().from({
+			condition: (state, { target }) => target - state > 1,
+			method: (_, { target }) => [inc({ target }), inc({ target })],
 			description: '+2',
 		});
 
@@ -276,61 +268,55 @@ describe('Mermaid', () => {
 
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- 21ac729[["+2"]]
-				21ac729 -.- dc2da69("+1")
-				dc2da69 -.- 19e83b4("+1")
-				19e83b4 -.- d1{ }
-				d1 -.- c1bb3cb[["+2"]]
-				c1bb3cb -.- c1bb3cb-err[ ]
-				c1bb3cb-err:::error
-				d1 -.- c9c70c6("+1")
-				c9c70c6 -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> dc2da69
-				dc2da69:::selected
-				dc2da69 --> 19e83b4
-				19e83b4:::selected
-				19e83b4 --> c9c70c6
-				c9c70c6:::selected
-				c9c70c6 --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- afa7c77[["+2"]]
+					afa7c77 -.- 1d5c604("+1")
+					1d5c604 -.- e4545aa("+1")
+					e4545aa -.- d1{ }
+					d1 -.- 5a8d071[["+2"]]
+					5a8d071 -.- 5a8d071-err[ ]
+					5a8d071-err:::error
+					d1 -.- 6ba514a("+1")
+					6ba514a -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 1d5c604
+					1d5c604:::selected
+					1d5c604 --> e4545aa
+					e4545aa:::selected
+					e4545aa --> 6ba514a
+					6ba514a:::selected
+					6ba514a --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 				`.trim(),
 		);
 	});
 
 	it('nested methods', function () {
-		const plusOne = Task.from({
+		const plusOne = Task.of<number>().from({
 			// This means the task can only be triggered
 			// if the system state is below the target
-			condition: (state: number, { target }) => state < target,
+			condition: (state, { target }) => state < target,
 			// The effect of the action is increasing the system
 			// counter by 1
-			effect: (state: number) => state + 1,
+			effect: (state) => ++state._,
 			// An optional description. Useful for testing
 			description: '+1',
 		});
 
-		const plusTwo = Task.from({
-			condition: (state: number, { target }) => target - state > 1,
-			method: (_: number, { target }) => [
-				plusOne({ target }),
-				plusOne({ target }),
-			],
+		const plusTwo = Task.of<number>().from({
+			condition: (state, { target }) => target - state > 1,
+			method: (_, { target }) => [plusOne({ target }), plusOne({ target })],
 			description: '+2',
 		});
 
-		const plusThree = Task.from({
-			condition: (state: number, { target }) => target - state > 2,
-			method: (_: number, { target }) => [
-				plusTwo({ target }),
-				plusOne({ target }),
-			],
+		const plusThree = Task.of<number>().from({
+			condition: (state, { target }) => target - state > 2,
+			method: (_, { target }) => [plusTwo({ target }), plusOne({ target })],
 			description: '+3',
 		});
 
@@ -343,49 +329,49 @@ describe('Mermaid', () => {
 		planner.findPlan(0, 7);
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- 822bf63[["+3"]]
-				822bf63 -.- edeeb11[["+2"]]
-				edeeb11 -.- 8b74640("+1")
-				8b74640 -.- 927a1d9("+1")
-				927a1d9 -.- 93d33ca("+1")
-				93d33ca -.- d1{ }
-				d1 -.- 6edb6ff[["+3"]]
-				6edb6ff -.- 8f0ba02[["+2"]]
-				8f0ba02 -.- 192c0db("+1")
-				192c0db -.- 823efa0("+1")
-				823efa0 -.- 2a4b707("+1")
-				2a4b707 -.- d2{ }
-				d2 -.- e3e8116[["+3"]]
-				e3e8116 -.- e3e8116-err[ ]
-				e3e8116-err:::error
-				d2 -.- 9649060[["+2"]]
-				9649060 -.- 9649060-err[ ]
-				9649060-err:::error
-				d2 -.- c9f44d7("+1")
-				c9f44d7 -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> 8b74640
-				8b74640:::selected
-				8b74640 --> 927a1d9
-				927a1d9:::selected
-				927a1d9 --> 93d33ca
-				93d33ca:::selected
-				93d33ca --> 192c0db
-				192c0db:::selected
-				192c0db --> 823efa0
-				823efa0:::selected
-				823efa0 --> 2a4b707
-				2a4b707:::selected
-				2a4b707 --> c9f44d7
-				c9f44d7:::selected
-				c9f44d7 --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- e1410cd[["+3"]]
+					e1410cd -.- ced9af0[["+2"]]
+					ced9af0 -.- 180733b("+1")
+					180733b -.- 9c0697d("+1")
+					9c0697d -.- 4402352("+1")
+					4402352 -.- d1{ }
+					d1 -.- 5180f6e[["+3"]]
+					5180f6e -.- 193c573[["+2"]]
+					193c573 -.- 6653d29("+1")
+					6653d29 -.- 5e028cf("+1")
+					5e028cf -.- 8efc9e4("+1")
+					8efc9e4 -.- d2{ }
+					d2 -.- 97cf280[["+3"]]
+					97cf280 -.- 97cf280-err[ ]
+					97cf280-err:::error
+					d2 -.- 5800777[["+2"]]
+					5800777 -.- 5800777-err[ ]
+					5800777-err:::error
+					d2 -.- b71bed1("+1")
+					b71bed1 -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> 180733b
+					180733b:::selected
+					180733b --> 9c0697d
+					9c0697d:::selected
+					9c0697d --> 4402352
+					4402352:::selected
+					4402352 --> 6653d29
+					6653d29:::selected
+					6653d29 --> 5e028cf
+					5e028cf:::selected
+					5e028cf --> 8efc9e4
+					8efc9e4:::selected
+					8efc9e4 --> b71bed1
+					b71bed1:::selected
+					b71bed1 --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
 			`,
 		);
 	});
@@ -393,21 +379,21 @@ describe('Mermaid', () => {
 	it('parallel tasks without methods', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-			description: ({ counter }) => `${counter} + 1`,
+		const byOne = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => counter < ctx.target,
+			effect: (counter) => ++counter._,
+			description: ({ counterId }) => `${counterId} + 1`,
 		});
 
-		const multiIncrement = Task.from({
-			condition: (state: Counters, ctx) =>
-				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 0).length >
-				1,
-			method: (state: Counters, ctx) =>
-				Object.keys(state)
-					.filter((k) => ctx.target[k] - state[k] > 0)
-					.map((k) => byOne({ counter: k, target: ctx.target[k] })),
+		const multiIncrement = Task.of<Counters>().from({
+			condition: (counters, ctx) =>
+				Object.keys(counters).filter((k) => ctx.target[k] - counters[k] > 0)
+					.length > 1,
+			method: (counters, ctx) =>
+				Object.keys(counters)
+					.filter((k) => ctx.target[k] - counters[k] > 0)
+					.map((k) => byOne({ counterId: k, target: ctx.target[k] })),
 			description: `increment counters`,
 		});
 
@@ -420,83 +406,84 @@ describe('Mermaid', () => {
 		planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
 		expect(trace.render()).to.deep.equal(
 			dedent`
-			graph TD
-				start(( ))
-				start -.- d0{ }
-				d0 -.- 588eea4[["increment counters"]]
-				588eea4 -.- 9071720("a + 1")
-				588eea4 -.- 7747bff("b + 1")
-				9071720 -.- j6b09f09
-				7747bff -.- j6b09f09
-				j6b09f09(( ))
-				j6b09f09 -.- d1{ }
-				d1 -.- c5108a8[["increment counters"]]
-				c5108a8 -.- 6aa0594("a + 1")
-				c5108a8 -.- 2c5439a("b + 1")
-				6aa0594 -.- jf78e02c
-				2c5439a -.- jf78e02c
-				jf78e02c(( ))
-				jf78e02c -.- d2{ }
-				d2 -.- ee9e70b[["increment counters"]]
-				ee9e70b -.- ee9e70b-err[ ]
-				ee9e70b-err:::error
-				d2 -.- b75673e("a + 1")
-				b75673e -.- stop(( ))
-				stop:::finish
-				classDef finish stroke:#000,fill:#000
-				start:::selected
-				start --> fj6b09f09(( ))
-				fj6b09f09:::selected
-				fj6b09f09 --> 9071720
-				9071720:::selected
-				fj6b09f09 --> 7747bff
-				7747bff:::selected
-				j6b09f09(( ))
-				9071720 --> j6b09f09
-				7747bff --> j6b09f09
-				j6b09f09:::selected
-				j6b09f09 --> fjf78e02c(( ))
-				fjf78e02c:::selected
-				fjf78e02c --> 6aa0594
-				6aa0594:::selected
-				fjf78e02c --> 2c5439a
-				2c5439a:::selected
-				jf78e02c(( ))
-				6aa0594 --> jf78e02c
-				2c5439a --> jf78e02c
-				jf78e02c:::selected
-				jf78e02c --> b75673e
-				b75673e:::selected
-				b75673e --> stop
-				classDef error stroke:#f00
-				classDef selected stroke:#0f0			`,
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 8dd5003[["increment counters"]]
+					8dd5003 -.- 5bb6c18("a + 1")
+					8dd5003 -.- 9c5d478("b + 1")
+					5bb6c18 -.- j7272a3d
+					9c5d478 -.- j7272a3d
+					j7272a3d(( ))
+					j7272a3d -.- d1{ }
+					d1 -.- 2fb608a[["increment counters"]]
+					2fb608a -.- a5d1149("a + 1")
+					2fb608a -.- 9578070("b + 1")
+					a5d1149 -.- jde6ad08
+					9578070 -.- jde6ad08
+					jde6ad08(( ))
+					jde6ad08 -.- d2{ }
+					d2 -.- 8abf853[["increment counters"]]
+					8abf853 -.- 8abf853-err[ ]
+					8abf853-err:::error
+					d2 -.- 05e1e95("a + 1")
+					05e1e95 -.- stop(( ))
+					stop:::finish
+					classDef finish stroke:#000,fill:#000
+					start:::selected
+					start --> fj7272a3d(( ))
+					fj7272a3d:::selected
+					fj7272a3d --> 5bb6c18
+					5bb6c18:::selected
+					fj7272a3d --> 9c5d478
+					9c5d478:::selected
+					j7272a3d(( ))
+					5bb6c18 --> j7272a3d
+					9c5d478 --> j7272a3d
+					j7272a3d:::selected
+					j7272a3d --> fjde6ad08(( ))
+					fjde6ad08:::selected
+					fjde6ad08 --> a5d1149
+					a5d1149:::selected
+					fjde6ad08 --> 9578070
+					9578070:::selected
+					jde6ad08(( ))
+					a5d1149 --> jde6ad08
+					9578070 --> jde6ad08
+					jde6ad08:::selected
+					jde6ad08 --> 05e1e95
+					05e1e95:::selected
+					05e1e95 --> stop
+					classDef error stroke:#f00
+					classDef selected stroke:#0f0
+			`,
 		);
 	});
 
 	it('parallel tasks with methods', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-			description: ({ counter }) => `${counter} + 1`,
+		const byOne = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => counter < ctx.target,
+			effect: (counter) => ++counter._,
+			description: ({ counterId }) => `${counterId} + 1`,
 		});
 
-		const byTwo = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-			method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
-			description: ({ counter }) => `increase '${counter}'`,
+		const byTwo = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => ctx.target - counter > 1,
+			method: (_, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+			description: ({ counterId }) => `increase '${counterId}'`,
 		});
 
-		const multiIncrement = Task.from({
-			condition: (state: Counters, ctx) =>
-				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			method: (state: Counters, ctx) =>
-				Object.keys(state)
-					.filter((k) => ctx.target[k] - state[k] > 1)
-					.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+		const multiIncrement = Task.of<Counters>().from({
+			condition: (counters, ctx) =>
+				Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+			method: (counters, ctx) =>
+				Object.keys(counters)
+					.filter((k) => ctx.target[k] - counters[k] > 1)
+					.map((k) => byTwo({ counterId: k, target: ctx.target[k] })),
 			description: `increment counters`,
 		});
 
@@ -511,83 +498,84 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 2396eea[["increment counters"]]
-					2396eea -.- 682aa0e[["increase 'a'"]]
-					682aa0e -.- f564b6b("a + 1")
-					f564b6b -.- 0d3673e("a + 1")
-					2396eea -.- 5dd218c[["increase 'b'"]]
-					5dd218c -.- d4ee1fa("b + 1")
-					d4ee1fa -.- c7319a4("b + 1")
-					0d3673e -.- jf78e02c
-					c7319a4 -.- jf78e02c
-					jf78e02c(( ))
-					jf78e02c -.- d1{ }
-					d1 -.- 7de2726[["increment counters"]]
-					7de2726 -.- 7de2726-err[ ]
-					7de2726-err:::error
-					d1 -.- 976345d[["increase 'a'"]]
-					976345d -.- 976345d-err[ ]
-					976345d-err:::error
-					d1 -.- 468e422("a + 1")
-					468e422 -.- stop(( ))
+					d0 -.- 6155512[["increment counters"]]
+					6155512 -.- 9ea56ac[["increase 'a'"]]
+					9ea56ac -.- 27fff9e("a + 1")
+					27fff9e -.- 0e3f56c("a + 1")
+					6155512 -.- 5003b21[["increase 'b'"]]
+					5003b21 -.- de69aab("b + 1")
+					de69aab -.- 0bf9a34("b + 1")
+					0e3f56c -.- jde6ad08
+					0bf9a34 -.- jde6ad08
+					jde6ad08(( ))
+					jde6ad08 -.- d1{ }
+					d1 -.- 3311fc0[["increment counters"]]
+					3311fc0 -.- 3311fc0-err[ ]
+					3311fc0-err:::error
+					d1 -.- a9c52c6[["increase 'a'"]]
+					a9c52c6 -.- a9c52c6-err[ ]
+					a9c52c6-err:::error
+					d1 -.- eb5cff4("a + 1")
+					eb5cff4 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> fj6b09f09(( ))
-					fj6b09f09:::selected
-					fj6b09f09 --> f564b6b
-					f564b6b:::selected
-					f564b6b --> 0d3673e
-					0d3673e:::selected
-					fj6b09f09 --> d4ee1fa
-					d4ee1fa:::selected
-					d4ee1fa --> c7319a4
-					c7319a4:::selected
-					j6b09f09(( ))
-					0d3673e --> j6b09f09
-					c7319a4 --> j6b09f09
-					j6b09f09:::selected
-					j6b09f09 --> 468e422
-					468e422:::selected
-					468e422 --> stop
+					start --> fj7272a3d(( ))
+					fj7272a3d:::selected
+					fj7272a3d --> 27fff9e
+					27fff9e:::selected
+					27fff9e --> 0e3f56c
+					0e3f56c:::selected
+					fj7272a3d --> de69aab
+					de69aab:::selected
+					de69aab --> 0bf9a34
+					0bf9a34:::selected
+					j7272a3d(( ))
+					0e3f56c --> j7272a3d
+					0bf9a34 --> j7272a3d
+					j7272a3d:::selected
+					j7272a3d --> eb5cff4
+					eb5cff4:::selected
+					eb5cff4 --> stop
 					classDef error stroke:#f00
-					classDef selected stroke:#0f0			`,
+					classDef selected stroke:#0f0
+				`,
 		);
 	});
 
 	it('parallel tasks with nested forks', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-			description: ({ counter }) => `${counter}++`,
+		const byOne = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => counter < ctx.target,
+			effect: (counter) => ++counter._,
+			description: ({ counterId }) => `${counterId}++`,
 		});
 
-		const byTwo = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-			method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
-			description: ({ counter }) => `${counter} + 2`,
+		const byTwo = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => ctx.target - counter > 1,
+			method: (_, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
+			description: ({ counterId }) => `${counterId} + 2`,
 		});
 
-		const multiIncrement = Task.from({
-			condition: (state: Counters, ctx) =>
-				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			method: (state: Counters, ctx) =>
-				Object.keys(state)
-					.filter((k) => ctx.target[k] - state[k] > 1)
-					.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+		const multiIncrement = Task.of<Counters>().from({
+			condition: (counters, ctx) =>
+				Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+			method: (counters, ctx) =>
+				Object.keys(counters)
+					.filter((k) => ctx.target[k] - counters[k] > 1)
+					.map((k) => byTwo({ counterId: k, target: ctx.target[k] })),
 			description: `increment multiple`,
 		});
 
-		const chunker = Task.from({
-			condition: (state: Counters, ctx) =>
-				Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-			method: (state: Counters, ctx) => {
-				const toUpdate = Object.keys(state).filter(
-					(k) => ctx.target[k] - state[k] > 1,
+		const chunker = Task.of<Counters>().from({
+			condition: (counters, ctx) =>
+				Object.keys(counters).some((k) => ctx.target[k] - counters[k] > 1),
+			method: (counters, ctx) => {
+				const toUpdate = Object.keys(counters).filter(
+					(k) => ctx.target[k] - counters[k] > 1,
 				);
 
 				const chunkSize = 2;
@@ -597,7 +585,7 @@ describe('Mermaid', () => {
 					tasks.push(
 						multiIncrement({
 							target: {
-								...state,
+								...counters,
 								...chunk.reduce(
 									(acc, k) => ({ ...acc, [k]: ctx.target[k] }),
 									{},
@@ -623,107 +611,108 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 16c4cee[["chunk"]]
-					16c4cee -.- 85de134[["increment multiple"]]
-					85de134 -.- f086833[["a + 2"]]
-					f086833 -.- 6725504("a++")
-					6725504 -.- d9eff37("a++")
-					85de134 -.- 491551c[["b + 2"]]
-					491551c -.- bb6a327("b++")
-					bb6a327 -.- 1b3d60d("b++")
-					16c4cee -.- 14b5abe[["increment multiple"]]
-					14b5abe -.- a6594ae[["c + 2"]]
-					a6594ae -.- 79ef4af("c++")
-					79ef4af -.- d7098f4("c++")
-					14b5abe -.- 9a04ffd[["d + 2"]]
-					9a04ffd -.- 62f8002("d++")
-					62f8002 -.- 5e7f342("d++")
-					d9eff37 -.- jfb9402c
-					1b3d60d -.- jfb9402c
-					jfb9402c(( )) -.- 9034b1e
-					d7098f4 -.- jb231a35
-					5e7f342 -.- jb231a35
-					jb231a35(( )) -.- 9034b1e
-					9034b1e(( ))
-					9034b1e -.- d1{ }
-					d1 -.- cb79260[["chunk"]]
-					cb79260 -.- cb79260-err[ ]
-					cb79260-err:::error
-					d1 -.- a65b91b[["increment multiple"]]
-					a65b91b -.- a65b91b-err[ ]
-					a65b91b-err:::error
-					d1 -.- 8923404[["a + 2"]]
-					8923404 -.- 8923404-err[ ]
-					8923404-err:::error
-					d1 -.- e51d42f("a++")
-					e51d42f -.- stop(( ))
+					d0 -.- ac8cc3a[["chunk"]]
+					ac8cc3a -.- b2fcf21[["increment multiple"]]
+					b2fcf21 -.- 9ef9ead[["a + 2"]]
+					9ef9ead -.- c5037ba("a++")
+					c5037ba -.- 39337c1("a++")
+					b2fcf21 -.- 332010e[["b + 2"]]
+					332010e -.- 034bbe0("b++")
+					034bbe0 -.- 20ee506("b++")
+					ac8cc3a -.- bf2a438[["increment multiple"]]
+					bf2a438 -.- 8ec14bf[["c + 2"]]
+					8ec14bf -.- 9313895("c++")
+					9313895 -.- 9483746("c++")
+					bf2a438 -.- 7093746[["d + 2"]]
+					7093746 -.- 98a9a34("d++")
+					98a9a34 -.- d36adcb("d++")
+					39337c1 -.- j2b2a51d
+					20ee506 -.- j2b2a51d
+					j2b2a51d(( )) -.- 4fa0388
+					9483746 -.- j02d8902
+					d36adcb -.- j02d8902
+					j02d8902(( )) -.- 4fa0388
+					4fa0388(( ))
+					4fa0388 -.- d1{ }
+					d1 -.- fd65f2e[["chunk"]]
+					fd65f2e -.- fd65f2e-err[ ]
+					fd65f2e-err:::error
+					d1 -.- 6571c52[["increment multiple"]]
+					6571c52 -.- 6571c52-err[ ]
+					6571c52-err:::error
+					d1 -.- df8fad6[["a + 2"]]
+					df8fad6 -.- df8fad6-err[ ]
+					df8fad6-err:::error
+					d1 -.- b715c94("a++")
+					b715c94 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> f56cffb0(( ))
-					f56cffb0:::selected
-					f56cffb0 --> fj18095dd(( ))
-					fj18095dd:::selected
-					fj18095dd --> 6725504
-					6725504:::selected
-					6725504 --> d9eff37
-					d9eff37:::selected
-					fj18095dd --> bb6a327
-					bb6a327:::selected
-					bb6a327 --> 1b3d60d
-					1b3d60d:::selected
-					j18095dd(( ))
-					d9eff37 --> j18095dd
-					1b3d60d --> j18095dd
-					j18095dd:::selected
-					f56cffb0 --> fj343bab8(( ))
-					fj343bab8:::selected
-					fj343bab8 --> 79ef4af
-					79ef4af:::selected
-					79ef4af --> d7098f4
-					d7098f4:::selected
-					fj343bab8 --> 62f8002
-					62f8002:::selected
-					62f8002 --> 5e7f342
-					5e7f342:::selected
-					j343bab8(( ))
-					d7098f4 --> j343bab8
-					5e7f342 --> j343bab8
-					j343bab8:::selected
-					56cffb0(( ))
-					j18095dd --> 56cffb0
-					j343bab8 --> 56cffb0
-					56cffb0:::selected
-					56cffb0 --> e51d42f
-					e51d42f:::selected
-					e51d42f --> stop
+					start --> f304966c(( ))
+					f304966c:::selected
+					f304966c --> fj5213432(( ))
+					fj5213432:::selected
+					fj5213432 --> c5037ba
+					c5037ba:::selected
+					c5037ba --> 39337c1
+					39337c1:::selected
+					fj5213432 --> 034bbe0
+					034bbe0:::selected
+					034bbe0 --> 20ee506
+					20ee506:::selected
+					j5213432(( ))
+					39337c1 --> j5213432
+					20ee506 --> j5213432
+					j5213432:::selected
+					f304966c --> fj316bfe2(( ))
+					fj316bfe2:::selected
+					fj316bfe2 --> 9313895
+					9313895:::selected
+					9313895 --> 9483746
+					9483746:::selected
+					fj316bfe2 --> 98a9a34
+					98a9a34:::selected
+					98a9a34 --> d36adcb
+					d36adcb:::selected
+					j316bfe2(( ))
+					9483746 --> j316bfe2
+					d36adcb --> j316bfe2
+					j316bfe2:::selected
+					304966c(( ))
+					j5213432 --> 304966c
+					j316bfe2 --> 304966c
+					304966c:::selected
+					304966c --> b715c94
+					b715c94:::selected
+					b715c94 --> stop
 					classDef error stroke:#f00
-					classDef selected stroke:#0f0			`,
+					classDef selected stroke:#0f0
+				`,
 		);
 	});
 
 	it('draws sequential plan when backtracking is reported', function () {
 		type Counters = { [k: string]: number };
 
-		const byOne = Task.from({
-			path: '/:counter',
-			condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-			effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-			description: ({ counter }) => `${counter} + 1`,
+		const byOne = Task.of<Counters>().from({
+			lens: '/:counterId',
+			condition: (counter, ctx) => counter < ctx.target,
+			effect: (counter) => ++counter._,
+			description: ({ counterId }) => `${counterId} + 1`,
 		});
 
-		const conflictingIncrement = Task.from({
-			condition: (state: Counters, ctx) =>
-				Object.keys(state).filter((k) => ctx.target[k] - state[k] > 1).length >
-				1,
-			method: (state: Counters, ctx) =>
-				Object.keys(state)
-					.filter((k) => ctx.target[k] - state[k] > 1)
+		const conflictingIncrement = Task.of<Counters>().from({
+			condition: (counters, ctx) =>
+				Object.keys(counters).filter((k) => ctx.target[k] - counters[k] > 1)
+					.length > 1,
+			method: (counters, ctx) =>
+				Object.keys(counters)
+					.filter((k) => ctx.target[k] - counters[k] > 1)
 					.flatMap((k) => [
 						// We create parallel steps to increase the same element of the state
 						// concurrently
-						byOne({ counter: k, target: ctx.target[k] }),
-						byOne({ counter: k, target: ctx.target[k] }),
+						byOne({ counterId: k, target: ctx.target[k] }),
+						byOne({ counterId: k, target: ctx.target[k] }),
 					]),
 			description: `increment counters`,
 		});
@@ -740,34 +729,34 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 817288c[["increment counters"]]
-					817288c -.- ac5943a("a + 1")
-					ac5943a -.- 0d3673e("a + 1")
-					0d3673e -.- 002f81e("b + 1")
-					002f81e -.- c7319a4("b + 1")
-					c7319a4 -.- d1{ }
-					d1 -.- 4b2ca33[["increment counters"]]
-					4b2ca33 -.- 4b2ca33-err[ ]
-					4b2ca33-err:::error
-					d1 -.- 468e422("a + 1")
-					468e422 -.- stop(( ))
+					d0 -.- d90b3da[["increment counters"]]
+					d90b3da -.- dd89b07("a + 1")
+					dd89b07 -.- 0e3f56c("a + 1")
+					0e3f56c -.- f733eae("b + 1")
+					f733eae -.- 0bf9a34("b + 1")
+					0bf9a34 -.- d1{ }
+					d1 -.- e45e61b[["increment counters"]]
+					e45e61b -.- e45e61b-err[ ]
+					e45e61b-err:::error
+					d1 -.- eb5cff4("a + 1")
+					eb5cff4 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> ac5943a
-					ac5943a:::selected
-					ac5943a --> 0d3673e
-					0d3673e:::selected
-					0d3673e --> 002f81e
-					002f81e:::selected
-					002f81e --> c7319a4
-					c7319a4:::selected
-					c7319a4 --> 468e422
-					468e422:::selected
-					468e422 --> stop
+					start --> dd89b07
+					dd89b07:::selected
+					dd89b07 --> 0e3f56c
+					0e3f56c:::selected
+					0e3f56c --> f733eae
+					f733eae:::selected
+					f733eae --> 0bf9a34
+					0bf9a34:::selected
+					0bf9a34 --> eb5cff4
+					eb5cff4:::selected
+					eb5cff4 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
-			`,
+				`,
 		);
 	});
 });
