@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { Task } from 'mahler';
+import { Domain } from 'mahler';
 import { App, Service, ServiceStatus } from './state';
 
 interface StatusError extends Error {
@@ -16,6 +16,8 @@ function isEqualConfig(s1: Service, s2: Service) {
 
 const docker = new Docker();
 
+const App = Domain.of<App>();
+
 /**
  * Pull an image from the registry, this task is applicable to
  * the creation of a new image
@@ -24,7 +26,7 @@ const docker = new Docker();
  * Effect: add the image to the list of images
  * Action: pull the image from the registry and add it to the images local registry
  */
-export const fetchImage = Task.of<App>().from({
+export const fetchImage = App.task({
 	op: 'create',
 	lens: '/images/:imageName',
 	// The effect is inferred from the operation
@@ -58,7 +60,7 @@ export const fetchImage = Task.of<App>().from({
  * Effect: add the image to the list of images
  * Action: pull the image from the registry
  */
-export const fetchServiceImage = Task.of<App>().from({
+export const fetchServiceImage = App.task({
 	op: 'create',
 	lens: '/services/:serviceName',
 	method: (_, { target }) => {
@@ -75,7 +77,7 @@ export const fetchServiceImage = Task.of<App>().from({
  * Effect: add the service to the `services` object, with a `status` of `created`
  * Action: create a new container using the docker API and set the `containerId` property of the service in the `services` object
  */
-export const installService = Task.of<App>().from({
+export const installService = App.task({
 	op: 'create',
 	lens: '/services/:serviceName',
 	condition: (_, { system, target }) => target.image in system.images,
@@ -152,7 +154,7 @@ export const installService = Task.of<App>().from({
  * Effect: set the service status to `running`
  * Action: start the container using the docker API
  */
-export const startService = Task.of<App>().from({
+export const startService = App.task({
 	lens: '/services/:serviceName',
 	condition: (service, { target }) =>
 		service.containerId != null &&
@@ -181,7 +183,7 @@ export const startService = Task.of<App>().from({
  * Effect: set the service status to `stopped`
  * Action: stop the container using the docker API
  */
-export const stopService = Task.of<App>().from({
+export const stopService = App.task({
 	op: '*',
 	lens: '/services/:serviceName',
 	condition: (service) =>
@@ -217,7 +219,7 @@ export const stopService = Task.of<App>().from({
  * Effect: remove the service from the app
  * Action: remove the container using the docker API
  */
-export const uninstallService = Task.of<App>().from({
+export const uninstallService = App.task({
 	// Recreating the service also requires that the container is uninstalled first
 	// so this needs to apply to a service update or a service removal
 	op: '*',
