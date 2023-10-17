@@ -16,6 +16,7 @@ describe('Agent', () => {
 				success: true,
 				state: 0,
 			});
+			agent.stop();
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
@@ -35,6 +36,7 @@ describe('Agent', () => {
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
+			agent.stop();
 		});
 
 		it('it allows to subscribe to the agent state', async () => {
@@ -62,6 +64,7 @@ describe('Agent', () => {
 
 			// Intermediate states returned by the observable should be emitted by the agent
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			agent.stop();
 		});
 
 		it('allows to use observables as actions', async () => {
@@ -97,6 +100,7 @@ describe('Agent', () => {
 
 			// Intermediate states returned by the observable should be emitted by the agent
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			agent.stop();
 		});
 
 		it('runs parallel plans', async () => {
@@ -145,6 +149,7 @@ describe('Agent', () => {
 				success: true,
 				state: { a: 3, b: 2 },
 			});
+			agent.stop();
 		});
 	});
 

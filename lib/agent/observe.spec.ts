@@ -54,8 +54,8 @@ describe('observe', () => {
 		type O = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
 		const o = Ref.of<O>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
 
-		const values: string[] = [];
-		const next = (v: O) => values.push(JSON.stringify(v));
+		const values: O[] = [];
+		const next = (v: O) => values.push(v);
 
 		observe((r: Ref<O>) => {
 			r._.a++;
@@ -64,26 +64,24 @@ describe('observe', () => {
 			r._.b.d.f.push(1);
 		}, observerFrom(next))(o);
 
-		expect(values).to.have.deep.members(
-			[
-				{
-					a: 2,
-					b: { c: 'hello', d: { e: true, f: [0] } },
-				},
-				{
-					a: 2,
-					b: { c: 'hello world', d: { e: true, f: [0] } },
-				},
-				{
-					a: 2,
-					b: { c: 'hello world', d: { e: false, f: [0] } },
-				},
-				{
-					a: 2,
-					b: { c: 'hello world', d: { e: false, f: [0, 1] } },
-				},
-			].map((v) => JSON.stringify(v)),
-		);
+		expect(values).to.have.deep.members([
+			{
+				a: 2,
+				b: { c: 'hello', d: { e: true, f: [0] } },
+			},
+			{
+				a: 2,
+				b: { c: 'hello world', d: { e: true, f: [0] } },
+			},
+			{
+				a: 2,
+				b: { c: 'hello world', d: { e: false, f: [0] } },
+			},
+			{
+				a: 2,
+				b: { c: 'hello world', d: { e: false, f: [0, 1] } },
+			},
+		]);
 		expect(o._).to.deep.equal({
 			a: 2,
 			b: { c: 'hello world', d: { e: false, f: [0, 1] } },

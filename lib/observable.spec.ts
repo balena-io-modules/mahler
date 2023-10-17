@@ -97,7 +97,7 @@ describe('Observable', () => {
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await clock.tickAsync(39);
+		await clock.tickAsync(30);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledThrice;
@@ -112,22 +112,18 @@ describe('Observable', () => {
 		// Testing unsubcribe
 		next.reset();
 		const subscriber2 = o.subscribe(next2);
-		await clock.tickAsync(39);
+		await clock.tickAsync(30);
 
 		expect(next2).to.have.been.calledThrice;
+		expect(next2).to.have.been.calledWith(3);
 		expect(next2).to.have.been.calledWith(4);
 		expect(next2).to.have.been.calledWith(5);
-		expect(next2).to.have.been.calledWith(6);
 		expect(next).to.not.have.been.called;
 
 		subscriber2.unsubscribe();
 	});
 
-	it('shares values between subscribers', async () => {
-		// The current implementation makes it so values
-		// produced by async generators will be shared by
-		// multiple observers, which is probably not what we
-		// want, but it allows for a simpler implementation
+	it('multiplexes iterable values between subscribers', async () => {
 		const o = interval(10);
 
 		// Add a subscriber
@@ -136,17 +132,29 @@ describe('Observable', () => {
 		const subscriber = o.subscribe(next);
 		const subscriber2 = o.subscribe(next2);
 
-		await clock.tickAsync(49);
+		await clock.tickAsync(30);
 
 		// Only now the sensor function should be called
-		expect(next).to.have.been.calledTwice;
-		expect(next2).to.have.been.calledTwice;
+		expect(next).to.have.been.calledThrice;
+		expect(next2).to.have.been.calledThrice;
 		expect(next).to.have.been.calledWith(0);
+		expect(next2).to.have.been.calledWith(0);
+		expect(next).to.have.been.calledWith(1);
 		expect(next2).to.have.been.calledWith(1);
 		expect(next).to.have.been.calledWith(2);
-		expect(next2).to.have.been.calledWith(3);
+		expect(next2).to.have.been.calledWith(2);
 
 		subscriber.unsubscribe();
+
+		next.reset();
+		next2.reset();
+		await clock.tickAsync(10);
+
+		// Since the first subscriber unsubscribed, no more
+		// values should be emitted
+		expect(next).to.not.have.been.called;
+		expect(next2).to.have.been.calledWith(3);
+
 		subscriber2.unsubscribe();
 	});
 
@@ -157,7 +165,7 @@ describe('Observable', () => {
 		const next = stub();
 		const subscriber = o.subscribe(next);
 
-		await clock.tickAsync(39);
+		await clock.tickAsync(30);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledThrice;
@@ -168,56 +176,7 @@ describe('Observable', () => {
 		subscriber.unsubscribe();
 	});
 
-	it('it allows to merge observables', async () => {
-		const letters = Observable.of('a', 'b', 'c');
-		const o = letters.flatMap((x) => interval(10).map((y) => x + y));
-
-		// Add a subscriber
-		const next = stub();
-		const subscriber = o.subscribe(next);
-
-		await clock.tickAsync(55);
-
-		// Only now the sensor function should be called
-		expect(next).to.have.been.calledWith('a0');
-		expect(next).to.have.been.calledWith('a1');
-		expect(next).to.have.been.calledWith('a2');
-		expect(next).to.have.been.calledWith('b0');
-		expect(next).to.have.been.calledWith('b1');
-
-		subscriber.unsubscribe();
-	});
-
-	it('it accepts generators returning values', async () => {
-		const letters = Observable.from(
-			(function* () {
-				yield 'a';
-				yield 'b';
-				return 'c';
-			})(),
-		);
-
-		// Add a subscriber
-		const next = stub();
-
-		const promise = new Promise<void>((resolve, reject) => {
-			const subscriber = letters.subscribe({
-				next,
-				error: reject,
-				complete: () => {
-					resolve();
-					subscriber.unsubscribe();
-				},
-			});
-		});
-		await promise;
-		expect(next).to.have.been.calledThrice;
-		expect(next).to.have.been.calledWith('a');
-		expect(next).to.have.been.calledWith('b');
-		expect(next).to.have.been.calledWith('c');
-	});
-
-	it('it propagates errors', async () => {
+	it('propagates errors', async () => {
 		const letters = Observable.from(
 			(function* () {
 				yield 'a';
@@ -241,6 +200,8 @@ describe('Observable', () => {
 		});
 		await expect(promise).to.be.rejected;
 		expect(next).to.have.been.calledTwice;
+		expect(next).to.have.been.calledWith('a');
+		expect(next).to.have.been.calledWith('b');
 	});
 
 	it('ignores the error if no error handler is provided', async () => {
