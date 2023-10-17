@@ -150,11 +150,12 @@ export const RecursionDetected = {
 };
 export type RecursionDetected = typeof RecursionDetected;
 
-export function SearchFailed(depth: number) {
+export function SearchFailed(depth: number, atMaxDepth = false) {
 	return {
 		event: 'error' as const,
 		cause: 'search-failed' as const,
 		depth,
+		atMaxDepth,
 	};
 }
 
@@ -184,4 +185,14 @@ export interface PlannerConfig<TState> {
 	 * for a plan. It defaults to a noop.
 	 */
 	trace: (e: PlanningEvent<TState> | PlanningError) => void;
+
+	/**
+	 * Max search depth before giving up. Defaults to 1000.
+	 *
+	 * While the planner implements loop detection, depending on the task
+	 * implementation, there still can be cases where the planner can keep adding
+	 * the same action in an infinite loop. This parameter allows to stop the
+	 * search after a certain number of iterations to avoid this.
+	 */
+	maxSearchDepth: number;
 }

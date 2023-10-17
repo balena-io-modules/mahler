@@ -33,6 +33,7 @@ interface PlanningState<TState = any> {
 	trace: PlannerConfig<TState>['trace'];
 	initialPlan: Plan<TState>;
 	callStack?: Array<Method<TState>>;
+	maxSearchDepth?: number;
 }
 
 function findLoop<T>(id: string, node: Node<T> | null): boolean {
@@ -354,10 +355,19 @@ export function findPlan<TState = any>({
 	depth = 0,
 	initialPlan,
 	callStack = [],
+	maxSearchDepth = 1000,
 }: PlanningState<TState>): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
 	assert(initialPlan.success);
+
+	if (depth >= maxSearchDepth) {
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: SearchFailed(depth, true),
+		};
+	}
 
 	// Get the list of operations from the patch
 	const ops = distance(initialPlan.state);
@@ -367,7 +377,7 @@ export function findPlan<TState = any>({
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		const maxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
+		const sMaxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
 		trace({
 			event: 'found',
 			prev: initialPlan.start,
@@ -376,7 +386,7 @@ export function findPlan<TState = any>({
 			success: true,
 			start: initialPlan.start,
 			state: initialPlan.state,
-			stats: { ...stats, maxDepth },
+			stats: { ...stats, maxDepth: sMaxDepth },
 			pendingChanges: [],
 		};
 	}
@@ -445,6 +455,7 @@ export function findPlan<TState = any>({
 					trace,
 					initialPlan: { ...taskPlan, state, pendingChanges: [] },
 					callStack,
+					maxSearchDepth,
 				});
 
 				if (res.success) {

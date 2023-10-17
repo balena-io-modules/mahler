@@ -101,6 +101,7 @@ function from<TState = any>({
 		trace = () => {
 			/* noop */
 		},
+		maxSearchDepth = 1000,
 	} = config;
 
 	return {
@@ -118,6 +119,7 @@ function from<TState = any>({
 				distance: Distance.from(current, target),
 				tasks,
 				trace,
+				maxSearchDepth,
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
