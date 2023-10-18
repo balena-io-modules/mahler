@@ -1,8 +1,15 @@
 import { expect, console as logger } from '~/test-utils';
 
-import { Task, Agent, Ref } from 'mahler';
+import { Task, Agent, UNDEFINED } from 'mahler';
 import { Planner } from 'mahler/planner';
-import { stringify, sequence, mermaid, plan, branch } from 'mahler/testing';
+import {
+	stringify,
+	sequence,
+	mermaid,
+	plan,
+	branch,
+	zip,
+} from 'mahler/testing';
 
 import { stub } from 'sinon';
 
@@ -62,7 +69,7 @@ describe('README examples', () => {
 				condition: (state, { target }) => state < target,
 				effect: (state) => ++state._,
 				action: async (state) => {
-					state._ = storeCounter(state._ + 1);
+					state._ = await storeCounter(state._ + 1);
 				},
 				description: '+1',
 			});
@@ -259,12 +266,12 @@ describe('README examples', () => {
 			description: '+2',
 		});
 
-		it('grounding tasks', async () => {
-			const doPlusOne = plusOne({ target: 3 });
-			expect(await doPlusOne(Ref.of(0))).to.equal(1); // 1
+		it('binding tasks', async () => {
+			const doPlusOne = zip(plusOne({ target: 3 }));
+			expect(await doPlusOne(0)).to.equal(1); // 1
 
-			const doPlusTwo = plusTwo({ target: 3 });
-			expect(doPlusTwo(2)).to.have.lengthOf(2);
+			const doPlusTwo = zip(plusTwo({ target: 3 }));
+			expect(await doPlusTwo(0)).to.equal(2);
 		});
 
 		it('plan using plusTwo', () => {
@@ -336,7 +343,35 @@ describe('README examples', () => {
 		});
 
 		it('multi counter plusOne using lenses', () => {
-			/* TODO */
+			const plusOne = Task.of<System>().from({
+				lens: '/counters/:counterId',
+				condition: (counter, { target }) => counter < target,
+				effect: (counter) => ++counter._,
+				description: ({ counterId }) => `${counterId} + 1`,
+			});
+
+			const plusTwo = Task.of<System>().from({
+				lens: '/counters/:counterId',
+				condition: (counter, { target }) => target - counter > 1,
+				method: (_, { target, counterId }) => [
+					plusOne({ target, counterId }),
+					plusOne({ target, counterId }),
+				],
+				description: ({ counterId }) => `${counterId} + 2`,
+			});
+
+			const planner = Planner.from({
+				tasks: [plusOne, plusTwo],
+			});
+
+			// Find a plan from 0 to 3
+			const res = planner.findPlan(
+				{ counters: { a: 0, b: 0 } },
+				{ counters: { a: 2, b: 2 } },
+			);
+			expect(stringify(res)).to.deep.equal(
+				sequence('a + 1', 'a + 1', 'b + 1', 'b + 1'),
+			);
 		});
 	});
 
@@ -357,11 +392,14 @@ describe('README examples', () => {
 				config: { trace },
 			});
 
-			planner.findPlan(
+			const res = planner.findPlan(
 				{ counters: { a: 0, b: 0 } },
 				{ counters: { a: 2, b: 2 } },
 			);
-			// Remove the comment below to print the diagram to console
+			expect(stringify(res)).to.deep.equal(
+				sequence('a + 1', 'a + 1', 'b + 1', 'b + 1'),
+			);
+			// Uncomment the line below to print the diagram to console
 			// console.log(trace.render());
 		});
 
@@ -371,9 +409,9 @@ describe('README examples', () => {
 				condition: (counters, { target }) =>
 					Object.keys(counters).some((k) => counters[k] < target[k]),
 				method: (counters, { target }) =>
-					Object.keys(counters).map((k) =>
-						plusOne({ counterId: k, target: target[k] }),
-					),
+					Object.keys(counters)
+						.filter((k) => counters[k] < target[k])
+						.map((k) => plusOne({ counterId: k, target: target[k] })),
 				description: 'counters++',
 			});
 
@@ -387,14 +425,127 @@ describe('README examples', () => {
 				{ counters: { a: 0, b: 0 } },
 				{ counters: { a: 2, b: 2 } },
 			);
-			// Remove the comment below to print the diagram to console
-			console.log(trace.render());
+			// Uncomment the line below to print the diagram to console
+			// console.log(trace.render());
 
 			expect(stringify(res)).to.deep.equal(
 				plan()
 					.fork(branch('a + 1'), branch('b + 1'))
 					.fork(branch('a + 1'), branch('b + 1'))
 					.end(),
+			);
+		});
+	});
+
+	describe('Operations', () => {
+		type System = { counters: { [key: string]: number } };
+
+		const plusOne = Task.of<System>().from({
+			lens: '/counters/:counterId',
+			condition: (counter, { target }) => counter < target,
+			effect: (counter) => ++counter._,
+			description: ({ counterId }) => `${counterId} + 1`,
+		});
+
+		it('creating a new value without a `create` task', () => {
+			const trace = mermaid();
+			const planner = Planner.from({
+				tasks: [plusOne],
+				config: { trace },
+			});
+
+			const res = planner.findPlan(
+				{ counters: { a: 0 } },
+				{ counters: { a: 2, b: 1 } },
+			);
+
+			// No plan will be found
+			expect(res.success).to.be.false;
+			// Uncomment the line below to print the diagram to console
+			// console.log(trace.render());
+		});
+
+		it('creating a new value', () => {
+			const initCounter = Task.of<System>().from({
+				// This tells the planner that the task is applicable to a 'create' operation
+				// valid values are 'update' (default), 'create', 'delete', or '*'
+				op: 'create',
+				lens: '/counters/:counterId',
+				effect: (counter) => {
+					// Set the initial state for the counter
+					counter._ = 0;
+				},
+				description: ({ counterId }) => `${counterId} = 0`,
+			});
+
+			const trace = mermaid();
+			const planner = Planner.from({
+				tasks: [plusOne, initCounter],
+				config: { trace },
+			});
+
+			const res = planner.findPlan(
+				{ counters: { a: 0 } },
+				{ counters: { a: 2, b: 1 } },
+			);
+			// Uncomment the line below to print the diagram to console
+			// console.log(trace.render());
+			expect(stringify(res)).to.deep.equal(
+				sequence('a + 1', 'a + 1', 'b = 0', 'b + 1'),
+			);
+		});
+
+		it('deleting a value', () => {
+			const delCounter = Task.of<System>().from({
+				op: 'delete',
+				lens: '/counters/:counterId',
+				effect: () => {
+					// noop
+				},
+				description: ({ counterId }) => `delete ${counterId}`,
+			});
+
+			const trace = mermaid();
+			const planner = Planner.from({
+				tasks: [plusOne, delCounter],
+				config: { trace },
+			});
+
+			const res = planner.findPlan(
+				{ counters: { a: 0, b: 2 } },
+				{ counters: { a: 2, b: UNDEFINED } },
+			);
+			// Uncomment the line below to print the diagram to console
+			// console.log(trace.render());
+			expect(stringify(res)).to.deep.equal(
+				sequence('a + 1', 'a + 1', 'delete b'),
+			);
+		});
+
+		it('wildcard delete', () => {
+			const delCounter = Task.of<System>().from({
+				op: '*',
+				lens: '/counters/:counterId',
+				effect: (counter) => {
+					counter.delete();
+				},
+				description: ({ counterId }) => `delete ${counterId}`,
+			});
+
+			const trace = mermaid();
+			const planner = Planner.from({
+				tasks: [plusOne, delCounter],
+				config: { trace },
+			});
+
+			const res = planner.findPlan(
+				{ counters: { a: 0, b: 2 } },
+				{ counters: { a: 2, b: UNDEFINED } },
+			);
+			// Uncomment the line below to print the diagram to console
+			// console.log(trace.render());
+			expect(stringify(res)).to.deep.equal(
+				sequence('a + 1', 'a + 1', 'delete b'),
 			);
 		});
 	});
