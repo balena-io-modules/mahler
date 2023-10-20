@@ -15,6 +15,9 @@ type TaskContext<
 	TOp extends TaskOp = 'update',
 > = Context<TState, TPath, TOp> & { system: TState };
 
+/**
+ * Common arguments for all tasks
+ */
 interface TaskSpec<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -22,17 +25,19 @@ interface TaskSpec<
 > {
 	/**
 	 * A unique identifier for the task. This is automatically generated
-	 * when constructing he task.
+	 * when constructing he task, and is not user configurable.
 	 */
 	readonly id: string;
 
 	/**
-	 * A descriptor for this task
+	 * A descriptor for this task. The descriptor can be either a string or a Context
+	 * instance. The description does not receive the current state to allow actions to
+	 * be compared by their description (useful for testing and debugging).
 	 */
 	readonly description: string | ((c: Context<TState, TPath, TOp>) => string);
 
 	/**
-	 * A lens to focus on the part of the state that this task applies to
+	 * The path to the element that this task applies to
 	 */
 	readonly lens: TPath;
 
@@ -42,7 +47,8 @@ interface TaskSpec<
 	readonly op: TOp;
 
 	/**
-	 * A pre-condition that needs to be met before the task can be chosen
+	 * A condition that must be met for the task to be chosen by the planner or executed by
+	 * an agent.
 	 */
 	condition(
 		s: Lens<TState, TPath>,
@@ -50,35 +56,102 @@ interface TaskSpec<
 	): boolean;
 }
 
-// An action definition
+/**
+ * Action task specification. Internal use only
+ */
 interface ActionSpec<
 	TState = unknown,
 	TPath extends Path = '/',
 	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
-	 * The effect on the state that the action
-	 * provides. The effect function can only be ran if the pre condition
-	 * is met.
+	 * The effect on the state that the task performs.
 	 *
-	 * The effect function receives a reference to the state, which allows
-	 * the effect to mutate the state. The effect function should not return
+	 * The effect function will only be ran if the condition is met and developers
+	 * can trust that the condition will be checked beforehand.
+	 *
+	 * The effect function receives a view to the state, which allows
+	 * it to mutate the state. The effect function should not return
 	 * anything.
+	 *
+	 * If the task operation is `create`, the task constructor will add as
+	 * condition that the property pointed by the lens is undefined. The value will
+	 * be created before calling the effect function provided by the user.
+	 *
+	 * If the task operation is `delete`, the task constructor will add as a condition
+	 * that the property pointed by the lens is not undefined. The value will be deleted
+	 * automatically after the effect function provided by the user.
+	 *
+	 * @param view - A view to the state pointed by the lens.
+	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
 	 */
-	effect(s: View<TState, TPath>, c: TaskContext<TState, TPath, TOp>): void;
+	effect(view: View<TState, TPath>, ctx: TaskContext<TState, TPath, TOp>): void;
 
 	/**
-	 * The actual action the task performs.
+	 * TThe actual action the task performs.	 *
 	 *
-	 * The action function receives a reference to the state, which allows the
-	 * action to mutate the state. The action function should not return anything.
+	 * The action function will only be ran if the condition is met and developers
+	 * can trust that the condition will be checked beforehand.
+	 *
+	 * The action function receives a view to the state, which allows
+	 * it to mutate the state. The action function should not return
+	 * anything.
+	 *
+	 * If the task operation is `create`, the task constructor will add as
+	 * condition that the property pointed by the lens is undefined. The value will
+	 * be created before calling the action function provided by the user.
+	 *
+	 * If the task operation is `delete`, the task constructor will add as a condition
+	 * that the property pointed by the lens is not undefined. The value will be deleted
+	 * automatically after the action functions provided by the user.
+	 *
+	 * @param view - A view to the state pointed by the lens.
+	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
 	 */
+
 	action(
 		s: View<TState, TPath>,
 		c: TaskContext<TState, TPath, TOp>,
 	): Promise<void>;
 }
 
+/**
+ * An action task defines a primitive operation that can be chosen by a planner and
+ * executed by an agent. Action tasks can be used to perform composite behaviors via
+ * methods.
+ *
+ * Action tasks can be created via the Task constructor as follows
+ *
+ * ```typescript
+ * const plusOne = Task.from({
+ *   // A condition for chosing/executing the task
+ *   condition: (state: number, { target }) => state < target,
+ *   // The effect of the action is increasing the system
+ *   // counter by 1. This will be used during planning
+ *   effect: (state: View<number>) => ++state._,
+ *   // The actual action that will be executed
+ *   action: async (state: View<number>) => {
+ *      ++state._;
+ *   },
+ *   // An optional description. Useful for testing
+ *   description: '+1',
+ * });
+ * ```
+ *
+ * An ActionTask is also a function that binds the task to a specific context. This allows
+ * the taks to be used in methods.
+ *
+ * ```ts
+ * const plusTwo = Task.from<number>({
+ *   // We want this method to be chosen only if the difference between the current
+ *   // state and the target is bigger than one
+ *   condition: (state, { target }) => target - state > 1,
+ *   // The method returns two instances of the plusOne task bound to the given target
+ *   method: (_, { target }) => [plusOne({ target }), plusOne({ target })],
+ *   description: '+2',
+ * });
+ * ```
+ */
 export interface ActionTask<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -113,7 +186,11 @@ export interface MethodSpec<
 	readonly expansion: MethodExpansion;
 
 	/**
-	 * The method to be called when the task is executed
+	 * The method to be called when the task is executed.
+	 *
+	 * The method should return a list of instructions to be used by the planner.
+	 * It should never modify the state object.
+	 *
 	 * if the method returns an empty list, this means there are no
 	 * further instructions that can be applied
 	 */
@@ -123,6 +200,27 @@ export interface MethodSpec<
 	): Instruction<TState> | Array<Instruction<TState>>;
 }
 
+/**
+ * A method task defines a composite operation that can be chosen by a planner.
+ *
+ * A method can guide the planner towards following a certain path by providing
+ * a sequence of operations to be used if conditions are suitable.
+ *
+ * Method tasks can be created via the Task constructor as follows
+ *
+ * ```ts
+ * const plusTwo = Task.from<number>({
+ *   // We want this method to be chosen only if the difference between the current
+ *   // state and the target is bigger than one
+ *   condition: (state, { target }) => target - state > 1,
+ *   // The method returns two instances of the plusOne task bound to the given target
+ *   method: (_, { target }) => [plusOne({ target }), plusOne({ target })],
+ *   description: '+2',
+ * });
+ * ```
+ *
+ * Methods can also reference methods for hierarchical task definition.
+ */
 export interface MethodTask<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -141,6 +239,7 @@ export interface MethodTask<
 	(ctx: TaskArgs<TState, TPath, TOp>): Method<TState, TPath, TOp>;
 }
 
+// Bind a task to a specific context
 function ground<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -151,6 +250,8 @@ function ground<
 ): Instruction<TState, TPath, TOp> {
 	const templateParts = Path.elems(task.lens);
 
+	// Form the context path from the task lens and the
+	// given task arguments
 	const path =
 		'/' +
 		templateParts
@@ -179,8 +280,6 @@ function ground<
 
 	const condition = (s: TState) => {
 		const lens = Lens.from(s, path as TPath);
-
-		// Otherwise we check the condition
 		return task.condition(lens, {
 			...context,
 			system: s,
@@ -289,6 +388,9 @@ export type Task<
 	TOp extends TaskOp = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
+/**
+ * Method task properties for the task constructor
+ */
 export type MethodTaskProps<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -296,6 +398,9 @@ export type MethodTaskProps<
 > = Partial<Omit<MethodSpec<TState, TPath, TOp>, 'method' | 'id'>> &
 	Pick<MethodSpec<TState, TPath, TOp>, 'method'>;
 
+/**
+ * Action task properties for the task constructor
+ */
 export type ActionTaskProps<
 	TState = unknown,
 	TPath extends Path = '/',
@@ -320,7 +425,7 @@ function isActionProps<
 }
 
 /**
- * Create a task
+ * Construct a new task (action or method) from a task specification
  */
 function from<
 	TState = unknown,
