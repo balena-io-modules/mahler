@@ -5,4 +5,4 @@ export * from './logger';
 export * from './target';
 export * from './ref';
 export * from './domain';
-export { View } from './lens';
+export * from './view';

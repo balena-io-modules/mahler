@@ -1,6 +1,7 @@
-import { Lens, View } from './lens';
+import { Lens } from './lens';
 import { Path } from './path';
 import { Ref } from './ref';
+import { View } from './view';
 
 import { Observable, Subscribable } from './observable';
 

@@ -1,7 +1,7 @@
 import { Ref } from '../ref';
 import { Observer } from '../observable';
 import { Operation } from '../operation';
-import { View } from '../lens';
+import { View } from '../view';
 
 function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';

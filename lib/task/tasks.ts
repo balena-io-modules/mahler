@@ -2,9 +2,10 @@ import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Context, TaskArgs, TaskOp } from './context';
-import { Lens, View } from '../lens';
+import { Lens } from '../lens';
 import { Path } from '../path';
 import { Ref } from '../ref';
+import { View } from '../view';
 
 import { Action, Instruction, Method, MethodExpansion } from './instructions';
 

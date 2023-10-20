@@ -2,7 +2,7 @@ import { expect } from '~/test-utils';
 import { Lens } from './lens';
 
 describe('Lens', () => {
-	describe('Context', () => {
+	describe('context', () => {
 		it('gets context from generic dictionary', () => {
 			type Counters = { [K in keyof any]: number };
 			const c = Lens.context<Counters, '/'>(`/`, `/`, { a: 1, b: 2 });
