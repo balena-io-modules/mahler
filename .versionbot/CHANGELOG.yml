@@ -1,4 +1,255 @@
 - commits:
+    - subject: Improve type documentation
+      hash: 7cb753b4a12e0db2071aae39cd296bae02de59c9
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Update README
+      hash: b9ed4b04a8fb0e28504c2c2ec8e0d4c01bf78889
+      body: |
+        This updates the API documentation and examples on the README with the
+        refactored API
+      footer:
+        CHange-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Refactor View interface out of the lens module
+      hash: 5f52a244e815687e21371fad5cf2a60dceb518ba
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Update test:compose script
+      hash: 8dccae932be75d3887d4846b5ac9ed5a2520eefb
+      body: |
+        Uses most recent `docker compose run` feature
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add maxSearchDepth planner option
+      hash: 0ffc757b83edbd64df86afbdfea53cc436c381e5
+      body: |
+        This allows to avoid infinite search loop due to task definition bugs.
+
+        The `maxSearchDepth` option defaults to 1000 and can be changed when
+        constructing the planner.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add Domain interface.
+      hash: c318a618bd964913b8e3c52c1b161552ee91a817
+      body: |
+        The domain interface allows to shorten task and sensor creation by first
+        creating a domain, where all tasks created from the domain will work on
+        the same state type.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix agent heater tests leaking into each other
+      hash: 900abfcb2259fbc4d0d583c251e119f6872649c2
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Improve Observable implementation
+      hash: 679e04a8b174c56818ff3c17951a4677000fe306
+      body: |
+        This removes the unused `flatMap` observable function, but most
+        importantly, it updates the way observable emits values from an
+        iterable. Values from an iterable are now shared to all subscribers
+        while before they would be split between them.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix mermaid tests for the new API
+      hash: 00594dd72c4b3975bdd6c00d882b079d513faa02
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix planning utils tests
+      hash: 7efcaf7a2db391423a15423670d0943b583b62dc
+      body: |
+        This fixes the tests to match the new task interface
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Improve pointer interface
+      hash: 096d59e0613fd063ebd48bed47370ec029e6d076
+      body: |
+        This renames the constructor `of` to `from` for consistency and adds
+        better validation to paths that cannot be valid because of incompatible
+        types.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix observable tests
+      hash: 51790de3874723821441e5b4ba2cbc2815ceb330
+      body: |
+        Observable tests use timers which would lead to some flakyness in the
+        results. This moves to sinon timers to ensure the tests are consistent.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix orchestrator tests
+      hash: 8b02eb4c6c43630b61fedbb36d62024c8ab54e85
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Rename `Diff` interface to `Distance`
+      hash: 8c9a83686debea0588d6e4826b35151766a4eb9d
+      body: |
+        This is a better name as it clearly conveys the interface objective of
+        calculating distance to the goal.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Rename Target.DELETED to UNDEFINED
+      hash: 2572c91c2210ebc34f6047ca28c8f59bb9597902
+      body: |
+        The UNDEFINED name is more intuitive and makes sense in the context of
+        javascript
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix Task tests
+      hash: 36e998bd1125d1b5982c0808e094bfee76e728ff
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix composer tests
+      hash: 14c2e3f861d79942b54b90b447faed7573cce3b4
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Use View instead of Ref for action and effect functions
+      hash: e61d058a979b27ce907842e340cd2183d18e1f97
+      body: |
+        While 'delete' tasks automatically delete data, sometimes it is
+        necessary to manually delete the part of the state pointed by the view.
+        Using a View as the first argument allows these methods to call the
+        `delete()` operation in the view.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix bug in Mermaid diagramming
+      hash: 650abfeb074ea6b887c62f1b355e6dbf340bcbf9
+      body: |
+        Errors would assign the wrong parent, meaning the diagram would break
+        when backtracking to previous levels of the search was necessary
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add zip test utility
+      hash: 58889cfe40ab345795543e29674da33ab4e34e96
+      body: |
+        The function takes an action or a method and returns a function that
+        combines the condition and action (or list of expanded actions) to make
+        it easier for testing.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add default conditions for `create` and `delete` tasks
+      hash: 6c98e377f6d20501038edb695ff54dcbb46c6580
+      body: |
+        When grounding the task, the framework will add some existence
+        pre-conditions depending on the operation. This avoids the user from
+        having to add them. The API now also makes either action or effect
+        optional when defining action tasks.
+
+        Whenever a `create` operation is defined, the Task API will create an
+        empty object before passing the value to the effect or action functions.
+
+        Whenever a `delete` operation is defined, the API will first execute the
+        effect and action functions and then proceed to delete the referenced
+        object, after the functions succeed.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add method `expansion` property
+      hash: 24bf92c1ff62938794160347e6f638c767bfdc23
+      body: ""
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Update README examples with new API
+      hash: 0e87074a5090788d53a3d4f8a8c161df08b38d25
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Refactor Task API to use references and lenses
+      hash: 66f7ae5bb3e95e314aecc1dda327bc7f81cdf3a7
+      body: |
+        The new task API will no longer need to have lens functions inside the
+        context as now a reference to the value will be given to the task
+        functions.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Create Ref type
+      hash: 03ee71a67c8b0618a2e51807bcd4684ae26364a4
+      body: |
+        This type allows us to pass arguments by reference to functions
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Rename `Agent.of` to `Agent.from`
+      hash: bd401e6dd5d9ea4ba25ee28629e64f103ef586b3
+      body: |
+        In line with the new constructor convention
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Rename `Planner.of` to `Planner.from`
+      hash: 9ecf344bef9ec364a2f3bfd302fcab99706378f1
+      body: |
+        This is the new naming convention for constructors.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Design v1 API
+      hash: bf22c47b13d9c645d8f4274bd82262cb861b83a4
+      body: |
+        Some README driven development for Mahler's v1 API
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+  version: 1.0.0
+  title: ""
+  date: 2023-10-31T21:25:46.658Z
+- commits:
     - subject: Fix bug when mapping effects
       hash: 52636d4304c013edc3f1855aa6a51e2ee01cfdd2
       body: |
