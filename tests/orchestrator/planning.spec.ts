@@ -1,9 +1,9 @@
 import { expect } from '~/test-utils';
 
-import { ServiceStatus } from './state';
-import { planner } from './planner';
-import { DELETED } from 'mahler';
+import { UNDEFINED } from 'mahler';
 import { plan, stringify } from 'mahler/testing';
+import { planner } from './planner';
+import { ServiceStatus } from './state';
 
 describe('orchestrator/planning', () => {
 	it('updates the app/release state if it has not been set', () => {
@@ -12,7 +12,7 @@ describe('orchestrator/planning', () => {
 			uuid: 'd0',
 			apps: {},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		};
 
 		const result = planner.findPlan(device, {
@@ -36,7 +36,7 @@ describe('orchestrator/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("initialize '/apps/a0'")
+				.action('create /apps/a0')
 				.action("initialize release 'r0' for app 'a0'")
 				.action(
 					"create container for service 'main' of app 'a0' and release 'r0'",
@@ -63,7 +63,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [],
+			images: {},
 		};
 
 		const result = planner.findPlan(device, {
@@ -87,7 +87,7 @@ describe('orchestrator/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_main:r0'")
 				.action(
 					"create container for service 'main' of app 'a0' and release 'r0'",
 				)
@@ -164,7 +164,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [],
+			images: {},
 		};
 
 		const result = planner.findPlan(device, {
@@ -187,12 +187,12 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		});
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_main:r0'")
 				.action(
 					"create container for service 'main' of app 'a0' and release 'r0'",
 				)
@@ -228,7 +228,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		};
 
 		const result = planner.findPlan(device, {
@@ -250,7 +250,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		});
 
 		expect(stringify(result)).to.deep.equal(
@@ -293,7 +293,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		};
 
 		const result = planner.findPlan(device, {
@@ -301,7 +301,7 @@ describe('orchestrator/planning', () => {
 				a0: {
 					name: 'test-app',
 					releases: {
-						r0: DELETED,
+						r0: UNDEFINED,
 						r1: {
 							services: {
 								main: {
@@ -324,7 +324,7 @@ describe('orchestrator/planning', () => {
 		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("initialize release 'r1' for app 'a0'")
-				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_main:r1'")
 				.action(
 					"create container for service 'main' of app 'a0' and release 'r1'",
 				)
@@ -338,7 +338,7 @@ describe('orchestrator/planning', () => {
 				.action(
 					"start container for service 'main' of app 'a0' and release 'r1'",
 				)
-				.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_other:r1'")
 				.action(
 					"create container for service 'other' of app 'a0' and release 'r1'",
 				)
@@ -371,7 +371,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		};
 
 		const result = planner.findPlan(device, {
@@ -379,7 +379,7 @@ describe('orchestrator/planning', () => {
 				a0: {
 					name: 'test-app',
 					releases: {
-						r0: DELETED,
+						r0: UNDEFINED,
 						r1: {
 							services: {
 								// main service has not changed
@@ -403,10 +403,10 @@ describe('orchestrator/planning', () => {
 		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("initialize release 'r1' for app 'a0'")
-				.action("pull image 'alpine:latest' for service 'main' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_main:r1'")
 				.action("migrate unchanged service 'main' of app 'a0 to release 'r1' '")
 				.action("remove release 'r0'")
-				.action("pull image 'alpine:latest' for service 'other' of app 'a0'")
+				.action("pull image 'alpine:latest' with tag 'a0_other:r1'")
 				.action(
 					"create container for service 'other' of app 'a0' and release 'r1'",
 				)

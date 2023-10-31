@@ -1,12 +1,13 @@
 import { setTimeout as delay } from 'timers/promises';
-import { diff, patch, Operation as PatchOperation } from 'mahler-wasm';
 
-import { Observer } from '../observable';
-import { Planner, Node, EmptyNode } from '../planner';
-import { Sensor, Subscription } from '../sensor';
+import { assert } from '../assert';
+import { Observer, Subscription } from '../observable';
+import { EmptyNode, Node, Planner } from '../planner';
+import { Ref } from '../ref';
+import { Sensor } from '../sensor';
 import { Target } from '../target';
 import { Action } from '../task';
-import { assert } from '../assert';
+import { observe } from './observe';
 
 import {
 	AgentOpts,
@@ -57,34 +58,41 @@ export class Runtime<TState> {
 	private running = false;
 	private stopped = false;
 	private subscribed: Subscription[] = [];
+	private stateRef: Ref<TState>;
 
 	constructor(
 		private readonly observer: Observer<TState>,
-		public state: TState,
+		state: TState,
 		private readonly target: Target<TState>,
 		private readonly planner: Planner<TState>,
 		sensors: Array<Sensor<TState>>,
 		private readonly opts: AgentOpts,
 	) {
+		this.stateRef = Ref.of(state);
 		// add subscribers to sensors
-		this.subscribed = sensors.map((s) =>
-			s.subscribe((next: (s: TState) => TState) => {
-				// QUESTION: do we need to handle concurrency
-				this.state = next(this.state);
-
+		this.subscribed = sensors.map((sensor) =>
+			sensor(this.stateRef).subscribe((s) => {
+				// There is no need to update the state reference as the sensor already
+				// modifies the state. We don't handle concurrency as we expect that whatever
+				// value modified by sensologrs does not conflict with the value modified by
+				// actions
 				if (opts.follow) {
 					// Trigger a re-plan to see if the state is still on target
 					this.start();
 				} else {
 					// Notify the observer of the new state
-					this.observer.next(this.state);
+					this.observer.next(s);
 				}
 			}),
 		);
 	}
 
+	public get state() {
+		return this.stateRef._;
+	}
+
 	private findPlan() {
-		const result = this.planner.findPlan(this.state, this.target);
+		const result = this.planner.findPlan(this.stateRef._, this.target);
 
 		if (!result.success) {
 			// Jump to the catch below
@@ -94,35 +102,13 @@ export class Runtime<TState> {
 		return result;
 	}
 
-	private async runAction(action: Action): Promise<PatchOperation[]> {
+	private async runAction(action: Action): Promise<void> {
 		try {
-			// We keep a reference to the previous state, which is
-			// what we need to compare the updated state to
-			const before = this.state;
-			const res = action(before);
-			const runtime = this;
-			// If the action result is an observable, then
-			// we need to subscribe to it and update the internal
-			// state as the observable emits new values
-			return new Promise((resolve, reject) => {
-				res.subscribe({
-					next(s) {
-						const changes = diff(before, s);
-						if (changes.length > 0) {
-							runtime.state = patch(runtime.state, changes);
-							runtime.observer.next(runtime.state);
-						}
-					},
-					complete() {
-						// There should be no more changes to perform
-						// here
-						resolve([]);
-					},
-					error(e) {
-						reject(e);
-					},
-				});
-			});
+			// Running the action should perform the changes in the
+			// local state without the need of comparisons later.
+			// The observe() wrapper allows to notify the observer from every
+			// change to some part of the state
+			await observe(action, this.observer)(this.stateRef);
 		} catch (e) {
 			throw new ActionRunFailed(action, e);
 		}
@@ -144,25 +130,12 @@ export class Runtime<TState> {
 				throw new Cancelled();
 			}
 
-			if (!action.condition(this.state)) {
+			if (!action.condition(this.stateRef._)) {
 				throw new ActionConditionFailed(action);
 			}
 
 			logger.info(`${action.description}: running ...`);
-			const changes = await this.runAction(action);
-			if (changes.length > 0) {
-				// NOTE: there is a small chance that the state changes while the
-				// patch is being applied. This means there is potential to lose changes
-				// by a race (even though patch should be very fast).
-				// There are two potential solutions here, either we wrap this call in a
-				// mutex, so only one patch can be applied at a time, or we find a way to update
-				// the state object in place, so only the relevant parts of the state are updated
-				this.state = patch(this.state, changes);
-
-				// Notify observer of the new state only if there
-				// are changes
-				this.observer.next(this.state);
-			}
+			await this.runAction(action);
 			logger.info(`${action.description}: success`);
 
 			return await this.runPlan(node.next);
@@ -219,7 +192,7 @@ export class Runtime<TState> {
 			let found = false;
 
 			// Send the initial state to the observer
-			this.observer.next(this.state);
+			this.observer.next(structuredClone(this.stateRef._));
 			while (!this.stopped) {
 				try {
 					logger.debug('finding a plan to the target');
@@ -231,7 +204,7 @@ export class Runtime<TState> {
 					// The plan is empty, we have reached the goal
 					if (start == null) {
 						logger.debug('plan empty, nothing else to do');
-						return { success: true as const, state: this.state };
+						return { success: true as const, state: this.stateRef._ };
 					}
 
 					const plan: string[] = [];

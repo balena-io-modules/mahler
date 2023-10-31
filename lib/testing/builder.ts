@@ -6,6 +6,8 @@ interface PlanBuilder {
 	 */
 	action(description: string): PlanBuilder;
 
+	actions(...descriptions: string[]): PlanBuilder;
+
 	/**
 	 * Adds a sub-plan to the simple plan
 	 * to represent a fork in the current plan
@@ -32,6 +34,12 @@ export function plan(): PlanBuilder {
 	const builder = {
 		action(description: string) {
 			repr.push(description);
+
+			return builder;
+		},
+
+		actions(...descriptions: string[]) {
+			repr.push(...descriptions);
 
 			return builder;
 		},
@@ -66,6 +74,12 @@ export function branch(...values: Branch): Branch {
 		}
 	}
 	return b.dag();
+}
+
+export function sequence(...actions: string[]): string {
+	return plan()
+		.actions(...actions)
+		.end();
 }
 
 export function fork(...branches: Branch[]): Fork {

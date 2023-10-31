@@ -1,42 +1,92 @@
-import { Observable, Observer, Subject } from './observable';
+import { Lens } from './lens';
+import { Path } from './path';
+import { Ref } from './ref';
+import { View } from './view';
 
-export { Subscription } from './observable';
+import { Observable, Subscribable } from './observable';
 
-type SensorOutput<T> = (s: T) => T;
-export type Sensor<T> = Observable<SensorOutput<T>>;
-export type Subscriber<T> = Observer<SensorOutput<T>>;
+/**
+ * A Sensor function for type T is a function that returns a generator
+ * that yields values of type T
+ */
+export type SensorFn<T> = () =>
+	| AsyncGenerator<T, never | void | T, void>
+	| Generator<T, never | void, void | undefined>;
+
+/**
+ * A sensor receives a reference to a global state and
+ * returns a subscribable that allows to observe changes
+ * to the state returned by the sensor operation.
+ */
+export type Sensor<T> = (s: Ref<T>) => Subscribable<T>;
+
+/**
+ * The sensor constructor properties
+ */
+export interface SensorProps<T, P extends Path = '/'> {
+	/**
+	 * A lens to indicate what part of the state the sensor
+	 * will update as it runs. Unlike task lense, sensor lenses
+	 * cannot have properties for now
+	 */
+	lens: P;
+
+	/**
+	 * A sensor function. The function returns a generator that yields
+	 * values of the type of the lens
+	 */
+	sensor: SensorFn<Lens<T, P>>;
+}
+
+/**
+ * Construct a new sensor
+ *
+ * This takes an argument either a `SensorProps` object, or just a function.
+ *
+ * If a function is passed, it is assumed to be the `sensor` function, and
+ * the `lens` is assumed to be the root of the state.
+ */
+function from<T, P extends Path = '/'>(
+	input: SensorFn<Lens<T, P>> | Partial<SensorProps<T, P>>,
+): Sensor<T> {
+	const {
+		lens = '/' as P,
+		sensor = function* () {
+			/* noop */
+		},
+	} = typeof input === 'function' ? { sensor: input } : input;
+	return function (s) {
+		const view = View.from(s, lens);
+
+		return Observable.from(sensor()).map((value) => {
+			// For each value emmited by the sensor
+			// we update the view and return the updated state
+			// to the subscriber
+			view._ = value;
+
+			// We need to return a copy of the state here, otherwise
+			// subscribers would be able to change the behavior of the
+			// agent or other subscribers
+			return structuredClone(s._);
+		});
+	};
+}
+
+/**
+ * A sensor builder interface allows to build multiple sensors of
+ * the same type.
+ */
+interface SensorBuilder<T> {
+	from<P extends Path = '/'>(t: SensorProps<T, P>): Sensor<T>;
+}
+
+function of<T>(): SensorBuilder<T> {
+	return {
+		from,
+	};
+}
 
 export const Sensor = {
-	of: <T>(
-		sensor: (subscriber: Subscriber<T>) => void | Promise<void>,
-	): Sensor<T> => {
-		const subject = new Subject<SensorOutput<T>>();
-
-		let running = false;
-		return Observable.from({
-			subscribe(next) {
-				const subscription = subject.subscribe(next);
-
-				// Now that we have subscribers we start the observable
-				if (!running) {
-					Promise.resolve(sensor(subject))
-						.then(() => {
-							// Notify the proxy of the observable completion
-							subject.complete();
-						})
-						.catch((e) => {
-							// Notify subscriber of uncaught errors on the observable
-							subject.error(e);
-						})
-						.finally(() => {
-							// The observable will restart when a new subscriber is added
-							running = false;
-						});
-					running = true;
-				}
-
-				return subscription;
-			},
-		});
-	},
+	of,
+	from,
 };

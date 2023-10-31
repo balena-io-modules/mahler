@@ -66,7 +66,7 @@ export const Node = {
 		// id as there may be changes in the state that have nothing
 		// to do with the action. We just use the part of the state
 		// that is relevant to the action according to the path
-		const state = Pointer.of(s, a.path);
+		const state = Pointer.from(s, a.path);
 
 		// md5 should be good enough for this purpose
 		// and it's the fastest of the available options

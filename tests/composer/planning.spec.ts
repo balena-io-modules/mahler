@@ -9,7 +9,7 @@ describe('composer/planning', () => {
 		const app = {
 			name: 'test',
 			services: {},
-			images: [],
+			images: {},
 		};
 
 		const result = planner.findPlan(app, {
@@ -24,7 +24,7 @@ describe('composer/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("pull image 'alpine:latest' for service 'main'")
+				.action("pull image 'alpine:latest'")
 				.action("installing container for service 'main'")
 				.action("starting container for service 'main'")
 				.end(),
@@ -35,7 +35,7 @@ describe('composer/planning', () => {
 		const app = {
 			name: 'test',
 			services: {},
-			images: [{ name: 'alpine:latest', imageId: '123' }],
+			images: { 'alpine:latest': { imageId: '123' } },
 		};
 
 		const result = planner.findPlan(app, {
@@ -67,7 +67,7 @@ describe('composer/planning', () => {
 					command: ['sleep', 'infinity'],
 				},
 			},
-			images: [{ name: 'alpine:latest', imageId: '123' }],
+			images: { 'alpine:latest': { imageId: '123' } },
 		};
 
 		const result = planner.findPlan(app, {
@@ -87,7 +87,7 @@ describe('composer/planning', () => {
 		const app = {
 			name: 'test',
 			services: {},
-			images: [],
+			images: {},
 		};
 
 		const result = planner.findPlan(app, {
@@ -103,7 +103,7 @@ describe('composer/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("pull image 'alpine:latest' for service 'main'")
+				.action("pull image 'alpine:latest'")
 				.action("installing container for service 'main'")
 				.action("starting container for service 'main'")
 				.action("stopping container for service 'main'")
@@ -122,7 +122,7 @@ describe('composer/planning', () => {
 					command: ['sleep', 'infinity'],
 				},
 			},
-			images: [{ name: 'alpine:3.13', imageId: '123' }],
+			images: { 'alpine:3.13': { imageId: '123' } },
 		};
 
 		const result = planner.findPlan(app, {
@@ -138,7 +138,7 @@ describe('composer/planning', () => {
 			plan()
 				.action("stopping container for service 'main'")
 				.action("removing container for service 'main'")
-				.action("pull image 'alpine:3.14' for service 'main'")
+				.action("pull image 'alpine:3.14'")
 				.action("installing container for service 'main'")
 				.action("starting container for service 'main'")
 				.end(),
@@ -156,7 +156,7 @@ describe('composer/planning', () => {
 					command: ['sleep', 'infinity'],
 				},
 			},
-			images: [{ name: 'alpine:3.13', imageId: '123' }],
+			images: { 'alpine:3.13': { imageId: '123' } },
 		};
 
 		const result = planner.findPlan(app, {
@@ -171,7 +171,7 @@ describe('composer/planning', () => {
 		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("removing container for service 'main'")
-				.action("pull image 'alpine:3.14' for service 'main'")
+				.action("pull image 'alpine:3.14'")
 				.action("installing container for service 'main'")
 				.action("starting container for service 'main'")
 				.end(),
@@ -190,7 +190,7 @@ it('knows to recreate service if config has changed', () => {
 				command: ['sleep', 'infinity'],
 			},
 		},
-		images: [{ name: 'alpine:3.13', imageId: '123' }],
+		images: { 'alpine:3.13': { imageId: '123' } },
 	};
 
 	const result = planner.findPlan(app, {

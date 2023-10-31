@@ -1,4 +1,4 @@
-import { Diff } from '../diff';
+import { Distance } from '../distance';
 import { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
@@ -79,7 +79,7 @@ function reversePlan<T>(
 	return [prev, curr.next];
 }
 
-function of<TState = any>({
+function from<TState = any>({
 	tasks = [],
 	config = {},
 }: {
@@ -101,6 +101,7 @@ function of<TState = any>({
 		trace = () => {
 			/* noop */
 		},
+		maxSearchDepth = 1000,
 	} = config;
 
 	return {
@@ -115,9 +116,10 @@ function of<TState = any>({
 					stats: { iterations: 0, maxDepth: 0, time: 0 },
 					pendingChanges: [],
 				},
-				diff: Diff.of(current, target),
+				distance: Distance.from(current, target),
 				tasks,
 				trace,
+				maxSearchDepth,
 			});
 			res.stats = { ...res.stats, time: performance.now() - time };
 			if (res.success) {
@@ -136,5 +138,5 @@ function of<TState = any>({
 }
 
 export const Planner = {
-	of,
+	from,
 };

@@ -1,25 +1,28 @@
-import { expect, console } from '~/test-utils';
+import { expect, console as logger } from '~/test-utils';
 import { Agent } from './agent';
-import { Task, NoAction } from './task';
-import { Sensor, Subscriber } from './sensor';
+import { NoAction, Task } from './task';
+import { Sensor } from './sensor';
+
+import { stub } from 'sinon';
 
 import { setTimeout } from 'timers/promises';
 
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.of({ initial: 0, opts: { logger: console } });
+			const agent = Agent.from({ initial: 0, opts: { logger: logger } });
 			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
 				state: 0,
 			});
+			agent.stop();
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, logger: console },
+				opts: { minWaitMs: 10, logger: logger },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
@@ -27,24 +30,24 @@ describe('Agent', () => {
 		});
 
 		it('it continues looking for plan unless max retries is set', async () => {
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, maxRetries: 2, logger: console },
+				opts: { minWaitMs: 10, maxRetries: 2, logger: logger },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
+			agent.stop();
 		});
 
 		it('it allows to subscribe to the agent state', async () => {
-			const inc = Task.of({
-				condition: (state: number, { target }) => state < target,
-				effect: (state: number) => state + 1,
-				action: async (state: number) => state + 1,
+			const inc = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
 				description: 'increment',
 			});
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: 0,
-				opts: { logger: console, minWaitMs: 10 },
+				opts: { logger: logger, minWaitMs: 10 },
 				tasks: [inc],
 			});
 
@@ -61,22 +64,26 @@ describe('Agent', () => {
 
 			// Intermediate states returned by the observable should be emitted by the agent
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			agent.stop();
 		});
 
 		it('allows to use observables as actions', async () => {
-			const counter = Task.of({
-				condition: (state: number, { target }) => state < target,
-				effect: (_: number, { target }) => target,
-				action: async function* (state: number, { target }) {
-					while (state < target) {
-						yield ++state;
+			const counter = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state, { target }) => {
+					state._ = target;
+				},
+				action: async (state, { target }) => {
+					while (state._ < target) {
+						// Each time the state is modified, the agent should emit the new state
+						state._++;
 						await setTimeout(10);
 					}
 				},
 			});
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: 0,
-				opts: { logger: console },
+				opts: { logger: logger },
 				tasks: [counter],
 			});
 
@@ -93,42 +100,43 @@ describe('Agent', () => {
 
 			// Intermediate states returned by the observable should be emitted by the agent
 			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			agent.stop();
 		});
 
 		it('runs parallel plans', async () => {
 			type Counters = { [k: string]: number };
 
-			const byOne = Task.of({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.get(state) < ctx.target,
-				effect: (state: Counters, ctx) => ctx.set(state, ctx.get(state) + 1),
-				action: async (state: Counters, ctx) => {
+			const byOne = Task.of<Counters>().from({
+				lens: '/:counterId',
+				condition: (counter, { target }) => counter < target,
+				effect: (counter) => ++counter._,
+				action: async (counter) => {
 					await setTimeout(100 * Math.random());
-					return ctx.set(state, ctx.get(state) + 1);
+					counter._++;
 				},
-				description: ({ counter }) => `${counter} + 1`,
+				description: ({ counterId }) => `${counterId} + 1`,
 			});
 
-			const byTwo = Task.of({
-				path: '/:counter',
-				condition: (state: Counters, ctx) => ctx.target - ctx.get(state) > 1,
-				method: (_: Counters, ctx) => [byOne({ ...ctx }), byOne({ ...ctx })],
-				description: ({ counter }) => `increase '${counter}'`,
+			const byTwo = Task.of<Counters>().from({
+				lens: '/:counterId',
+				condition: (counter, { target }) => target - counter > 1,
+				method: (_, ctx) => [byOne(ctx), byOne(ctx)],
+				description: ({ counterId }) => `increase '${counterId}'`,
 			});
 
-			const multiIncrement = Task.of({
-				condition: (state: Counters, ctx) =>
-					Object.keys(state).some((k) => ctx.target[k] - state[k] > 1),
-				method: (state: Counters, ctx) =>
-					Object.keys(state)
-						.filter((k) => ctx.target[k] - state[k] > 1)
-						.map((k) => byTwo({ counter: k, target: ctx.target[k] })),
+			const multiIncrement = Task.from<Counters>({
+				condition: (counters, { target }) =>
+					Object.keys(counters).some((k) => target[k] - counters[k] > 1),
+				method: (counters, { target }) =>
+					Object.keys(counters)
+						.filter((k) => target[k] - counters[k] > 1)
+						.map((k) => byTwo({ counterId: k, target: target[k] })),
 				description: `increment counters`,
 			});
 
-			const agent = Agent.of({
+			const agent = Agent.from({
 				initial: { a: 0, b: 0 },
-				opts: { logger: console, minWaitMs: 1 * 1000 },
+				opts: { logger: logger, minWaitMs: 1 * 1000 },
 				tasks: [multiIncrement, byTwo, byOne],
 			});
 
@@ -141,84 +149,94 @@ describe('Agent', () => {
 				success: true,
 				state: { a: 3, b: 2 },
 			});
+			agent.stop();
 		});
 	});
 
 	describe('heater', () => {
 		type Heater = { roomTemp: number; resistorOn: boolean };
-		const turnOn = Task.of({
-			condition: (state: Heater, { target }) =>
+
+		// This emulates the target state of the heater hardware
+		let resistorOn = false;
+		const toggleResistorOn = stub().callsFake(() => {
+			resistorOn = true;
+		});
+		const toggleResistorOff = stub().callsFake(() => {
+			resistorOn = false;
+		});
+
+		const turnOn = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				state.roomTemp < target.roomTemp && !state.resistorOn,
-			effect: (state: Heater, { target }) => ({
-				...state,
+			effect: (state, { target }) => {
 				// Turning the resistor on does not change the temperature
 				// immediately, but the effect is that the temperature eventually
 				// will reach that point
-				roomTemp: target.roomTemp,
-				resistorOn: true,
-			}),
-			action: async (state: Heater) => ({
-				...state,
-				resistorOn: true,
-			}),
+				state._.roomTemp = target.roomTemp;
+				state._.resistorOn = true;
+			},
+			action: async (state) => {
+				state._.resistorOn = true;
+				toggleResistorOn();
+			},
 			description: 'turn resistor ON',
 		});
 
-		const turnOff = Task.of({
-			condition: (state: Heater, { target }) =>
+		const turnOff = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				state.roomTemp > target.roomTemp && !!state.resistorOn,
-			effect: (state: Heater, { target }) => ({
-				...state,
-				roomTemp: target.roomTemp,
-				resistorOn: false,
-			}),
-			action: async (state: Heater) => ({
-				...state,
-				resistorOn: false,
-			}),
+			effect: (state, { target }) => {
+				state._.roomTemp = target.roomTemp;
+				state._.resistorOn = false;
+			},
+			action: async (state) => {
+				state._.resistorOn = false;
+				toggleResistorOff();
+			},
 			description: 'turn resistor OFF',
 		});
 
-		const wait = Task.of({
-			condition: (state: Heater, { target }) =>
+		const wait = Task.of<Heater>().from({
+			condition: (state, { target }) =>
 				// We have not reached the target but the resistor is already off
 				(state.roomTemp > target.roomTemp && !state.resistorOn) ||
 				// We have not reached the target but the resistor is already on
 				(state.roomTemp < target.roomTemp && !!state.resistorOn),
-			effect: (state: Heater, { target }) => ({
-				...state,
-				roomTemp: target.roomTemp,
-			}),
+			effect: (state, { target }) => {
+				state._.roomTemp = target.roomTemp;
+			},
 			action: NoAction,
 			description: 'wait for temperature to reach target',
 		});
 
-		const termometer = Sensor.of(async (subscriber: Subscriber<Heater>) => {
-			while (subscriber) {
-				subscriber.next((state) => {
-					// For this test we assume the temperature source of truth comes
-					// from the agent, but that won't be true in a real system,
-					// where the termometer would be the source of truth
-					const roomTemp = state.roomTemp;
-					if (state.resistorOn) {
+		// We wrap the sensor in a function so it doesn't leak to other
+		// tests
+		const termometer = (roomTemp: number) =>
+			Sensor.of<Heater>().from({
+				lens: '/roomTemp',
+				sensor: async function* () {
+					while (true) {
 						// The heater is on, so the temperature increases
-						return { ...state, roomTemp: roomTemp + 1 };
-					} else {
-						return { ...state, roomTemp: roomTemp - 1 };
+						if (resistorOn) {
+							++roomTemp;
+						} else {
+							--roomTemp;
+						}
+						yield roomTemp;
+						// Temperature increases/decreases 1 degree every 10ms
+						await setTimeout(10);
 					}
-				});
-
-				// Temperature increases/decreases 1 degree every 10ms
-				await setTimeout(10);
-			}
-		});
+				},
+			});
 
 		it('it should turn on the heater if temperature is below the target', async () => {
-			const agent = Agent.of({
-				initial: { roomTemp: 10, resistorOn: false },
+			const roomTemp = 10;
+			resistorOn = false;
+			const agent = Agent.from({
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
-				sensors: [termometer],
-				opts: { minWaitMs: 10, logger: console },
+				sensors: [termometer(roomTemp)],
+				opts: { minWaitMs: 10, logger: logger },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -229,11 +247,13 @@ describe('Agent', () => {
 		});
 
 		it('it should turn off the heater if temperature is above the target', async () => {
-			const agent = Agent.of({
-				initial: { roomTemp: 30, resistorOn: true },
+			const roomTemp = 30;
+			resistorOn = true;
+			const agent = Agent.from({
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
-				sensors: [termometer],
-				opts: { minWaitMs: 10, logger: console },
+				sensors: [termometer(roomTemp)],
+				opts: { minWaitMs: 10, logger: logger },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -244,11 +264,13 @@ describe('Agent', () => {
 		});
 
 		it('it should allow observers to subcribe to the agent state', async () => {
-			const agent = Agent.of({
-				initial: { roomTemp: 18, resistorOn: false },
+			const roomTemp = 18;
+			resistorOn = false;
+			const agent = Agent.from({
+				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
-				sensors: [termometer],
-				opts: { minWaitMs: 10, logger: console },
+				sensors: [termometer(roomTemp)],
+				opts: { minWaitMs: 10, logger: logger },
 			});
 
 			const states: Heater[] = [];
@@ -261,6 +283,10 @@ describe('Agent', () => {
 			// The observable should return all the state changes
 			expect(states).to.deep.equal([
 				{ roomTemp: 18, resistorOn: false },
+				{ roomTemp: 18, resistorOn: true },
+				// Because the termometer is started with the agent, the temperature
+				// drops a degree before it can be increased by turning the resistor on
+				{ roomTemp: 17, resistorOn: true },
 				{ roomTemp: 18, resistorOn: true },
 				{ roomTemp: 19, resistorOn: true },
 				{ roomTemp: 20, resistorOn: true },

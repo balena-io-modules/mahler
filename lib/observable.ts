@@ -20,7 +20,6 @@ export interface Subscribable<T> {
 
 export interface Observable<T> extends Subscribable<T> {
 	map<U>(f: (t: T) => U): Observable<U>;
-	flatMap<U>(f: (t: T) => Observable<U>): Observable<U>;
 }
 
 /**
@@ -107,8 +106,16 @@ function isSubscribable<T>(x: unknown): x is Subscribable<T> {
 	return x != null && typeof (x as any).subscribe === 'function';
 }
 
-function isIterable<T>(x: unknown): x is Iterable<T> {
+function isSyncIterable<T>(x: unknown): x is Iterable<T> {
 	return x != null && typeof x === 'object' && Symbol.iterator in x;
+}
+
+function iIterable<T>(x: unknown): x is AsyncIterable<T> | Iterable<T> {
+	return (
+		x != null &&
+		typeof x === 'object' &&
+		(Symbol.iterator in x || Symbol.asyncIterator in x)
+	);
 }
 
 async function processPromise<T>(p: PromiseLike<T>, subscriber: Subscriber<T>) {
@@ -121,12 +128,10 @@ async function processPromise<T>(p: PromiseLike<T>, subscriber: Subscriber<T>) {
 }
 
 async function processIterable<T>(
-	input: Iterable<T> | AsyncIterable<T>,
+	input: AsyncIterable<T>,
 	subscriber: Subscriber<T>,
 ) {
-	const items = isIterable(input)
-		? input[Symbol.iterator]()
-		: input[Symbol.asyncIterator]();
+	const items = input[Symbol.asyncIterator]();
 
 	let n = await items.next();
 	while (!n.done) {
@@ -137,20 +142,76 @@ async function processIterable<T>(
 		n = await items.next();
 	}
 
-	if (subscriber.closed) {
-		return;
-	}
-
-	// If the iterable or generator function
-	// returns an extra value at the end, we
-	// need to pass it to the subscriber as well
-	if (n.value != null) {
-		subscriber.next(n.value);
-	}
 	subscriber.complete();
 }
 
+/**
+ * Multiplexes an iterable so that multiple iterators can consume it
+ *
+ * This returns a function that can be called to create a new iterator. Each
+ * iterator will receive the same values in the same order.
+ */
+function multiplexIterable<T>(input: Iterable<T> | AsyncIterable<T>) {
+	const items = isSyncIterable(input)
+		? input[Symbol.iterator]()
+		: input[Symbol.asyncIterator]();
+
+	const consumers: Array<{
+		resolve: (t: IteratorResult<T>) => void;
+		reject: (e: any) => void;
+	}> = [];
+
+	let running = false;
+	async function readFromInput() {
+		if (running || consumers.length === 0) {
+			return;
+		}
+		running = true;
+
+		try {
+			// Get the next result and pass it to all consumers waiting for
+			// it
+			const result = await Promise.resolve(items.next());
+			let c = consumers.shift();
+			// Pass the resulting value to all consumers waiting for it
+			while (c != null) {
+				c.resolve(result);
+				c = consumers.shift();
+			}
+			// Once all consumers have been served we will only get the next result
+			// once next() has been called in one of the output iterators
+		} catch (e) {
+			consumers.forEach((c) => c.reject(e));
+			consumers.length = 0;
+		} finally {
+			running = false;
+		}
+	}
+
+	return function (): AsyncIterable<T> {
+		return {
+			[Symbol.asyncIterator]() {
+				return {
+					next() {
+						const promise = new Promise<IteratorResult<T>>(
+							(resolve, reject) => {
+								consumers.push({ resolve, reject });
+							},
+						);
+						void readFromInput();
+						return promise;
+					},
+				};
+			},
+		};
+	};
+}
+
 function from<T>(input: ObservableInput<T>): Observable<T> {
+	let items: () => AsyncIterable<T>;
+	if (iIterable(input)) {
+		items = multiplexIterable(input);
+	}
 	const self: Observable<T> = {
 		subscribe(next: Observer<T> | Next<T>): Subscription {
 			let s: Subscriber<T>;
@@ -179,7 +240,7 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 			if (isPromiseLike(input)) {
 				processPromise(input, s).catch(s.error);
 			} else {
-				processIterable(input, s).catch(s.error);
+				processIterable(items(), s).catch(s.error);
 			}
 
 			return {
@@ -192,53 +253,9 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 		map<U>(f: (t: T) => U): Observable<U> {
 			return from(map(self, f));
 		},
-		flatMap<U>(f: (t: T) => Subscribable<U>): Observable<U> {
-			return from(flatMap(self, f));
-		},
 	};
 
 	return self;
-}
-
-function flatMap<T, U>(
-	o: Subscribable<T>,
-	f: (t: T) => Subscribable<U>,
-): Subscribable<U> {
-	return {
-		subscribe(subscriber: Observer<U>): Subscription {
-			const subscriptions: Subscription[] = [];
-			const subscription = o.subscribe({
-				next: (t) => {
-					const innerSubscription = f(t).subscribe({
-						next: subscriber.next,
-						error: (e) => {
-							subscriber.error(e);
-							subscriptions.forEach((s) => s.unsubscribe());
-						},
-						complete: () => {
-							subscriptions.splice(subscriptions.indexOf(innerSubscription), 1);
-							if (subscriptions.length === 0) {
-								subscriber.complete();
-							}
-						},
-					});
-					subscriptions.push(innerSubscription);
-				},
-				error: subscriber.error,
-				complete: () => {
-					if (subscriptions.length === 0) {
-						subscriber.complete();
-					}
-				},
-			});
-			return {
-				unsubscribe: () => {
-					subscription.unsubscribe();
-					subscriptions.forEach((s) => s.unsubscribe());
-				},
-			};
-		},
-	};
 }
 
 function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
@@ -265,5 +282,4 @@ export const Observable = {
 	from,
 	is,
 	map,
-	flatMap,
 };

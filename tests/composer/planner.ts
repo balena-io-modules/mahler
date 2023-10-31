@@ -1,10 +1,24 @@
 import { Planner } from 'mahler/planner';
-import { console } from '~/test-utils';
+import { mermaid } from 'mahler/testing';
+
+export const trace = mermaid();
 
 import { App } from './state';
-import { fetch, install, remove, start, stop } from './tasks';
+import {
+	fetchServiceImage,
+	installService,
+	uninstallService,
+	startService,
+	stopService,
+} from './tasks';
 
-export const planner = Planner.of<App>({
-	tasks: [fetch, install, start, stop, remove],
-	config: { trace: console.trace },
+export const planner = Planner.from<App>({
+	tasks: [
+		fetchServiceImage,
+		installService,
+		startService,
+		stopService,
+		uninstallService,
+	],
+	config: { trace },
 });

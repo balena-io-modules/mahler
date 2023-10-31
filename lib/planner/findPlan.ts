@@ -4,12 +4,13 @@ import {
 	Operation as PatchOperation,
 } from 'mahler-wasm';
 
-import { Context } from '../context';
-import { Diff } from '../diff';
+import { Lens } from '../lens';
+import { Distance } from '../distance';
 import { Operation } from '../operation';
 import { Path } from '../path';
 import { Pointer } from '../pointer';
-import { Action, Instruction, Method, Task } from '../task';
+import { Ref } from '../ref';
+import { Action, Instruction, Method, Task, MethodExpansion } from '../task';
 import { Plan } from './plan';
 import { EmptyNode, Node } from './node';
 import {
@@ -25,13 +26,14 @@ import { isTaskApplicable } from './utils';
 import assert from '../assert';
 
 interface PlanningState<TState = any> {
-	diff: Diff<TState>;
+	distance: Distance<TState>;
 	tasks: Array<Task<TState>>;
 	depth?: number;
 	operation?: Operation<TState, any>;
 	trace: PlannerConfig<TState>['trace'];
 	initialPlan: Plan<TState>;
 	callStack?: Array<Method<TState>>;
+	maxSearchDepth?: number;
 }
 
 function findLoop<T>(id: string, node: Node<T> | null): boolean {
@@ -67,7 +69,11 @@ function tryAction<TState = any>(
 	if (findLoop(id, initialPlan.start)) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
-	const state = action(initialPlan.state)();
+
+	// Because the effect mutates the state, we need to create a copy here
+	const ref = Ref.of(structuredClone(initialPlan.state));
+	action.effect(ref);
+	const state = ref._;
 
 	// We calculate the changes only at the action level
 	const changes = createPatch(initialPlan.state, state);
@@ -316,9 +322,25 @@ function tryInstruction<TState = any>(
 
 	let res: Plan<TState>;
 	if (Method.is(instruction)) {
-		// We try methods in parallel first. If conflicts are found then we'll try
-		// running them in sequence
-		res = tryParallel(instruction, { ...state, trace, initialPlan, callStack });
+		// If sequential expansion was chosen, then we go straight to
+		// evaluating the method in a sequential manner
+		if (instruction.expansion === MethodExpansion.SEQUENTIAL) {
+			res = trySequential(instruction, {
+				...state,
+				trace,
+				initialPlan,
+				callStack,
+			});
+		} else {
+			// Otherwise. We try methods in parallel first. If conflicts are found then we'll try
+			// running them in sequence
+			res = tryParallel(instruction, {
+				...state,
+				trace,
+				initialPlan,
+				callStack,
+			});
+		}
 	} else {
 		res = tryAction(instruction, { ...state, trace, initialPlan, callStack });
 	}
@@ -327,26 +349,35 @@ function tryInstruction<TState = any>(
 }
 
 export function findPlan<TState = any>({
-	diff,
+	distance,
 	tasks,
 	trace,
 	depth = 0,
 	initialPlan,
 	callStack = [],
+	maxSearchDepth = 1000,
 }: PlanningState<TState>): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
 	assert(initialPlan.success);
 
+	if (depth >= maxSearchDepth) {
+		return {
+			success: false,
+			stats: initialPlan.stats,
+			error: SearchFailed(depth, true),
+		};
+	}
+
 	// Get the list of operations from the patch
-	const ops = diff(initialPlan.state);
+	const ops = distance(initialPlan.state);
 
 	const { stats } = initialPlan;
 
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		const maxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
+		const sMaxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
 		trace({
 			event: 'found',
 			prev: initialPlan.start,
@@ -355,7 +386,7 @@ export function findPlan<TState = any>({
 			success: true,
 			start: initialPlan.start,
 			state: initialPlan.state,
-			stats: { ...stats, maxDepth },
+			stats: { ...stats, maxDepth: sMaxDepth },
 			pendingChanges: [],
 		};
 	}
@@ -382,15 +413,15 @@ export function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Context.of<TState, any, any>(
-				task.path,
+			const ctx = Lens.context<TState, any>(
+				task.lens,
 				path,
-				Pointer.of(diff.target, path)!,
+				Pointer.from(distance.target, path)!,
 			);
 
 			const taskPlan = tryInstruction(task(ctx as any), {
 				depth,
-				diff,
+				distance: distance,
 				tasks,
 				trace,
 				operation,
@@ -419,11 +450,12 @@ export function findPlan<TState = any>({
 
 				const res = findPlan({
 					depth: depth + 1,
-					diff,
+					distance: distance,
 					tasks,
 					trace,
 					initialPlan: { ...taskPlan, state, pendingChanges: [] },
 					callStack,
+					maxSearchDepth,
 				});
 
 				if (res.success) {
