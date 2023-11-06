@@ -6,3 +6,4 @@ export * from './target';
 export * from './ref';
 export * from './domain';
 export * from './view';
+export * from './observable';
