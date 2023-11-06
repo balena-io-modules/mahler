@@ -1,4 +1,16 @@
 - commits:
+    - subject: Export the Observable interface
+      hash: bac8d93e4f81234ac5b70e3dd6be97789b56e7ae
+      body: |
+        This may be useful for implementing wrappers around Agent
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 1.0.1
+  title: ""
+  date: 2023-11-06T15:11:00.241Z
+- commits:
     - subject: Improve type documentation
       hash: 7cb753b4a12e0db2071aae39cd296bae02de59c9
       body: ""
