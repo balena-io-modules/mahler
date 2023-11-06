@@ -1,4 +1,18 @@
 - commits:
+    - subject: Add Target constructor
+      hash: 12f5a90e3685fb98e8f7737e1ceb9aedeeb303a6
+      body: |
+        Allows to get a Target object by comparing a desired state
+        with the current state and adding `UNDEFINED` symbols for deleted
+        values.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 1.1.0
+  title: ""
+  date: 2023-11-06T18:36:52.143Z
+- commits:
     - subject: Export the Observable interface
       hash: bac8d93e4f81234ac5b70e3dd6be97789b56e7ae
       body: |
