@@ -1,4 +1,18 @@
 - commits:
+    - subject: Propagate state changes in parallel tasks
+      hash: 0e32173c711a085a4db82da0c9ba1368b9575512
+      body: |
+        While parallel tasks returned pending changes from execution branches,
+        they would not update the state object, meaning nested method calls
+        would fail due to not having the right state.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 1.1.1
+  title: ""
+  date: 2023-11-08T19:20:11.515Z
+- commits:
     - subject: Add Target constructor
       hash: 12f5a90e3685fb98e8f7737e1ceb9aedeeb303a6
       body: |
