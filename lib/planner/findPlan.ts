@@ -249,7 +249,7 @@ function tryParallel<TState = any>(
 
 		return {
 			success: true,
-			state: initialPlan.state,
+			state: branch.state,
 			pendingChanges: branch.pendingChanges,
 			start: branch.start,
 			stats: initialPlan.stats,
@@ -281,19 +281,24 @@ function tryParallel<TState = any>(
 	// We add the fork node
 	const start = Node.fork(results.map((r) => r.start!));
 
-	// We don't update the state here as
-	// applyPatch performs changes in place, which means
-	// we need to make a structured copy of the state
-	const state = initialPlan.state;
-
 	// Since we already checked conflicts, we can just concat the changes
 	const pendingChanges = results.reduce(
 		(acc, r) => acc.concat(r.pendingChanges),
 		initialPlan.pendingChanges,
 	);
 
+	// Now we can apply changes from parallel branches
+	let state: TState;
+	try {
+		state = applyPatch(initialPlan.state, pendingChanges);
+	} catch (e: any) {
+		return { success: false, stats: initialPlan.stats, error: MergeFailed(e) };
+	}
+
 	return {
 		success: true,
+		// We need to return the accumulated state here so a calling
+		// method can use the state
 		state,
 		pendingChanges,
 		start,
@@ -453,7 +458,11 @@ export function findPlan<TState = any>({
 					distance: distance,
 					tasks,
 					trace,
-					initialPlan: { ...taskPlan, state, pendingChanges: [] },
+					initialPlan: {
+						...taskPlan,
+						state,
+						pendingChanges: [],
+					},
 					callStack,
 					maxSearchDepth,
 				});
