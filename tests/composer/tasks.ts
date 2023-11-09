@@ -144,7 +144,7 @@ export const installService = App.task({
 		service._.createdAt = new Date(Created);
 	},
 	description: ({ serviceName }) =>
-		`installing container for service '${serviceName}'`,
+		`install container for service '${serviceName}'`,
 });
 
 /**
@@ -173,7 +173,7 @@ export const startService = App.task({
 		service._.startedAt = new Date(State.StartedAt);
 	},
 	description: ({ serviceName }) =>
-		`starting container for service '${serviceName}'`,
+		`start container for service '${serviceName}'`,
 });
 
 /**
@@ -209,7 +209,7 @@ export const stopService = App.task({
 		service._.finishedAt = new Date(State.FinishedAt);
 	},
 	description: ({ serviceName }) =>
-		`stopping container for service '${serviceName}'`,
+		`stop container for service '${serviceName}'`,
 });
 
 /**
@@ -238,5 +238,5 @@ export const uninstallService = App.task({
 		service.delete();
 	},
 	description: ({ serviceName }) =>
-		`removing container for service '${serviceName}'`,
+		`remove container for service '${serviceName}'`,
 });

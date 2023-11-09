@@ -85,7 +85,6 @@ describe('orchestrator/agent', () => {
 			.that.equals(true);
 
 		// Update the target
-		console.info('Stopping container');
 		agent.seek({
 			apps: {
 				a0: {

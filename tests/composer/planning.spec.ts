@@ -25,8 +25,8 @@ describe('composer/planning', () => {
 		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest'")
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
+				.action("install container for service 'main'")
+				.action("start container for service 'main'")
 				.end(),
 		);
 	});
@@ -50,8 +50,8 @@ describe('composer/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
+				.action("install container for service 'main'")
+				.action("start container for service 'main'")
 				.end(),
 		);
 	});
@@ -79,7 +79,7 @@ describe('composer/planning', () => {
 		});
 
 		expect(stringify(result)).to.deep.equal(
-			plan().action("stopping container for service 'main'").end(),
+			plan().action("stop container for service 'main'").end(),
 		);
 	});
 
@@ -104,9 +104,9 @@ describe('composer/planning', () => {
 		expect(stringify(result)).to.deep.equal(
 			plan()
 				.action("pull image 'alpine:latest'")
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
-				.action("stopping container for service 'main'")
+				.action("install container for service 'main'")
+				.action("start container for service 'main'")
+				.action("stop container for service 'main'")
 				.end(),
 		);
 	});
@@ -136,11 +136,11 @@ describe('composer/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("stopping container for service 'main'")
-				.action("removing container for service 'main'")
+				.action("stop container for service 'main'")
+				.action("remove container for service 'main'")
 				.action("pull image 'alpine:3.14'")
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
+				.action("install container for service 'main'")
+				.action("start container for service 'main'")
 				.end(),
 		);
 	});
@@ -170,10 +170,10 @@ describe('composer/planning', () => {
 
 		expect(stringify(result)).to.deep.equal(
 			plan()
-				.action("removing container for service 'main'")
+				.action("remove container for service 'main'")
 				.action("pull image 'alpine:3.14'")
-				.action("installing container for service 'main'")
-				.action("starting container for service 'main'")
+				.action("install container for service 'main'")
+				.action("start container for service 'main'")
 				.end(),
 		);
 	});
@@ -204,10 +204,10 @@ it('knows to recreate service if config has changed', () => {
 
 	expect(stringify(result)).to.deep.equal(
 		plan()
-			.action("stopping container for service 'main'")
-			.action("removing container for service 'main'")
-			.action("installing container for service 'main'")
-			.action("starting container for service 'main'")
+			.action("stop container for service 'main'")
+			.action("remove container for service 'main'")
+			.action("install container for service 'main'")
+			.action("start container for service 'main'")
 			.end(),
 	);
 });
