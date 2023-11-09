@@ -43,23 +43,30 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	return t as S;
 }
 
+type TreeOperation<S, P extends Path> = Operation<S, P> & { isLeaf: boolean };
+
 /**
  * getOperations returns all the possible operations that are applicable given a
  * new target state. This means, for instance, that if a target state creates a new
  * value under /a/b/c, this function must report a 'create' operation on that path, but also
  * 'update' operations on '/a/b', '/a', and '/' as any of those can result in same outcome
  */
-function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
+function* getOperations<S>(
+	s: S,
+	t: Target<S>,
+): Iterable<TreeOperation<S, any>> {
 	// We store target, path pair in a quee so we can visit the full target
 	// object, ordered by level, without recursion
-	const queue: Array<{ tgt: Target<any>; path: Path }> = [{ tgt: t, path: '' }];
+	const queue: Array<{ tgt: Target<any>; path: Path; isLeaf?: false }> = [
+		{ tgt: t, path: '' },
+	];
 
 	// The target object
 	const patched = applyPatch(s, t);
 
 	// The list of operations to return
 	while (queue.length > 0) {
-		const { tgt, path } = queue.shift()!;
+		const { tgt, path, isLeaf } = queue.shift()!;
 
 		const sValue = Pointer.from(s, path);
 		const tValue = Pointer.from(patched, path);
@@ -67,12 +74,12 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 		// If the target is DELETED, and the source value still
 		// exists we need to add a delete operation
 		if (tgt === UNDEFINED && sValue != null) {
-			yield { op: 'delete', path };
+			yield { op: 'delete', path, isLeaf: isLeaf == null };
 		} else if (tgt !== UNDEFINED) {
 			// If the source value does not exist, then we add a `create`
 			// operation
 			if (sValue == null) {
-				yield { op: 'create', path, target: tValue! };
+				yield { op: 'create', path, target: tValue!, isLeaf: true };
 			}
 			// If the source value does exist, we do a deep comparison compare the source to the patched
 			// version and if they don't match, we add an `update` operation
@@ -82,6 +89,13 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 					path: path === '' ? '/' : path,
 					source: sValue!,
 					target: tValue!,
+					isLeaf:
+						// If the source or target are not objects, or they are arrays, then
+						// we wont continue recursing so the object is a leaf
+						typeof sValue !== 'object' ||
+						Array.isArray(sValue) ||
+						typeof tValue !== 'object' ||
+						Array.isArray(tValue),
 				};
 			}
 		}
@@ -111,10 +125,21 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 		) {
 			for (const key of Object.keys(sValue)) {
 				const newPath = `${path}/${key}`;
-				queue.push({ tgt: UNDEFINED, path: newPath });
+				// We set isLeaf to false here because we know that the source
+				// comes from a previous iteration
+				queue.push({ tgt: UNDEFINED, path: newPath, isLeaf: false });
 			}
 		}
 	}
+}
+
+/**
+ * Calculates the list of changes between the current state and the target
+ */
+export function diff<S>(s: S, t: Target<S>): Array<Operation<S, any>> {
+	return [...getOperations(s, t)]
+		.filter(({ isLeaf }) => isLeaf)
+		.map(({ isLeaf, ...op }) => op);
 }
 
 function from<S>(src: S, tgt: Target<S>): Distance<S> {
@@ -124,7 +149,7 @@ function from<S>(src: S, tgt: Target<S>): Distance<S> {
 		(s: S) => {
 			// NOTE: we return an array here, but we could easily
 			// return an iterator instead for better memory usage
-			return [...getOperations(s, tgt)];
+			return [...getOperations(s, tgt)].map(({ isLeaf, ...op }) => op);
 		},
 		{
 			get target() {
