@@ -1,4 +1,48 @@
 - commits:
+    - subject: Improve logging messages
+      hash: 4ee23c9a7c44a64d94f393643616987a2b2999ce
+      body: |
+        While the goal is to add opentelemetry support, we can make messaging
+        more useful so it communicates what is going on with the process in
+        a human readable way
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add `diff` function to distance module
+      hash: 3fa1c827dd7ff7fd5262b653bd809978ae4746e4
+      body: |
+        This will allow the agent to log the list of necessary changes when
+        applying the target state as part of a new plan.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add 'source' property to UpdateOperation
+      hash: 644236c2b3ad076613b63e82e9ebc422e481d52c
+      body: |
+        This will be useful for logging the state of the agent
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Rename Operation.value to Operation.target
+      hash: c3572c6eee828fbd2d2fcafc476cfec865f0d598
+      body: |
+        This naming is more consistent with the rest of the API. We'll also add
+        soon a `source` value to the update operation for debugging purposes.
+
+        This also cleans up some unused code in the operation module.
+
+        This is an internal interface so this is not a breaking change.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 1.2.0
+  title: ""
+  date: 2023-11-09T18:32:43.810Z
+- commits:
     - subject: Propagate state changes in parallel tasks
       hash: 0e32173c711a085a4db82da0c9ba1368b9575512
       body: |
