@@ -13,6 +13,7 @@ interface DeleteOperation<P extends Path> {
 interface UpdateOperation<T, P extends Path> {
 	op: 'update';
 	path: P;
+	source: Pointer<T, P>;
 	target: Pointer<T, P>;
 }
 

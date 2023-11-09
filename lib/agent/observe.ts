@@ -50,9 +50,21 @@ function observeObject<T, U extends object>(
 					parentPath === '' && prop === '_'
 						? ''
 						: `${parentPath}/${String(prop)}`;
-				const op = prop in target ? 'update' : 'create';
 
-				observer.next({ op, path, target: value });
+				if (prop in target) {
+					observer.next({
+						op: 'update',
+						path,
+						source: (target as any)[prop],
+						target: value,
+					});
+				} else {
+					observer.next({
+						op: 'create',
+						path,
+						target: value,
+					});
+				}
 			}
 			return res;
 		},

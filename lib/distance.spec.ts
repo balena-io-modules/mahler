@@ -81,9 +81,18 @@ describe('Distance', () => {
 					c: { k: 'v' },
 				}),
 			).to.have.deep.members([
-				{ op: 'update', path: '/', target: { a: 2, b: 'one', c: {} } },
-				{ op: 'update', path: '/a', target: 2 },
-				{ op: 'update', path: '/c', target: {} },
+				{
+					op: 'update',
+					path: '/',
+					source: {
+						a: 1,
+						b: 'one',
+						c: { k: 'v' },
+					},
+					target: { a: 2, b: 'one', c: {} },
+				},
+				{ op: 'update', path: '/a', source: 1, target: 2 },
+				{ op: 'update', path: '/c', source: { k: 'v' }, target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
@@ -94,9 +103,18 @@ describe('Distance', () => {
 					c: { k: 'v' },
 				}),
 			).to.deep.equal([
-				{ op: 'update', path: '/', target: { a: 2, b: 'two', c: {} } },
-				{ op: 'update', path: '/a', target: 2 },
-				{ op: 'update', path: '/c', target: {} },
+				{
+					op: 'update',
+					path: '/',
+					source: {
+						a: 1,
+						b: 'two',
+						c: { k: 'v' },
+					},
+					target: { a: 2, b: 'two', c: {} },
+				},
+				{ op: 'update', path: '/a', source: 1, target: 2 },
+				{ op: 'update', path: '/c', source: { k: 'v' }, target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
@@ -107,8 +125,17 @@ describe('Distance', () => {
 					c: {},
 				}),
 			).to.deep.equal([
-				{ op: 'update', path: '/', target: { a: 2, b: 'one', c: {} } },
-				{ op: 'update', path: '/a', target: 2 },
+				{
+					op: 'update',
+					path: '/',
+					source: {
+						a: 1,
+						b: 'one',
+						c: {},
+					},
+					target: { a: 2, b: 'one', c: {} },
+				},
+				{ op: 'update', path: '/a', source: 1, target: 2 },
 			]);
 
 			expect(
@@ -132,8 +159,18 @@ describe('Distance', () => {
 					a: {},
 				}),
 			).to.have.deep.members([
-				{ op: 'update', path: '/', target: { a: { b: { c: 'd' } } } },
-				{ op: 'update', path: '/a', target: { b: { c: 'd' } } },
+				{
+					op: 'update',
+					path: '/',
+					source: { a: {} },
+					target: { a: { b: { c: 'd' } } },
+				},
+				{
+					op: 'update',
+					path: '/a',
+					source: {},
+					target: { b: { c: 'd' } },
+				},
 				{ op: 'create', path: '/a/b', target: { c: 'd' } },
 			]);
 		});
@@ -146,8 +183,18 @@ describe('Distance', () => {
 
 			const diff = Distance.from(src, { a: { b: UNDEFINED } });
 			expect(diff({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
-				{ op: 'update', path: '/', target: { a: {} } },
-				{ op: 'update', path: '/a', target: {} },
+				{
+					op: 'update',
+					path: '/',
+					source: { a: { b: { c: { d: 'e' } } } },
+					target: { a: {} },
+				},
+				{
+					op: 'update',
+					path: '/a',
+					source: { b: { c: { d: 'e' } } },
+					target: {},
+				},
 				{ op: 'delete', path: '/a/b' },
 				{ op: 'delete', path: '/a/b/c' },
 				{ op: 'delete', path: '/a/b/c/d' },

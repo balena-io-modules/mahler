@@ -43,6 +43,12 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	return t as S;
 }
 
+/**
+ * getOperations returns all the possible operations that are applicable given a
+ * new target state. This means, for instance, that if a target state creates a new
+ * value under /a/b/c, this function must report a 'create' operation on that path, but also
+ * 'update' operations on '/a/b', '/a', and '/' as any of those can result in same outcome
+ */
 function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 	// We store target, path pair in a quee so we can visit the full target
 	// object, ordered by level, without recursion
@@ -74,6 +80,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 				yield {
 					op: 'update',
 					path: path === '' ? '/' : path,
+					source: sValue!,
 					target: tValue!,
 				};
 			}
