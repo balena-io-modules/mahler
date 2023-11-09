@@ -1,6 +1,8 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import { assert } from '../assert';
+import { Operation } from '../operation';
+import { diff } from '../distance';
 import { Observer, Subscription } from '../observable';
 import { EmptyNode, Node, Planner } from '../planner';
 import { Ref } from '../ref';
@@ -92,7 +94,35 @@ export class Runtime<TState> {
 	}
 
 	private findPlan() {
+		const { logger } = this.opts;
+
+		const toLog = (o: Operation<TState, any>) => {
+			if (o.op === 'create') {
+				return [`create '${o.path}' with value`, o.target];
+			}
+
+			if (o.op === 'update') {
+				return [`update '${o.path}' from`, o.source, 'to', o.target];
+			}
+
+			return [`delete '${o.path}'`];
+		};
+
+		const changes = diff(this.stateRef._, this.target);
+		logger.debug(
+			`looking for a plan, pending changes:${
+				changes.length > 0 ? '' : ' none'
+			}`,
+		);
+		changes.map(toLog).forEach((log) => logger.debug('-', ...log));
+
+		// Trigger a plan search
 		const result = this.planner.findPlan(this.stateRef._, this.target);
+		logger.debug(
+			`search finished after ${
+				result.stats.iterations
+			} iterations in ${result.stats.time.toFixed(1)}ms`,
+		);
 
 		if (!result.success) {
 			// Jump to the catch below
@@ -193,23 +223,22 @@ export class Runtime<TState> {
 
 			// Send the initial state to the observer
 			this.observer.next(structuredClone(this.stateRef._));
+			logger.info('applying new target state');
 			while (!this.stopped) {
 				try {
-					logger.debug('finding a plan to the target');
 					const result = this.findPlan();
-					logger.debug('planning stats', JSON.stringify(result.stats));
-
 					const { start } = result;
 
 					// The plan is empty, we have reached the goal
 					if (start == null) {
-						logger.debug('plan empty, nothing else to do');
+						logger.info('nothing else to do: target state reached');
 						return { success: true as const, state: this.stateRef._ };
 					}
 
 					const plan: string[] = [];
 					flatten(start, plan);
-					logger.debug('plan found, will execute the following actions', plan);
+					logger.debug('plan found, will execute the following actions:');
+					plan.map((action) => logger.debug('-', action));
 
 					// If we got here, we have found a suitable plan
 					found = true;
@@ -252,7 +281,7 @@ export class Runtime<TState> {
 					}
 				}
 				const wait = Math.min(this.opts.backoffMs(tries), this.opts.maxWaitMs);
-				logger.debug(`waiting ${wait / 1000}(s) before re-planning`);
+				logger.debug(`waiting ${wait / 1000}s before re-planning`);
 				await delay(wait);
 
 				// Only backof if we haven't found a plan yet
