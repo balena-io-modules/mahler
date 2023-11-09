@@ -1,7 +1,6 @@
 import { expect } from '~/test-utils';
 import { isTaskApplicable } from './utils';
 import { Task, NoEffect } from '../task';
-import { Operation } from '../operation';
 
 describe('planner/utils', () => {
 	describe('isTaskApplicable', () => {
@@ -39,11 +38,11 @@ describe('planner/utils', () => {
 			expect(
 				isTaskApplicable(
 					Task.from({ op: 'delete', lens: '/a/:arg/c', effect: NoEffect }),
-					Operation.of<{ a: { b: { c: string } } }, '/a/b/c'>({
+					{
 						op: 'create',
 						path: '/a/b/c',
-						value: 'foo',
-					}),
+						target: 'foo',
+					},
 				),
 			).to.be.false;
 		});

@@ -52,7 +52,7 @@ function observeObject<T, U extends object>(
 						: `${parentPath}/${String(prop)}`;
 				const op = prop in target ? 'update' : 'create';
 
-				observer.next({ op, path, value });
+				observer.next({ op, path, target: value });
 			}
 			return res;
 		},
@@ -82,7 +82,7 @@ export function observe<T, U = void>(
 					switch (change.op) {
 						case 'create':
 						case 'update':
-							view._ = change.value as any;
+							view._ = change.target as any;
 							break;
 						case 'delete':
 							view.delete();

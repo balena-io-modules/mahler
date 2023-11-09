@@ -81,9 +81,9 @@ describe('Distance', () => {
 					c: { k: 'v' },
 				}),
 			).to.have.deep.members([
-				{ op: 'update', path: '/', value: { a: 2, b: 'one', c: {} } },
-				{ op: 'update', path: '/a', value: 2 },
-				{ op: 'update', path: '/c', value: {} },
+				{ op: 'update', path: '/', target: { a: 2, b: 'one', c: {} } },
+				{ op: 'update', path: '/a', target: 2 },
+				{ op: 'update', path: '/c', target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
@@ -94,9 +94,9 @@ describe('Distance', () => {
 					c: { k: 'v' },
 				}),
 			).to.deep.equal([
-				{ op: 'update', path: '/', value: { a: 2, b: 'two', c: {} } },
-				{ op: 'update', path: '/a', value: 2 },
-				{ op: 'update', path: '/c', value: {} },
+				{ op: 'update', path: '/', target: { a: 2, b: 'two', c: {} } },
+				{ op: 'update', path: '/a', target: 2 },
+				{ op: 'update', path: '/c', target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
@@ -107,8 +107,8 @@ describe('Distance', () => {
 					c: {},
 				}),
 			).to.deep.equal([
-				{ op: 'update', path: '/', value: { a: 2, b: 'one', c: {} } },
-				{ op: 'update', path: '/a', value: 2 },
+				{ op: 'update', path: '/', target: { a: 2, b: 'one', c: {} } },
+				{ op: 'update', path: '/a', target: 2 },
 			]);
 
 			expect(
@@ -132,9 +132,9 @@ describe('Distance', () => {
 					a: {},
 				}),
 			).to.have.deep.members([
-				{ op: 'update', path: '/', value: { a: { b: { c: 'd' } } } },
-				{ op: 'update', path: '/a', value: { b: { c: 'd' } } },
-				{ op: 'create', path: '/a/b', value: { c: 'd' } },
+				{ op: 'update', path: '/', target: { a: { b: { c: 'd' } } } },
+				{ op: 'update', path: '/a', target: { b: { c: 'd' } } },
+				{ op: 'create', path: '/a/b', target: { c: 'd' } },
 			]);
 		});
 
@@ -146,8 +146,8 @@ describe('Distance', () => {
 
 			const diff = Distance.from(src, { a: { b: UNDEFINED } });
 			expect(diff({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
-				{ op: 'update', path: '/', value: { a: {} } },
-				{ op: 'update', path: '/a', value: {} },
+				{ op: 'update', path: '/', target: { a: {} } },
+				{ op: 'update', path: '/a', target: {} },
 				{ op: 'delete', path: '/a/b' },
 				{ op: 'delete', path: '/a/b/c' },
 				{ op: 'delete', path: '/a/b/c/d' },

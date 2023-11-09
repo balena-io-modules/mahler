@@ -66,7 +66,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 			// If the source value does not exist, then we add a `create`
 			// operation
 			if (sValue == null) {
-				yield { op: 'create', path, value: tValue! };
+				yield { op: 'create', path, target: tValue! };
 			}
 			// If the source value does exist, we do a deep comparison compare the source to the patched
 			// version and if they don't match, we add an `update` operation
@@ -74,7 +74,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<Operation<S, any>> {
 				yield {
 					op: 'update',
 					path: path === '' ? '/' : path,
-					value: tValue!,
+					target: tValue!,
 				};
 			}
 		}
