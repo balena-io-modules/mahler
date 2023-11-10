@@ -240,11 +240,12 @@ export class Runtime<TState> {
 					logger.debug('plan found, will execute the following actions:');
 					plan.map((action) => logger.debug('-', action));
 
-					// If we got here, we have found a suitable plan
-					found = true;
-
 					// Execute the plan
 					await this.runPlan(start);
+
+					// If we got here, we have successfully found and executed a plan
+					found = true;
+					tries = 0;
 
 					// We've executed the plan succesfully
 					// we don't exit immediately since the goal may
@@ -252,8 +253,9 @@ export class Runtime<TState> {
 					// more steps in a next re-plan
 					logger.info('plan executed successfully');
 				} catch (e) {
+					found = false;
 					if (e instanceof PlanNotFound) {
-						/* ignore and go to delay */
+						logger.warn('no plan found');
 					} else if (e instanceof ActionConditionFailed) {
 						logger.warn(`${e.action.description}: condition not met`);
 					} else if (e instanceof ActionRunFailed) {
@@ -264,7 +266,7 @@ export class Runtime<TState> {
 						break;
 					} else {
 						/* Something else happened, better exit immediately */
-						logger.error('Unknown error while looking for plan:', e);
+						logger.error('unknown error while looking for plan:', e);
 						return {
 							success: false as const,
 							error: new UnknownError(e),
@@ -273,7 +275,7 @@ export class Runtime<TState> {
 				}
 
 				if (!found) {
-					if (this.opts.maxRetries > 0 && tries >= this.opts.maxRetries) {
+					if (tries >= this.opts.maxRetries) {
 						return {
 							success: false as const,
 							error: new Failure(tries),
@@ -284,7 +286,7 @@ export class Runtime<TState> {
 				logger.debug(`waiting ${wait / 1000}s before re-planning`);
 				await delay(wait);
 
-				// Only backof if we haven't found a plan yet
+				// Only backof if we haven't been able to reach the target
 				tries += +!found;
 			}
 

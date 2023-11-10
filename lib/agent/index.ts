@@ -184,7 +184,7 @@ function from<TState>({
 	opts?: DeepPartial<AgentOpts>;
 }): Agent<TState> {
 	const opts: AgentOpts = {
-		maxRetries: 0,
+		maxRetries: Infinity,
 		follow: false,
 		maxWaitMs: 5 * 60 * 1000,
 		minWaitMs: 1 * 1000,
