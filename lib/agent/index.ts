@@ -1,12 +1,12 @@
 import assert from '../assert';
 import { NullLogger } from '../logger';
-import { Subscribable, Subject } from '../observable';
+import { Subscribable, Subject, Observable } from '../observable';
 import { Planner } from '../planner';
 import { Sensor } from '../sensor';
 import { Target } from '../target';
 import { Task } from '../task';
-import { Runtime } from './runtime';
-import { AgentOpts, NotStarted, Result } from './types';
+import { Runtime, RuntimeState } from './runtime';
+import { AgentOpts, AgentStatus, NotStarted, Result } from './types';
 
 export * from './types';
 
@@ -126,6 +126,11 @@ export interface Agent<TState = any> extends Subscribable<TState> {
 	 * immediately.
 	 */
 	stop(): void;
+
+	/**
+	 * Get the agent status
+	 */
+	status(): AgentStatus;
 }
 
 type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
@@ -200,13 +205,18 @@ function from<TState>({
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.minWaitMs > 0, 'opts.minWaitMs must be greater than 0');
 
-	const subject: Subject<TState> = new Subject();
+	let status: AgentStatus = 'stopped';
 
 	// Subscribe to runtime changes to keep
 	// the local copy of state up-to-date
-	subject.subscribe((s) => {
+	const subject: Subject<RuntimeState<TState>> = new Subject();
+	subject.subscribe(({ state: s, status: rStatus }) => {
 		state = s;
+		status = rStatus;
 	});
+
+	// This is used to communicate state to the agent subscribers
+	const observable = Observable.from(subject).map(({ state: s }) => s);
 
 	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
 
@@ -241,10 +251,14 @@ function from<TState>({
 				// Reset the runtime
 				setupRuntime = Promise.resolve(null);
 
+				status = 'stopping';
 				return runtime.stop().then(() => {
 					// We notify subscribers of completion only
 					// when stop is called
 					subject.complete();
+
+					// Set the agent status back to stopped
+					status = 'stopped';
 				});
 			});
 		},
@@ -261,7 +275,10 @@ function from<TState>({
 			return state;
 		},
 		subscribe(next) {
-			return subject.subscribe(next);
+			return observable.subscribe(next);
+		},
+		status() {
+			return status;
 		},
 	};
 }

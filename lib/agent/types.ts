@@ -4,6 +4,15 @@ export type Result<T> =
 	| { success: true; state: T }
 	| { success: false; error: Error };
 
+/**
+ * The agent runtime status
+ *
+ * - idle: The agent is not currently seeking a target state but may be listening for changes
+ * - running: The agent is actively seeking a target state
+ * - stopped: The agent has been stopped and is no longer listening for changes
+ */
+export type AgentStatus = 'idle' | 'running' | 'stopping' | 'stopped';
+
 export interface AgentOpts {
 	/**
 	 * Follow the system state and keep re-planning if the state goes off-target
