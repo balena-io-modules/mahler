@@ -2,7 +2,7 @@
 
 A automated task composer and [HTN](https://en.wikipedia.org/wiki/Hierarchical_task_network) based planner for building autonomous system agents in typescript.
 
-**NOTE** even though this project is on its v1, we still consider it experimental, as we continue exploring different mechanisms to improve efficiency of various aspects of the framework. This project does adhere to the [semantic versioning guidelines](https://semver.org/), so we wont perform any breaking API changes without a major version bump.
+**NOTE** even though this project is out of v0.x, we still consider it experimental, as we continue exploring different mechanisms to improve efficiency of various aspects of the framework. This project does adhere to the [semantic versioning guidelines](https://semver.org/), so we wont perform any breaking API changes without a major version bump.
 
 ## Features
 
@@ -1480,7 +1480,7 @@ const WifiConnect = Agent.from<State>({
 		// We want the agent to run forever
 		follow: true,
 		// And keep retrying on failure (this is the default)
-		maxRetries: 0,
+		maxRetries: Infinity,
 	},
 });
 ```

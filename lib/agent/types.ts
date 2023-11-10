@@ -11,7 +11,7 @@ export interface AgentOpts {
 	follow: boolean;
 
 	/**
-	 * The maximum number of attempts for finding a plan before giving up. Defaults to
+	 * The maximum number of attempts for reaching the target before giving up. Defaults to
 	 * infinite tries.
 	 */
 	maxRetries: number;
@@ -64,7 +64,7 @@ export class Stopped extends Error {
  */
 export class Failure extends Error {
 	constructor(tries: number) {
-		super('Agent failed to find a plan after ' + tries + ' attempts');
+		super('Agent failed to reach target after ' + tries + ' attempts');
 	}
 }
 
