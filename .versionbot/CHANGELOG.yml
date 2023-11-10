@@ -1,4 +1,22 @@
 - commits:
+    - subject: Revert changes to state if action fails
+      hash: fee4c8791454cd96f2246b773c92e046f4f43164
+      body: |
+        This updates the `observe` function to keep track
+        of changes and roll-back if calling the action fails.
+
+        This is needed to avoid an inconsistent state due to a failure that
+        could lead the planner in a wrong direction
+      footer:
+        Change-type: minor
+        change-type: minor
+        Closes: "#45"
+        closes: "#45"
+      author: Felipe Lalanne
+  version: 2.1.0
+  title: ""
+  date: 2023-11-10T14:25:47.254Z
+- commits:
     - subject: Make Agent maxRetries count failed plan runs
       hash: 70a9fcef7998e69f09a42ed853e2d8791155e056
       body: |
