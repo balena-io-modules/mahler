@@ -1,4 +1,23 @@
 - commits:
+    - subject: Make Agent maxRetries count failed plan runs
+      hash: 70a9fcef7998e69f09a42ed853e2d8791155e056
+      body: |
+        Before only failures to find a plan would count against the maxRetries
+        Agent options, which is really an error in design as that would not
+        leave to abort a failing plan.
+
+        This also changes maxRetries to default to Infinity, leaving maxRetries:
+        0 to mean that the agent will exit after a single try.
+
+        While this fixes some bad design decisions, this is a breaking change.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+  version: 2.0.0
+  title: ""
+  date: 2023-11-10T13:33:40.195Z
+- commits:
     - subject: Improve logging messages
       hash: 4ee23c9a7c44a64d94f393643616987a2b2999ce
       body: |
