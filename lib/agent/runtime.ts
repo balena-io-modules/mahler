@@ -98,14 +98,14 @@ export class Runtime<TState> {
 
 		const toLog = (o: Operation<TState, any>) => {
 			if (o.op === 'create') {
-				return [`create '${o.path}' with value`, o.target];
+				return ['create', o.path, 'with value', o.target];
 			}
 
 			if (o.op === 'update') {
-				return [`update '${o.path}' from`, o.source, 'to', o.target];
+				return ['update', o.path, 'from', o.source, 'to', o.target];
 			}
 
-			return [`delete '${o.path}'`];
+			return ['delete', o.path];
 		};
 
 		const changes = diff(this.stateRef._, this.target);

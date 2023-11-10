@@ -151,6 +151,83 @@ describe('Agent', () => {
 			});
 			agent.stop();
 		});
+
+		it('should reset the state if an action fails', async () => {
+			const plusOne = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
+				action: async (state) => {
+					++state._;
+
+					// The action fails after a partial update
+					throw new Error('action failed');
+				},
+				description: '+1',
+			});
+			const agent = Agent.from({
+				initial: 0,
+				opts: { logger: logger, maxRetries: 0 },
+				tasks: [plusOne],
+			});
+
+			agent.seek(1);
+
+			const res = await agent.wait();
+			expect(res.success).to.be.false;
+			expect(agent.state()).to.equal(0);
+			agent.stop();
+		});
+	});
+
+	it('should reset only the state of the failing branch', async () => {
+		type Counters = { a: number; b: number };
+
+		const aPlusOne = Task.of<Counters>().from({
+			lens: '/a',
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
+			description: 'a + 1',
+		});
+		const bPlusOne = Task.of<Counters>().from({
+			lens: '/b',
+			condition: (state, { target }) => state < target,
+			effect: (state) => ++state._,
+			action: async (state) => {
+				++state._;
+
+				// The action fails after a partial update
+				throw new Error('action failed');
+			},
+			description: 'b + 1',
+		});
+		const plusOne = Task.from<Counters>({
+			condition: (state, { target }) =>
+				state.a < target.a || state.b < target.b,
+			method: (state, { target }) => {
+				const tasks = [];
+				if (state.a < target.a) {
+					tasks.push(aPlusOne({ target: target.a }));
+				}
+				if (state.b < target.b) {
+					tasks.push(bPlusOne({ target: target.b }));
+				}
+				return tasks;
+			},
+			description: '+1',
+		});
+		const agent = Agent.from({
+			initial: { a: 0, b: 0 },
+			opts: { logger: logger, maxRetries: 0 },
+			tasks: [plusOne],
+		});
+
+		agent.seek({ a: 1, b: 1 });
+
+		const res = await agent.wait();
+		expect(res.success).to.be.false;
+		expect(agent.state().a).to.equal(1);
+		expect(agent.state().b).to.equal(0);
+		agent.stop();
 	});
 
 	describe('heater', () => {
