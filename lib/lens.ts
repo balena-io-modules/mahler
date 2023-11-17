@@ -66,9 +66,9 @@ type LensOnSinglePath<
 > = TKey extends ''
 	? LensOnEmptyPath<TChildState, TPath, TProps>
 	: // If the key is a valid key on the object of type S
-	TKey extends keyof TChildState
-	? LensOnEmptyPath<TChildState[TKey], TPath, TProps> // Then evaluate the empty path
-	: never; // If the key is not empty at this point, then the path is invalid
+	  TKey extends keyof TChildState
+	  ? LensOnEmptyPath<TChildState[TKey], TPath, TProps> // Then evaluate the empty path
+	  : never; // If the key is not empty at this point, then the path is invalid
 
 // The type of a change for an empty path, where the key is an empty string
 type LensOnEmptyPath<
