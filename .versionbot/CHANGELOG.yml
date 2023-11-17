@@ -1,4 +1,15 @@
 - commits:
+    - subject: Update default task descriptions
+      hash: 13d0d383bc44262d9a26f4274008e35103838caf
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 2.1.1
+  title: ""
+  date: 2023-11-17T18:21:58.087Z
+- commits:
     - subject: Revert changes to state if action fails
       hash: fee4c8791454cd96f2246b773c92e046f4f43164
       body: |
