@@ -16,13 +16,13 @@ type PointerWithCompoundPath<
 > = O extends any[]
 	? PointerWithoutSlash<O[number], T>
 	: H extends keyof O
-	? PointerWithoutSlash<O[H], T>
-	: never;
+	  ? PointerWithoutSlash<O[H], T>
+	  : never;
 type PointerWithSinglePath<O, H extends string> = O extends any[]
 	? O[number]
 	: H extends keyof O
-	? O[H]
-	: never;
+	  ? O[H]
+	  : never;
 
 export class InvalidPointer extends Error {
 	constructor(path: Path, obj: unknown) {

@@ -455,14 +455,13 @@ function from<
 	// Check that the path is valid
 	Path.assert(lens);
 
-	const opLabel = op === '*' ? 'process' : op;
-	let prefix = '[method] ';
+	const opLabel = op === '*' ? 'modify' : op;
 
 	// The default description is
 	// update /a/b/c or
 	// [method] update /a/b/c
 	const description = (ctx: Context<TState, TPath, TOp>) =>
-		`${prefix}${opLabel} ${ctx.path}`;
+		`${opLabel} ${ctx.path}`;
 
 	// Create operations require that the sub-element pointed by the value
 	// does not exist yet
@@ -480,7 +479,6 @@ function from<
 	// The task properties
 	const tProps = (() => {
 		if (isActionProps(taskProps)) {
-			prefix = '';
 			const {
 				effect: taskEffect = () => void 0,
 				action: taskAction = async (v, c) => taskEffect(v, c),
