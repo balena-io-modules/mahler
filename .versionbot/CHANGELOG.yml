@@ -1,4 +1,17 @@
 - commits:
+    - subject: Add `metadata` method to mermaid trace object
+      hash: 70f05fea167fb7607d05ab0e4258a6170beaa746
+      body: |
+        The metadata method returs the event data asocciated to each node in the
+        diagram.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 2.2.0
+  title: ""
+  date: 2023-11-17T21:32:50.071Z
+- commits:
     - subject: Update default task descriptions
       hash: 13d0d383bc44262d9a26f4274008e35103838caf
       body: ""
