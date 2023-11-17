@@ -185,6 +185,8 @@ class Diagram {
 	// sequential
 	callStack = new Map<string, number>();
 
+	meta: Record<string, PlanningError | PlanningEvent<any>> = {};
+
 	constructor() {
 		this.graph = [];
 	}
@@ -425,8 +427,9 @@ class Diagram {
 		this.graph.push(`	classDef error ${ERROR_NODE}`);
 	}
 
-	meta<T>(node: DiagramNode, e: PlanningEvent<T> | PlanningError) {
-		this.graph.push(`click ${node} meta "${htmlEncode(JSON.stringify(e))}"`);
+	updateMeta<T>(node: DiagramNode, e: PlanningEvent<T> | PlanningError) {
+		this.graph.push(`click ${node} meta "${node}"`);
+		this.meta[`${node}`] = e;
 	}
 
 	render(): string {
@@ -486,15 +489,27 @@ export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
 					break;
 			}
 			// We add metadata as a clickable event on the node
-			// metadata can be pretty large, so `meta` defaults
-			// to `false`
+			// we only do this if the meta option is set to avoid storing
+			// unnecessary data in memory
 			if (meta && node) {
-				diagram.meta(node, e);
+				diagram.updateMeta(node, e);
 			}
 		},
 		{
+			/**
+			 * Generate a mermaid diagram from the planning trace
+			 */
 			render() {
 				return diagram.render();
+			},
+			/**
+			 * Return the metadata associated with the diagram.
+			 *
+			 * The metadata is a record that maps each node to the event
+			 * the node represents.
+			 */
+			metadata() {
+				return diagram.meta;
 			},
 		},
 	);
