@@ -32,5 +32,39 @@ describe('Target', () => {
 				g: { h: 'hello', i: UNDEFINED },
 			});
 		});
+
+		it('ignores paths matching globs on the list', () => {
+			type S = {
+				a: number;
+				b?: string;
+				c: { d?: { e: number; f?: string }; h?: string };
+				g: { [k: string]: string };
+			};
+			const state: S = {
+				a: 1,
+				b: 'foo',
+				c: { d: { e: 2, f: 'bar' }, h: 'baz' },
+				g: { i: 'goodbye' },
+			};
+
+			expect(
+				Target.from(
+					state,
+					{
+						a: 1,
+						c: { d: { e: 3, f: undefined } },
+						g: { h: 'hello' },
+					},
+					['/b', '*/g', '/c/*/f'],
+				),
+			).to.deep.equal({
+				a: 1,
+				c: {
+					d: { e: 3, f: UNDEFINED },
+					h: UNDEFINED,
+				},
+				g: { h: 'hello' },
+			});
+		});
 	});
 });
