@@ -55,7 +55,7 @@ function findLoop<T>(id: string, node: Node<T> | null): boolean {
 
 function tryAction<TState = any>(
 	action: Action<TState>,
-	{ initialPlan }: PlanningState<TState>,
+	{ initialPlan, callStack = [] }: PlanningState<TState>,
 ): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
@@ -78,11 +78,10 @@ function tryAction<TState = any>(
 	// We calculate the changes only at the action level
 	const changes = createPatch(initialPlan.state, state);
 
-	// If the action performs no changes then we just return the initial plan
-	// as this action does not contribute to the overall goal
-	// TODO: should we return `success: false` here instead? what if the action
-	// is part of a method
-	if (changes.length === 0) {
+	// If the action is not part of a method and it
+	// performs no changes then we just return the initial plan
+	// as we don't know how the action contributes to the overall goal
+	if (changes.length === 0 && callStack.length === 0) {
 		return initialPlan;
 	}
 
