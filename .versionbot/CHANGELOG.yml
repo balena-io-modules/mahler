@@ -1,4 +1,18 @@
 - commits:
+    - subject: Allow method actions to have empty effects
+      hash: 79854885dd694050f04dc430f51114d71f6f15c3
+      body: |
+        The planner ignores actions with no effects as it cannot tell if they
+        contribute to the overall goal. However if the action is called by a
+        method we can assume the developer knows why the action is needed.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 2.3.0
+  title: ""
+  date: 2023-11-23T14:02:24.269Z
+- commits:
     - subject: Add `metadata` method to mermaid trace object
       hash: 70f05fea167fb7607d05ab0e4258a6170beaa746
       body: |

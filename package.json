@@ -1,6 +1,6 @@
 {
   "name": "mahler",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "A automated task composer and HTN based planner for building autonomous system agents",
   "homepage": "https://github.com/balena-io-modules/mahler#readme",
   "main": "build/index.js",
@@ -78,6 +78,6 @@
     "mahler-wasm": "^0.1.0"
   },
   "versionist": {
-    "publishedAt": "2023-11-17T21:32:50.213Z"
+    "publishedAt": "2023-11-23T14:02:24.405Z"
   }
 }
