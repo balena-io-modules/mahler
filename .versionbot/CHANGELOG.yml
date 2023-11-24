@@ -1,4 +1,17 @@
 - commits:
+    - subject: Allow ignoring certain paths in Target construtor
+      hash: 83f79601e7b83d6b6fea55a91150d437f8230fac
+      body: |
+        Allows users construct a target that ignores some removals from the
+        source object.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 2.4.0
+  title: ""
+  date: 2023-11-24T16:19:07.128Z
+- commits:
     - subject: Allow method actions to have empty effects
       hash: 79854885dd694050f04dc430f51114d71f6f15c3
       body: |
