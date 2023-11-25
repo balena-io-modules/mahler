@@ -232,7 +232,10 @@ export class Runtime<TState> {
 					// The plan is empty, we have reached the goal
 					if (start == null) {
 						logger.info('nothing else to do: target state reached');
-						return { success: true as const, state: this.stateRef._ };
+						return {
+							success: true as const,
+							state: structuredClone(this.stateRef._),
+						};
 					}
 
 					const plan: string[] = [];
