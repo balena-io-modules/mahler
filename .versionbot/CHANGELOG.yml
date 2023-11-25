@@ -1,4 +1,18 @@
 - commits:
+    - subject: Return a copy of the state from agent runtime
+      hash: 1f021de39117bb8f656128413230ae6e7c4991e1
+      body: |
+        The promise was returning a reference to the state, meaning future
+        runs of the agent could change the object returned in a past run.
+        Using structuredClone avoids this issue
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 2.4.1
+  title: ""
+  date: 2023-11-25T00:30:07.456Z
+- commits:
     - subject: Allow ignoring certain paths in Target construtor
       hash: 83f79601e7b83d6b6fea55a91150d437f8230fac
       body: |
