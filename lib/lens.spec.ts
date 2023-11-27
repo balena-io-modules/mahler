@@ -1,5 +1,5 @@
 import { expect } from '~/test-utils';
-import { Lens } from './lens';
+import { Lens, Template } from './lens';
 
 describe('Lens', () => {
 	describe('context', () => {
@@ -65,6 +65,18 @@ describe('Lens', () => {
 				target: 'one',
 				pos: 0,
 			});
+		});
+	});
+
+	describe('Template', () => {
+		it('allows to split a path using the template definition', () => {
+			const template = Template.from('/a/:b/c');
+			expect(template.split('/a/one/c')).to.deep.equal(['a', 'one', 'c']);
+			expect(template.split('/a/one/two/three/c')).to.deep.equal([
+				'a',
+				'one/two/three',
+				'c',
+			]);
 		});
 	});
 });

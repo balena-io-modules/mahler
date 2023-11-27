@@ -9,6 +9,11 @@ export type Lens<TState, TPath extends Path> = LensContext<
 	TPath
 >['target'];
 
+export type LensProps<TState, TPath extends Path> = Omit<
+	LensContext<TState, TPath>,
+	'target' | 'path'
+>;
+
 export type LensContext<TState, TPath extends Path> = LensWithSlash<
 	TState,
 	TPath,
@@ -125,41 +130,83 @@ type LensOnArray<
 		: never
 	: never;
 
-function params(template: Path, path: Path) {
-	const templateParts = Path.elems(template);
-	const parts = Path.elems(path);
-
-	assert(
-		parts.length === templateParts.length,
-		`Path '${path} should match its template '${template}'`,
-	);
-
-	const args = {} as { [k: string]: any };
-
-	for (const templateElem of templateParts) {
-		const pathElem = parts.shift();
-		if (templateElem.startsWith(':')) {
-			const key = templateElem.slice(1);
-			// Convert the value to a number if it is an array index
-			args[key] = isArrayIndex(pathElem) ? +pathElem : pathElem;
-		} else {
-			assert(
-				templateElem === pathElem,
-				`Path '${path} should match its template '${template}'`,
-			);
-		}
-	}
-
-	return args;
+export interface Template<TPath extends Path> {
+	split(path: Path): string[];
+	props<TState>(path: Path): LensProps<TState, TPath>;
 }
+
+export const Template = {
+	from<TPath extends Path>(template: TPath): Template<TPath> {
+		Path.assert(template);
+		const templateParts = Path.elems(template);
+
+		const regexParts: string[] = [];
+		let varCount = 0;
+		for (const p of templateParts) {
+			if (p.startsWith(':')) {
+				varCount++;
+				regexParts.push('(.+)');
+			} else {
+				regexParts.push(p);
+			}
+		}
+
+		const regex = new RegExp(`^/?${regexParts.join('/')}$`);
+
+		return {
+			split(path: Path): string[] {
+				Path.assert(path);
+				const match = path.match(regex);
+				assert(
+					match != null && match.length === varCount + 1,
+					`Path '${path}' should match its template '${template}'`,
+				);
+
+				const vars = match.slice(1);
+				const parts: string[] = [];
+				for (const p of templateParts) {
+					if (p.startsWith(':')) {
+						parts.push(vars.shift()!);
+					} else {
+						parts.push(p);
+					}
+				}
+				return parts;
+			},
+			props<TState>(path: Path) {
+				Path.assert(path);
+				const match = path.match(regex);
+				assert(
+					match != null && match.length === varCount + 1,
+					`Path '${path} should match its template '${template}'`,
+				);
+				const parts = match.slice(1);
+
+				const args = {} as { [k: string]: any };
+
+				for (const templateElem of templateParts) {
+					if (templateElem.startsWith(':')) {
+						const pathElem = parts.shift();
+						const key = templateElem.slice(1);
+						// Convert the value to a number if it is an array index
+						args[key] = isArrayIndex(pathElem) ? +pathElem : pathElem;
+					}
+				}
+
+				return args as LensProps<TState, TPath>;
+			},
+		};
+	},
+};
 
 function context<TState, TPath extends Path>(
 	lens: TPath,
 	path: Path,
 	target: Lens<TState, TPath>,
 ): LensContext<TState, TPath> {
+	const template = Template.from(lens);
 	// Get route parameters
-	const args = params(lens, path);
+	const args = template.props<TState>(path);
 
 	return {
 		...(args as any),

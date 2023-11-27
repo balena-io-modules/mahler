@@ -2,7 +2,7 @@ import { isArrayIndex } from './is-array-index';
 import { Path } from './path';
 import { InvalidPointer } from './pointer';
 import { Ref } from './ref';
-import { Lens } from './lens';
+import { Lens, Template } from './lens';
 
 export interface View<TState, TPath extends Path = '/'>
 	extends Ref<Lens<TState, TPath>> {
@@ -14,10 +14,11 @@ export interface View<TState, TPath extends Path = '/'>
  */
 function createView<TState, TPath extends Path>(
 	ref: Ref<TState>,
-	path: TPath,
+	path: Path,
+	lens = path as TPath,
 ): View<TState, TPath> {
-	Path.assert(path);
-	const parts = Path.elems(path);
+	const template = Template.from(lens);
+	const parts = template.split(path);
 
 	// Save the last element of the path so we can delete it
 	const last = parts.pop();

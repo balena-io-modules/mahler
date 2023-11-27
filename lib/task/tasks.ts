@@ -289,9 +289,15 @@ function ground<
 	if (isActionSpec(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
 		const effect = (s: Ref<TState>) =>
-			taskEffect(View.from(s, path as TPath), { ...context, system: s._ });
+			taskEffect(View.from(s, path as TPath, task.lens), {
+				...context,
+				system: s._,
+			});
 		const action = async (s: Ref<TState>) =>
-			taskAction(View.from(s, path as TPath), { ...context, system: s._ });
+			taskAction(View.from(s, path as TPath, task.lens), {
+				...context,
+				system: s._,
+			});
 		return Object.assign(action, {
 			id,
 			path: context.path as TPath,
