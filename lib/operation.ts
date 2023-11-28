@@ -1,23 +1,23 @@
-import { Path } from './path';
+import { Path, PathString, Root } from './path';
 import { Pointer } from './pointer';
 
-interface CreateOperation<T, P extends Path> {
+interface CreateOperation<T, P extends PathString> {
 	op: 'create';
-	path: P;
+	path: Path<P>;
 	target: Pointer<T, P>;
 }
-interface DeleteOperation<P extends Path> {
+interface DeleteOperation<P extends PathString> {
 	op: 'delete';
-	path: P;
+	path: Path<P>;
 }
-interface UpdateOperation<T, P extends Path> {
+interface UpdateOperation<T, P extends PathString> {
 	op: 'update';
-	path: P;
+	path: Path<P>;
 	source: Pointer<T, P>;
 	target: Pointer<T, P>;
 }
 
-export type Operation<T = any, P extends Path = '/'> =
+export type Operation<T = any, P extends PathString = Root> =
 	| CreateOperation<T, P>
 	| DeleteOperation<P>
 	| UpdateOperation<T, P>;

@@ -11,7 +11,7 @@ describe('Tasks', () => {
 			description: '+1',
 		});
 		expect(inc.id).to.equal(
-			'9d73c72d26c1bbb33a4ee484e399129fcab792122a52a5816f1e0ef20dfc47ec',
+			'cbc6726f9c9afc51b7ef2356bc640663e77fbee26a50808cb3fd0355ab7dd043',
 		);
 
 		const inc2 = Task.from<number>({
@@ -41,7 +41,7 @@ describe('Tasks', () => {
 			description: '+2',
 		});
 		expect(byTwo.id).to.equal(
-			'e6ae37e6ef05cc2ee70493842cd1799aeeec8867c6efd15b1b1f1bca96436a48',
+			'7e3d92c6d21f4f0e63d3b3f2b571fdb5e7424a670d14718a23e2dd2d0588eddd',
 		);
 		expect(dec.id).to.not.equal(byTwo.id);
 

@@ -1,15 +1,15 @@
 import assert from './assert';
 import { Identity } from './identity';
 import { isArrayIndex } from './is-array-index';
-import { Path } from './path';
+import { Path, PathString } from './path';
 import { Pointer } from './pointer';
 
-export type Lens<TState, TPath extends Path> = LensContext<
+export type Lens<TState, TPath extends PathString> = LensContext<
 	TState,
 	TPath
 >['target'];
 
-export type LensContext<TState, TPath extends Path> = LensWithSlash<
+export type LensContext<TState, TPath extends PathString> = LensWithSlash<
 	TState,
 	TPath,
 	object
@@ -18,7 +18,7 @@ export type LensContext<TState, TPath extends Path> = LensWithSlash<
 // A lens to evaluate paths starting with a slash
 type LensWithSlash<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	TProps extends NonNullable<unknown>,
 > = TPath extends `/${infer TTail}`
 	? LensWithoutSlash<TChildState, TPath, TTail, TProps> // If the path starts with a slash, evaluate the remaining part of the path
@@ -27,8 +27,8 @@ type LensWithSlash<
 // A lens to evaluate paths that start without a slash, e.g. `key1/key2` or `key`
 type LensWithoutSlash<
 	TChildState,
-	TPath extends Path,
-	TSubPath extends Path,
+	TPath extends PathString,
+	TSubPath extends PathString,
 	TProps extends NonNullable<unknown>,
 > = TSubPath extends `${infer THead}/${infer TTail}`
 	? LensOnCompoundPathWithParameter<TChildState, TPath, THead, TTail, TProps> // If the path is compound, evaluate it recursively
@@ -37,7 +37,7 @@ type LensWithoutSlash<
 // The lens for an operation on a single path, e.g. `:param` or `key`
 type LensOnSinglePathWithParameter<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	TParam extends string,
 	TProps extends NonNullable<unknown>,
 > = TParam extends `:${infer Arg}`
@@ -60,7 +60,7 @@ type LensOnSinglePathWithParameter<
 // or else it has to be an empty path '' in order to be valid
 type LensOnSinglePath<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	TKey,
 	TProps extends NonNullable<unknown>,
 > = TKey extends ''
@@ -73,11 +73,11 @@ type LensOnSinglePath<
 // The type of a change for an empty path, where the key is an empty string
 type LensOnEmptyPath<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	TProps extends NonNullable<unknown>,
 > = Identity<
 	TProps & {
-		path: TPath;
+		path: Path<TPath>;
 		target: TChildState;
 	}
 >;
@@ -85,9 +85,9 @@ type LensOnEmptyPath<
 // Utility type to check if the key is a parameter
 type LensOnCompoundPathWithParameter<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	THead extends string,
-	TTail extends Path,
+	TTail extends PathString,
 	TProps extends NonNullable<unknown>,
 > = THead extends `:${infer Arg}` // Check if the key is a route parameters first
 	? TChildState extends Array<infer U> // Immediately check if the object is an array, in which case continue the evaluation o the tail
@@ -104,9 +104,9 @@ type LensOnCompoundPathWithParameter<
 // A compound path without parameters
 type LensOnCompoundPath<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	THead,
-	TTail extends Path,
+	TTail extends PathString,
 	TProps extends NonNullable<unknown>,
 > = THead extends keyof TChildState
 	? LensWithoutSlash<TChildState[THead], TPath, TTail, TProps>
@@ -115,9 +115,9 @@ type LensOnCompoundPath<
 // The type of a lens on a path referencing an array, where the first part of the path is a valid index on the array
 type LensOnArray<
 	TChildState,
-	TPath extends Path,
+	TPath extends PathString,
 	THead,
-	TTail extends Path,
+	TTail extends PathString,
 	TProps extends NonNullable<unknown>,
 > = TChildState extends Array<infer U> // If the object of type S is an array
 	? THead extends `${number}` // and the key is a number
@@ -126,8 +126,8 @@ type LensOnArray<
 	: never;
 
 function params(template: Path, path: Path) {
-	const templateParts = Path.elems(template);
-	const parts = Path.elems(path);
+	const templateParts = Path.split(template);
+	const parts = Path.split(path);
 
 	assert(
 		parts.length === templateParts.length,
@@ -153,24 +153,25 @@ function params(template: Path, path: Path) {
 	return args;
 }
 
-function context<TState, TPath extends Path>(
-	lens: TPath,
+function context<TState, TPath extends PathString>(
+	lens: Path<TPath>,
 	path: Path,
 	target: Lens<TState, TPath>,
 ): LensContext<TState, TPath> {
+	const lensPath = Path.from(lens);
 	// Get route parameters
-	const args = params(lens, path);
+	const args = params(lensPath, path);
 
 	return {
 		...(args as any),
 		target,
-		path: path as TPath,
+		path,
 	};
 }
 
-function createLens<TState, TPath extends Path>(
+function createLens<TState, TPath extends PathString>(
 	s: TState,
-	p: TPath,
+	p: Path<TPath>,
 ): Lens<TState, TPath> {
 	return Pointer.from(s, p) as Lens<TState, TPath>;
 }

@@ -1,29 +1,28 @@
 import {
-	diff as createPatch,
-	patch as applyPatch,
 	Operation as PatchOperation,
+	patch as applyPatch,
+	diff as createPatch,
 } from 'mahler-wasm';
 
-import { Lens } from '../lens';
+import assert from '../assert';
 import { Distance } from '../distance';
+import { Lens } from '../lens';
 import { Operation } from '../operation';
-import { Path } from '../path';
 import { Pointer } from '../pointer';
 import { Ref } from '../ref';
-import { Action, Instruction, Method, Task, MethodExpansion } from '../task';
-import { Plan } from './plan';
+import { Action, Instruction, Method, MethodExpansion, Task } from '../task';
 import { EmptyNode, Node } from './node';
+import { Plan } from './plan';
 import {
-	PlannerConfig,
-	LoopDetected,
-	RecursionDetected,
-	MethodExpansionEmpty,
 	ConditionNotMet,
-	SearchFailed,
+	LoopDetected,
 	MergeFailed,
+	MethodExpansionEmpty,
+	PlannerConfig,
+	RecursionDetected,
+	SearchFailed,
 } from './types';
 import { isTaskApplicable } from './utils';
-import assert from '../assert';
 
 interface PlanningState<TState = any> {
 	distance: Distance<TState>;
@@ -411,7 +410,7 @@ export function findPlan<TState = any>({
 
 			// Extract the path from the task template and the
 			// operation
-			const path: Path = operation.path;
+			const path = operation.path;
 
 			// Get the context expected by the task
 			// we get the target value for the context from the pointer
@@ -420,7 +419,7 @@ export function findPlan<TState = any>({
 			const ctx = Lens.context<TState, any>(
 				task.lens,
 				path,
-				Pointer.from(distance.target, path)!,
+				Pointer.from<TState, string>(distance.target, path) as any,
 			);
 
 			const taskPlan = tryInstruction(task(ctx as any), {

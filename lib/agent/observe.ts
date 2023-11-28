@@ -2,6 +2,7 @@ import { Ref } from '../ref';
 import { Observer } from '../observable';
 import { Operation } from '../operation';
 import { View } from '../view';
+import { Path } from '../path';
 
 function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';
@@ -12,16 +13,13 @@ function observeObject<T, U extends object>(
 	u: U,
 	observer: Observer<Operation<T, any>>,
 	reverseChanges = [] as Array<Operation<T, any>>,
-	parentPath = '',
+	parentPath = [] as string[],
 ): U {
 	if (!Array.isArray(u)) {
 		u = (Object.getOwnPropertyNames(u) as Array<keyof U>).reduce((acc, key) => {
 			const v = u[key];
 			if (isObject(v)) {
-				const path =
-					parentPath === '' && key === '_'
-						? ''
-						: `${parentPath}/${String(key)}`;
+				const path = parentPath.concat(key === '_' ? [] : String(key));
 				return {
 					...acc,
 					[key]: observeObject(r, v, observer, reverseChanges, path),
@@ -32,7 +30,7 @@ function observeObject<T, U extends object>(
 	} else {
 		u = u.map((v, i) => {
 			if (isObject(v)) {
-				const path = `${parentPath}/${i}`;
+				const path = parentPath.concat(String(i));
 				return observeObject(r, v, observer, reverseChanges, path);
 			}
 			return v;
@@ -48,10 +46,9 @@ function observeObject<T, U extends object>(
 				// If the object is an array do not notify on length changes
 				(!Array.isArray(target) || (Array.isArray(target) && prop !== 'length'))
 			) {
-				const path =
-					parentPath === '' && prop === '_'
-						? ''
-						: `${parentPath}/${String(prop)}`;
+				const path = Path.from(
+					prop === '_' ? [] : parentPath.concat(String(prop)),
+				);
 
 				if (prop in target) {
 					if (Array.isArray(target)) {
@@ -91,10 +88,9 @@ function observeObject<T, U extends object>(
 			const valueBefore = (target as any)[prop];
 			const res = Reflect.deleteProperty(target, prop);
 			if (res) {
-				const changePath =
-					parentPath === '' && prop === '_'
-						? ''
-						: `${parentPath}/${String(prop)}`;
+				const changePath = Path.from(
+					prop === '_' ? [] : parentPath.concat(String(prop)),
+				);
 				reverseChanges.push({
 					op: 'create',
 					path: changePath,

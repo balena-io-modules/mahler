@@ -1,4 +1,24 @@
-export type Path = string;
+export type PathString = string;
+
+type PathBrand = { __brand: 'Path' };
+export type Path<T extends string[] | string = string> = T extends string[]
+	? `/${PathArray<T>}` & PathBrand
+	: T extends string
+	  ? T & PathBrand
+	  : never;
+
+export type Root = '/';
+
+type PathArray<T extends string[]> = T extends [
+	infer THead extends string,
+	...infer TTail extends string[],
+]
+	? PathArrayWithHead<THead, TTail>
+	: '';
+
+type PathArrayWithHead<H extends string, T extends string[]> = T extends []
+	? H
+	: `${H}/${PathArray<T>}`;
 
 function isPath(x: unknown): x is Path {
 	return (
@@ -9,11 +29,21 @@ function isPath(x: unknown): x is Path {
 	);
 }
 
-function elems(p: Path) {
+// Escape slashes according to RFC 6901
+function encode(p: string) {
+	return p.replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
+function decode(s: string) {
+	return s.replace(/~1/g, '/').replace(/~0/g, '~');
+}
+
+function split(p: Path) {
 	return p
 		.slice(1)
 		.split('/')
-		.filter((s) => s.length > 0);
+		.filter((s) => s.length > 0)
+		.map(decode);
 }
 
 export class PathIsInvalid extends Error {
@@ -28,8 +58,13 @@ function assert(p: unknown) {
 	}
 }
 
+function from<const T extends string | string[]>(p: T): Path<T> {
+	const res = Array.isArray(p) ? '/' + p.map(encode).join('/') : p;
+	assert(res);
+	return res as Path<T>;
+}
+
 export const Path = {
-	is: isPath,
-	elems,
-	assert,
+	from,
+	split,
 };

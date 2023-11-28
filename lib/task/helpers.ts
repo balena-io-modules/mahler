@@ -1,5 +1,5 @@
 import { Context, TaskOp } from './context';
-import { Path } from '../path';
+import { PathString, Root } from '../path';
 import { Action } from './instructions';
 
 export const NoAction = async () => void 0;
@@ -11,7 +11,7 @@ export const NoEffect = () => void 0;
  */
 export function NoOp<
 	TState = any,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = '*',
 >(ctx: Context<TState, TPath, TOp>): Action<TState> {
 	return Object.assign(NoAction, {
