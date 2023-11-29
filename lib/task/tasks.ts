@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import assert from '../assert';
 import { Context, TaskArgs, TaskOp } from './context';
 import { Lens } from '../lens';
-import { Path } from '../path';
+import { Path, PathString, Root } from '../path';
 import { Ref } from '../ref';
 import { View } from '../view';
 
@@ -11,7 +11,7 @@ import { Action, Instruction, Method, MethodExpansion } from './instructions';
 
 type TaskContext<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > = Context<TState, TPath, TOp> & { system: TState };
 
@@ -20,7 +20,7 @@ type TaskContext<
  */
 interface TaskSpec<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > {
 	/**
@@ -39,7 +39,7 @@ interface TaskSpec<
 	/**
 	 * The path to the element that this task applies to
 	 */
-	readonly lens: TPath;
+	readonly lens: Path<TPath>;
 
 	/**
 	 * The operation that this task applies to
@@ -61,7 +61,7 @@ interface TaskSpec<
  */
 interface ActionSpec<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
@@ -154,7 +154,7 @@ interface ActionSpec<
  */
 export interface ActionTask<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > extends ActionSpec<TState, TPath, TOp> {
 	/**
@@ -173,7 +173,7 @@ export interface ActionTask<
 // A method definition
 export interface MethodSpec<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > extends TaskSpec<TState, TPath, TOp> {
 	/**
@@ -223,7 +223,7 @@ export interface MethodSpec<
  */
 export interface MethodTask<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > extends MethodSpec<TState, TPath, TOp> {
 	/**
@@ -242,31 +242,29 @@ export interface MethodTask<
 // Bind a task to a specific context
 function ground<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(
 	task: ActionSpec<TState, TPath, TOp> | MethodSpec<TState, TPath, TOp>,
 	args: TaskArgs<TState, TPath, TOp>,
 ): Instruction<TState, TPath, TOp> {
-	const templateParts = Path.elems(task.lens);
+	const templateParts = Path.split(task.lens);
 
 	// Form the context path from the task lens and the
 	// given task arguments
-	const path =
-		'/' +
-		templateParts
-			.map((p) => {
-				if (p.startsWith(':')) {
-					const key = p.slice(1);
-					assert(
-						key in args,
-						`Missing parameter '${key}' in context given to task '${task.id}', required by lens '${task.lens}'`,
-					);
-					return args[key as keyof typeof args];
-				}
-				return p;
-			})
-			.join('/');
+	const path = Path.from(
+		templateParts.map((p) => {
+			if (p.startsWith(':')) {
+				const key = p.slice(1);
+				assert(
+					key in args,
+					`Missing parameter '${key}' in context given to task '${task.id}', required by lens '${task.lens}'`,
+				);
+				return String(args[key as keyof typeof args]);
+			}
+			return p;
+		}),
+	) as Path<TPath>;
 
 	const target = (args as any).target;
 	const lensCtx = Lens.context<TState, TPath>(task.lens, path, target);
@@ -279,7 +277,7 @@ function ground<
 			: taskDescription;
 
 	const condition = (s: TState) => {
-		const lens = Lens.from(s, path as TPath);
+		const lens = Lens.from(s, path);
 		return task.condition(lens, {
 			...context,
 			system: s,
@@ -289,12 +287,12 @@ function ground<
 	if (isActionSpec(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
 		const effect = (s: Ref<TState>) =>
-			taskEffect(View.from(s, path as TPath), { ...context, system: s._ });
+			taskEffect(View.from(s, path), { ...context, system: s._ });
 		const action = async (s: Ref<TState>) =>
-			taskAction(View.from(s, path as TPath), { ...context, system: s._ });
+			taskAction(View.from(s, path), { ...context, system: s._ });
 		return Object.assign(action, {
 			id,
-			path: context.path as TPath,
+			path: context.path as Path<TPath>,
 			target,
 			_tag: 'action' as const,
 			description,
@@ -313,7 +311,10 @@ function ground<
 
 	const { expansion } = task;
 	const method = (s: TState) =>
-		task.method(Lens.from(s, context.path as TPath), { ...context, system: s });
+		task.method(Lens.from(s, context.path as Path<TPath>), {
+			...context,
+			system: s,
+		});
 
 	return Object.assign(method, {
 		id,
@@ -339,7 +340,7 @@ function ground<
  */
 function isActionSpec<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(
 	t: ActionSpec<TState, TPath, TOp> | MethodSpec<TState, TPath, TOp>,
@@ -357,7 +358,7 @@ function isActionSpec<
  */
 function isMethodTask<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
@@ -368,7 +369,7 @@ function isMethodTask<
  */
 function isActionTask<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
 	return (
@@ -384,7 +385,7 @@ function isActionTask<
  */
 export type Task<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
 
@@ -393,27 +394,27 @@ export type Task<
  */
 export type MethodTaskProps<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
-> = Partial<Omit<MethodSpec<TState, TPath, TOp>, 'method' | 'id'>> &
-	Pick<MethodSpec<TState, TPath, TOp>, 'method'>;
+> = Partial<Omit<MethodSpec<TState, TPath, TOp>, 'method' | 'id' | 'lens'>> &
+	Pick<MethodSpec<TState, TPath, TOp>, 'method'> & { lens?: TPath };
 
 /**
  * Action task properties for the task constructor
  */
 export type ActionTaskProps<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > =
-	| (Partial<Omit<ActionSpec<TState, TPath, TOp>, 'effect' | 'id'>> &
-			Pick<ActionSpec<TState, TPath, TOp>, 'effect'>)
-	| (Partial<Omit<ActionSpec<TState, TPath, TOp>, 'action' | 'id'>> &
-			Pick<ActionSpec<TState, TPath, TOp>, 'action'>);
+	| ((Partial<Omit<ActionSpec<TState, TPath, TOp>, 'effect' | 'id' | 'lens'>> &
+			Pick<ActionSpec<TState, TPath, TOp>, 'effect'>) & { lens?: TPath })
+	| ((Partial<Omit<ActionSpec<TState, TPath, TOp>, 'action' | 'id' | 'lens'>> &
+			Pick<ActionSpec<TState, TPath, TOp>, 'action'>) & { lens?: TPath });
 
 function isActionProps<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(
 	x: ActionTaskProps<TState, TPath, TOp> | MethodTaskProps<TState, TPath, TOp>,
@@ -429,31 +430,27 @@ function isActionProps<
  */
 function from<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
 function from<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(t: MethodTaskProps<TState, TPath, TOp>): MethodTask<TState, TPath, TOp>;
 function from<
 	TState = unknown,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(
 	taskProps:
 		| ActionTaskProps<TState, TPath, TOp>
 		| MethodTaskProps<TState, TPath, TOp>,
 ) {
-	const {
-		lens = '/',
-		op = 'update',
-		condition: taskCondition = () => true,
-	} = taskProps;
+	const { op = 'update', condition: taskCondition = () => true } = taskProps;
 
 	// Check that the path is valid
-	Path.assert(lens);
+	const lens = Path.from(taskProps.lens || ('/' as TPath));
 
 	const opLabel = op === '*' ? 'modify' : op;
 
@@ -521,9 +518,9 @@ function from<
 
 			return {
 				description,
-				lens: lens as TPath,
 				op: op as TOp,
 				...taskProps,
+				lens,
 				condition,
 				effect,
 				action,
@@ -531,10 +528,10 @@ function from<
 		} else {
 			return {
 				description,
-				lens: lens as TPath,
 				op: op as TOp,
 				expansion: MethodExpansion.DETECT,
 				...taskProps,
+				lens,
 				condition,
 			};
 		}
@@ -565,10 +562,10 @@ function from<
 }
 
 interface TaskBuilder<TState> {
-	from<TPath extends Path = '/', TOp extends TaskOp = 'update'>(
+	from<TPath extends PathString = Root, TOp extends TaskOp = 'update'>(
 		t: ActionTaskProps<TState, TPath, TOp>,
 	): ActionTask<TState, TPath, TOp>;
-	from<TPath extends Path = '/', TOp extends TaskOp = 'update'>(
+	from<TPath extends PathString = Root, TOp extends TaskOp = 'update'>(
 		t: MethodTaskProps<TState, TPath, TOp>,
 	): MethodTask<TState, TPath, TOp>;
 }

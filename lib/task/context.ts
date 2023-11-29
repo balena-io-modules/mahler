@@ -1,5 +1,5 @@
 import { Op } from '../operation';
-import { Path } from '../path';
+import { PathString, Root } from '../path';
 import { Identity } from '../identity';
 import { LensContext } from '../lens';
 
@@ -24,7 +24,11 @@ export type TaskOp = Op | '*';
  *  set(s, get(s)) = s
  *  set(set(s, a), a) = set(s,a)
  */
-export type Context<TState, TPath extends Path, TOp extends TaskOp> = Identity<
+export type Context<
+	TState,
+	TPath extends PathString,
+	TOp extends TaskOp,
+> = Identity<
 	TOp extends '*' | 'delete'
 		? Omit<LensContext<TState, TPath>, 'target'>
 		: LensContext<TState, TPath>
@@ -33,11 +37,11 @@ export type Context<TState, TPath extends Path, TOp extends TaskOp> = Identity<
 // Redeclare the type for exporting
 export type TaskArgs<
 	TState = any,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 > = Identity<Omit<Context<TState, TPath, TOp>, 'path'>>;
 
-function from<TState, TPath extends Path, TOp extends TaskOp>(
+function from<TState, TPath extends PathString, TOp extends TaskOp>(
 	lensCtx: LensContext<TState, TPath>,
 ): Context<TState, TPath, TOp> {
 	return lensCtx as any;

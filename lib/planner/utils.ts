@@ -1,5 +1,5 @@
 import { Task, TaskOp } from '../task';
-import { Path } from '../path';
+import { Path, PathString, Root } from '../path';
 import { Operation } from '../operation';
 
 /**
@@ -10,15 +10,15 @@ import { Operation } from '../operation';
  */
 export function isTaskApplicable<
 	TState = any,
-	TPath extends Path = '/',
+	TPath extends PathString = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
 	if (t.op !== '*' && t.op !== o.op) {
 		return false;
 	}
 
-	const taskParts = Path.elems(t.lens);
-	const opParts = Path.elems(o.path);
+	const taskParts = Path.split(t.lens);
+	const opParts = Path.split(o.path);
 
 	if (taskParts.length !== opParts.length) {
 		return false;

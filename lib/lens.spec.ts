@@ -1,11 +1,15 @@
 import { expect } from '~/test-utils';
 import { Lens } from './lens';
+import { Path } from './path';
 
 describe('Lens', () => {
 	describe('context', () => {
 		it('gets context from generic dictionary', () => {
 			type Counters = { [K in keyof any]: number };
-			const c = Lens.context<Counters, '/'>(`/`, `/`, { a: 1, b: 2 });
+			const c = Lens.context<Counters, '/'>(Path.from(`/`), Path.from(`/`), {
+				a: 1,
+				b: 2,
+			});
 			expect(c).to.deep.include({
 				target: { a: 1, b: 2 },
 			});
@@ -14,10 +18,11 @@ describe('Lens', () => {
 		it('calculates a simple context', () => {
 			type State = { a: { b: { c: string[] }; d: number } };
 
-			const c = Lens.context<State, '/a/b/:value'>('/a/b/:value', '/a/b/c', [
-				'one',
-				'two',
-			]);
+			const c = Lens.context<State, '/a/b/:value'>(
+				Path.from('/a/b/:value'),
+				Path.from('/a/b/c'),
+				['one', 'two'],
+			);
 
 			expect(c).to.deep.include({
 				target: ['one', 'two'],
@@ -29,8 +34,8 @@ describe('Lens', () => {
 			type State = { objects: { [id: string]: { value: number } } };
 
 			const ctx = Lens.context<State, '/objects/:id'>(
-				'/objects/:id',
-				'/objects/second',
+				Path.from('/objects/:id'),
+				Path.from('/objects/second'),
 				{ value: 123 },
 			);
 
@@ -41,8 +46,8 @@ describe('Lens', () => {
 			type State = { a: { b: { c: string[] }; d: number } };
 
 			const c = Lens.context<State, '/a/b/c/:pos'>(
-				'/a/b/c/:pos',
-				'/a/b/c/0',
+				Path.from('/a/b/c/:pos'),
+				Path.from('/a/b/c/0'),
 				'one',
 			);
 
@@ -56,8 +61,8 @@ describe('Lens', () => {
 			type State = { a: { b: { c: Array<{ e: string }> }; d: number } };
 
 			const c = Lens.context<State, '/a/b/c/:pos/e'>(
-				'/a/b/c/:pos/e',
-				'/a/b/c/0/e',
+				Path.from('/a/b/c/:pos/e'),
+				Path.from('/a/b/c/0/e'),
 				'one',
 			);
 

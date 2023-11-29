@@ -1,10 +1,10 @@
 import { isArrayIndex } from './is-array-index';
-import { Path } from './path';
+import { Path, PathString, Root } from './path';
 import { InvalidPointer } from './pointer';
 import { Ref } from './ref';
 import { Lens } from './lens';
 
-export interface View<TState, TPath extends Path = '/'>
+export interface View<TState, TPath extends PathString = Root>
 	extends Ref<Lens<TState, TPath>> {
 	delete(): void;
 }
@@ -12,12 +12,11 @@ export interface View<TState, TPath extends Path = '/'>
 /**
  * Returns a view builder function from a given path
  */
-function createView<TState, TPath extends Path>(
+function createView<TState, TPath extends PathString>(
 	ref: Ref<TState>,
-	path: TPath,
+	path: Path<TPath>,
 ): View<TState, TPath> {
-	Path.assert(path);
-	const parts = Path.elems(path);
+	const parts = Path.split(path);
 
 	// Save the last element of the path so we can delete it
 	const last = parts.pop();
