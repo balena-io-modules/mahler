@@ -22,7 +22,10 @@ type LensWithSlash<
 	TProps extends NonNullable<unknown>,
 > = TPath extends `/${infer TTail}`
 	? LensWithoutSlash<TChildState, TPath, TTail, TProps> // If the path starts with a slash, evaluate the remaining part of the path
-	: never; // Otherwise, the path is invalid
+	: TProps & {
+			path: Path<TPath>;
+			target: unknown;
+	  }; // Otherwise, the path is invalid
 
 // A lens to evaluate paths that start without a slash, e.g. `key1/key2` or `key`
 type LensWithoutSlash<

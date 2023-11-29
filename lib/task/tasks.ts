@@ -292,7 +292,7 @@ function ground<
 			taskAction(View.from(s, path), { ...context, system: s._ });
 		return Object.assign(action, {
 			id,
-			path: context.path,
+			path: context.path as Path<TPath>,
 			target,
 			_tag: 'action' as const,
 			description,

@@ -26,7 +26,7 @@ import { isTaskApplicable } from './utils';
 
 interface PlanningState<TState = any> {
 	distance: Distance<TState>;
-	tasks: Array<Task<TState>>;
+	tasks: Array<Task<TState, string, any>>;
 	depth?: number;
 	operation?: Operation<TState, any>;
 	trace: PlannerConfig<TState>['trace'];
@@ -416,13 +416,13 @@ export function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Lens.context<TState, any>(
+			const ctx = Lens.context<TState, string>(
 				task.lens,
 				path,
-				Pointer.from<TState, string>(distance.target, path) as any,
+				Pointer.from<TState, string>(distance.target, path),
 			);
 
-			const taskPlan = tryInstruction(task(ctx as any), {
+			const taskPlan = tryInstruction(task(ctx), {
 				depth,
 				distance: distance,
 				tasks,

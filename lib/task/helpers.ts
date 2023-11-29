@@ -17,7 +17,7 @@ export function NoOp<
 	return Object.assign(NoAction, {
 		_tag: 'action' as const,
 		id: 'noop',
-		path: ctx.path as TPath,
+		path: ctx.path,
 		target: (ctx as any).target,
 		description: 'no-op',
 		effect: NoEffect,
