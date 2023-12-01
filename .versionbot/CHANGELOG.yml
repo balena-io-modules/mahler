@@ -1,4 +1,23 @@
 - commits:
+    - subject: Fix observe so new object assignments are also reported
+      hash: ec3081bc7da8ab0875417b3d566efd5a5485063d
+      body: >
+        This fixes a bug where changes to a property being assigned an object
+        value would
+
+        not be reported by `observe`, leading to missing information in the
+
+        observer stream. This now calls observe on new assignments when
+
+        applicable and updates tests.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 2.5.1
+  title: ""
+  date: 2023-12-01T19:21:48.087Z
+- commits:
     - subject: Improve types to avoid unnecessary type conversions
       hash: 9ed6ae09712d3bd5bbe4c66e599ffe62f906e6a7
       body: ""
