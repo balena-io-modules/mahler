@@ -110,6 +110,205 @@ describe('observe', () => {
 		});
 	});
 
+	it('observes changes to nested re-assignments', () => {
+		type O = { foo?: string; bar?: O };
+		const o = Ref.of<O>({ foo: 'hello', bar: { foo: 'world' } });
+
+		const values: O[] = [];
+		const next = (v: O) => values.push(v);
+
+		observe((r: Ref<O>) => {
+			r._.foo = 'hello world';
+			r._.bar!.foo = 'world hello';
+			r._.bar!.bar = { foo: 'goodbye' };
+			delete r._.bar!.bar;
+			r._.bar!.bar = { foo: 'goodbye' };
+			r._.bar!.bar.foo = 'goodbye world';
+			r._.bar = { foo: 'hello again' };
+			r._.bar!.foo = 'goodbye again';
+		}, observerFrom(next))(o);
+
+		expect(values).to.have.deep.members([
+			{
+				foo: 'hello world',
+				bar: { foo: 'world' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello', bar: { foo: 'goodbye world' } },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'hello again' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'goodbye again' },
+			},
+		]);
+	});
+
+	it('reverts changes to nested re-assignments', () => {
+		type O = { foo?: string; bar?: O };
+		const o = Ref.of<O>({ foo: 'hello', bar: { foo: 'world' } });
+
+		const values: O[] = [];
+		const next = (v: O) => values.push(v);
+
+		expect(() =>
+			observe((r: Ref<O>) => {
+				r._.foo = 'hello world';
+				r._.bar!.foo = 'world hello';
+				r._.bar!.bar = { foo: 'goodbye' };
+				r._.bar!.bar.foo = 'goodbye world';
+				r._.bar = { foo: 'hello again' };
+				r._.bar!.foo = 'goodbye again';
+				throw new Error('something happened!');
+			}, observerFrom(next))(o),
+		).to.throw('something happened!');
+
+		expect(values).to.have.deep.members([
+			{
+				foo: 'hello world',
+				bar: { foo: 'world' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'world hello', bar: { foo: 'goodbye world' } },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'hello again' },
+			},
+			{
+				foo: 'hello world',
+				bar: { foo: 'goodbye again' },
+			},
+			{ foo: 'hello', bar: { foo: 'world' } },
+		]);
+
+		expect(o._).to.deep.equal({ foo: 'hello', bar: { foo: 'world' } });
+	});
+
+	it('observes changes to nested re-assignments in arrays', () => {
+		type O = { foo?: string; bar?: O[] };
+		const o = Ref.of<O>({ foo: 'hello', bar: [{ foo: 'world' }] });
+
+		const values: O[] = [];
+		const next = (v: O) => values.push(v);
+
+		observe((r: Ref<O>) => {
+			r._.foo = 'hello world';
+			r._.bar![0].foo = 'world hello';
+			r._.bar![0].bar = [{ foo: 'goodbye' }];
+			r._.bar![0].bar[0].foo = 'goodbye world';
+			r._.bar![0] = { foo: 'hello again' };
+			r._.bar![0].foo = 'goodbye again';
+		}, observerFrom(next))(o);
+
+		expect(values).to.have.deep.members([
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye' }] }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye world' }] }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'hello again' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'goodbye again' }],
+			},
+		]);
+	});
+
+	it('reverts changes to nested re-assignments in arrays', () => {
+		type O = { foo?: string; bar?: O[] };
+		const o = Ref.of<O>({ foo: 'hello', bar: [{ foo: 'world' }] });
+
+		const values: O[] = [];
+		const next = (v: O) => values.push(v);
+
+		expect(() =>
+			observe((r: Ref<O>) => {
+				r._.foo = 'hello world';
+				r._.bar![0].foo = 'world hello';
+				r._.bar![0].bar = [{ foo: 'goodbye' }];
+				r._.bar![0].bar[0].foo = 'goodbye world';
+				r._.bar![0] = { foo: 'hello again' };
+				r._.bar![0].foo = 'goodbye again';
+
+				throw new Error('something happened!');
+			}, observerFrom(next))(o),
+		).to.throw('something happened!');
+
+		expect(values).to.have.deep.members([
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye' }] }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye world' }] }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'hello again' }],
+			},
+			{
+				foo: 'hello world',
+				bar: [{ foo: 'goodbye again' }],
+			},
+			{ foo: 'hello', bar: [{ foo: 'world' }] },
+		]);
+
+		expect(o._).to.deep.equal({ foo: 'hello', bar: [{ foo: 'world' }] });
+	});
+
 	it('reverts changes if an error occurs while modifying an object', () => {
 		type O = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
 		const o = Ref.of<O>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
@@ -117,7 +316,7 @@ describe('observe', () => {
 		const values: O[] = [];
 		const next = (v: O) => values.push(v);
 
-		try {
+		expect(() =>
 			observe((r: Ref<O>) => {
 				r._.a++;
 				r._.b.c += ' world';
@@ -128,10 +327,8 @@ describe('observe', () => {
 				r._.b.d.f.pop();
 
 				throw new Error('something happened!');
-			}, observerFrom(next))(o);
-		} catch {
-			/* noop */
-		}
+			}, observerFrom(next))(o),
+		).to.throw('something happened!');
 
 		expect(values).to.have.deep.members([
 			{
@@ -177,8 +374,8 @@ describe('observe', () => {
 		const values: O[] = [];
 		const next = (v: O) => values.push(v);
 
-		try {
-			await observe(async (r: Ref<O>) => {
+		await expect(
+			observe(async (r: Ref<O>) => {
 				r._.a++;
 				r._.b.c += ' world';
 				r._.b.d.e = false;
@@ -188,10 +385,8 @@ describe('observe', () => {
 				r._.b.d.f.pop();
 
 				throw new Error('something happened!');
-			}, observerFrom(next))(o);
-		} catch {
-			/* noop */
-		}
+			}, observerFrom(next))(o),
+		).to.be.rejectedWith('something happened!');
 
 		expect(values).to.have.deep.members([
 			{
