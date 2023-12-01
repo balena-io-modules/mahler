@@ -1,5 +1,5 @@
 import { Ref } from '../ref';
-import { Observer } from '../observable';
+import { Observer, Next } from '../observable';
 import { Operation } from '../operation';
 import { View } from '../view';
 import { Path } from '../path';
@@ -8,76 +8,50 @@ function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';
 }
 
-function observeObject<T, U extends object>(
+function appendToPath(key: string | number | symbol, path: string[]) {
+	return key === '_' && path.length === 0 ? path : path.concat(String(key));
+}
+
+function buildProxy<T, U extends object>(
 	r: Ref<T>,
 	u: U,
-	observer: Observer<Operation<T, any>>,
-	reverseChanges = [] as Array<Operation<T, any>>,
-	parentPath = [] as string[],
+	next: Next<Operation<T, string>>,
+	path = [] as string[],
 ): U {
-	if (!Array.isArray(u)) {
-		u = (Object.getOwnPropertyNames(u) as Array<keyof U>).reduce((acc, key) => {
-			const v = u[key];
-			if (isObject(v)) {
-				const path = parentPath.concat(key === '_' ? [] : String(key));
-				return {
-					...acc,
-					[key]: observeObject(r, v, observer, reverseChanges, path),
-				};
-			}
-			return { ...acc, [key]: v };
-		}, {} as U);
-	} else {
-		u = u.map((v, i) => {
-			if (isObject(v)) {
-				const path = parentPath.concat(String(i));
-				return observeObject(r, v, observer, reverseChanges, path);
-			}
-			return v;
-		}) as U;
-	}
-
 	return new Proxy(u, {
 		set(target, prop, value) {
+			const childPath = appendToPath(prop, path);
+			const existsBefore = prop in target;
 			const valueBefore = (target as any)[prop];
-			const res = Reflect.set(target, prop, value);
-			if (
-				res &&
-				// If the object is an array do not notify on length changes
-				(!Array.isArray(target) || (Array.isArray(target) && prop !== 'length'))
-			) {
-				const path = Path.from(
-					prop === '_' ? [] : parentPath.concat(String(prop)),
-				);
 
-				if (prop in target) {
-					if (Array.isArray(target)) {
-						// Operations on arrays are additive, so the inverse of
-						// update is delete
-						reverseChanges.push({
-							op: 'delete',
-							path,
-						});
-					} else {
-						reverseChanges.push({
-							op: 'update',
-							path,
-							source: structuredClone(value),
-							target: valueBefore,
-						});
-					}
+			let valueProxy = value;
+			if (value != null && typeof value === 'object') {
+				// If we are re-assigning a key with a new object we need to
+				// observe that object too. We pass an empty array to changes as we don't want
+				// to reverse those changes
+				valueProxy = observeObject(r, value, next, childPath);
+			}
 
-					observer.next({
+			const res = Reflect.set(target, prop, valueProxy);
+
+			// Do not notify on array length changes
+			if (res) {
+				if (Array.isArray(target) && prop === 'length') {
+					return res;
+				}
+
+				if (existsBefore) {
+					// Notify the observer
+					next({
 						op: 'update',
-						path,
+						path: Path.from(childPath),
 						source: valueBefore,
 						target: value,
 					});
 				} else {
-					reverseChanges.push({ op: 'delete', path });
-					observer.next({
+					next({
 						op: 'create',
-						path,
+						path: Path.from(childPath),
 						target: value,
 					});
 				}
@@ -85,25 +59,58 @@ function observeObject<T, U extends object>(
 			return res;
 		},
 		deleteProperty(target, prop) {
-			const valueBefore = (target as any)[prop];
 			const res = Reflect.deleteProperty(target, prop);
 			if (res) {
-				const changePath = Path.from(
-					prop === '_' ? [] : parentPath.concat(String(prop)),
-				);
-				reverseChanges.push({
-					op: 'create',
-					path: changePath,
-					target: valueBefore,
-				});
-				observer.next({ op: 'delete', path: changePath });
+				const childPath = appendToPath(prop, path);
+				next({ op: 'delete', path: Path.from(childPath) });
 			}
 			return res;
 		},
 	});
 }
 
-function applyChanges<S>(r: Ref<S>, changes: Array<Operation<S, any>>) {
+function observeArray<T, U extends any[]>(
+	r: Ref<T>,
+	u: U,
+	next: Next<Operation<T, string>>,
+	path = [] as string[],
+): U {
+	u = u.map((v, i) => {
+		if (isObject(v)) {
+			const newPath = path.concat(String(i));
+			return observeObject(r, v, next, newPath);
+		}
+		return v;
+	}) as U;
+
+	return buildProxy(r, u, next, path);
+}
+
+function observeObject<T, U extends object>(
+	r: Ref<T>,
+	u: U,
+	next: Next<Operation<T, string>>,
+	path = [] as string[],
+): U {
+	if (Array.isArray(u)) {
+		return observeArray(r, u, next, path);
+	}
+	// Recursively observe existing properties of the object
+	u = (Object.getOwnPropertyNames(u) as Array<keyof U>).reduce((acc, key) => {
+		const v = u[key];
+		if (isObject(v)) {
+			return {
+				...acc,
+				[key]: observeObject(r, v, next, appendToPath(key, path)),
+			};
+		}
+		return { ...acc, [key]: v };
+	}, {} as U);
+
+	return buildProxy(r, u, next, path);
+}
+
+function applyChanges<S>(r: Ref<S>, changes: Array<Operation<S, string>>) {
 	changes.forEach((change) => {
 		const view = View.from(r, change.path);
 		switch (change.op) {
@@ -133,33 +140,24 @@ export function observe<T, U = void>(
 	observer: Observer<T>,
 ): (r: Ref<T>) => U {
 	return function (r: Ref<T>) {
-		const reverseChanges: Array<Operation<T, any>> = [];
-
+		const orig = structuredClone(r._);
 		function rollback() {
-			// We need to reverse the array as changes are added using Array.push
-			applyChanges(r, reverseChanges.reverse());
+			// Restore the original value
+			r._ = orig;
 
 			// We need to notify the observer of the last state
-			observer.next(structuredClone(r._));
+			observer.next(orig);
 		}
 
 		try {
 			const res = fn(
-				observeObject(
-					r,
-					r,
-					{
-						next: (change) => {
-							applyChanges(r, [change]);
-							observer.next(structuredClone(r._));
-						},
-						error: () => void 0,
-						complete: () => void 0,
-					},
-					reverseChanges,
-				),
+				observeObject(r, r, (change) => {
+					applyChanges(r, [change]);
+					observer.next(structuredClone(r._));
+				}),
 			);
 
+			// Catch error in async function calls
 			if (res instanceof Promise) {
 				return res.catch((e) => {
 					rollback();
@@ -169,6 +167,7 @@ export function observe<T, U = void>(
 
 			return res;
 		} catch (e) {
+			// Catch errors in sync function calls
 			rollback();
 			throw e;
 		}
