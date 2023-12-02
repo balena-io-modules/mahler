@@ -1,5 +1,5 @@
 import { Lens } from './lens';
-import { Path, PathString } from './path';
+import { Path, PathType } from './path';
 import { Ref } from './ref';
 import { View } from './view';
 
@@ -23,7 +23,7 @@ export type Sensor<T> = (s: Ref<T>) => Subscribable<T>;
 /**
  * The sensor constructor properties
  */
-export interface SensorProps<T, P extends PathString = '/'> {
+export interface SensorProps<T, P extends PathType = '/'> {
 	/**
 	 * A lens to indicate what part of the state the sensor
 	 * will update as it runs. Unlike task lense, sensor lenses
@@ -46,7 +46,7 @@ export interface SensorProps<T, P extends PathString = '/'> {
  * If a function is passed, it is assumed to be the `sensor` function, and
  * the `lens` is assumed to be the root of the state.
  */
-function from<T, P extends PathString = '/'>(
+function from<T, P extends PathType = '/'>(
 	input: SensorFn<Lens<T, P>> | Partial<SensorProps<T, P>>,
 ): Sensor<T> {
 	const {
@@ -77,7 +77,7 @@ function from<T, P extends PathString = '/'>(
  * the same type.
  */
 interface SensorBuilder<T> {
-	from<P extends PathString = '/'>(t: SensorProps<T, P>): Sensor<T>;
+	from<P extends PathType = '/'>(t: SensorProps<T, P>): Sensor<T>;
 }
 
 function of<T>(): SensorBuilder<T> {

@@ -1,40 +1,25 @@
 import { createHash } from 'crypto';
 
 import assert from '../assert';
-import { Context, TaskArgs, TaskOp } from './context';
 import { Lens } from '../lens';
-import { Path, PathString, Root } from '../path';
+import { AnyOp, Update } from '../operation';
+import { Path, PathType, Root } from '../path';
 import { Ref } from '../ref';
 import { View } from '../view';
-
+import { Context, TaskArgs, TaskOp } from './context';
 import { Action, Instruction, Method, MethodExpansion } from './instructions';
+import { ActionTaskProps, ContextWithSystem, MethodTaskProps } from './props';
 
-type TaskContext<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> = Context<TState, TPath, TOp> & { system: TState };
-
-/**
- * Common arguments for all tasks
- */
 interface TaskSpec<
 	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
 > {
 	/**
 	 * A unique identifier for the task. This is automatically generated
 	 * when constructing he task, and is not user configurable.
 	 */
 	readonly id: string;
-
-	/**
-	 * A descriptor for this task. The descriptor can be either a string or a Context
-	 * instance. The description does not receive the current state to allow actions to
-	 * be compared by their description (useful for testing and debugging).
-	 */
-	readonly description: string | ((c: Context<TState, TPath, TOp>) => string);
 
 	/**
 	 * The path to the element that this task applies to
@@ -47,72 +32,20 @@ interface TaskSpec<
 	readonly op: TOp;
 
 	/**
+	 * A descriptor for this task. The descriptor can be either a string or a Context
+	 * instance. The description does not receive the current state to allow actions to
+	 * be compared by their description (useful for testing and debugging).
+	 */
+	readonly description: string | ((c: Context<TState, TPath, TOp>) => string);
+
+	/**
 	 * A condition that must be met for the task to be chosen by the planner or executed by
 	 * an agent.
 	 */
-	condition(
+	readonly condition: (
 		s: Lens<TState, TPath>,
-		c: TaskContext<TState, TPath, TOp>,
-	): boolean;
-}
-
-/**
- * Action task specification. Internal use only
- */
-interface ActionSpec<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> extends TaskSpec<TState, TPath, TOp> {
-	/**
-	 * The effect on the state that the task performs.
-	 *
-	 * The effect function will only be ran if the condition is met and developers
-	 * can trust that the condition will be checked beforehand.
-	 *
-	 * The effect function receives a view to the state, which allows
-	 * it to mutate the state. The effect function should not return
-	 * anything.
-	 *
-	 * If the task operation is `create`, the task constructor will add as
-	 * condition that the property pointed by the lens is undefined. The value will
-	 * be created before calling the effect function provided by the user.
-	 *
-	 * If the task operation is `delete`, the task constructor will add as a condition
-	 * that the property pointed by the lens is not undefined. The value will be deleted
-	 * automatically after the effect function provided by the user.
-	 *
-	 * @param view - A view to the state pointed by the lens.
-	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
-	 */
-	effect(view: View<TState, TPath>, ctx: TaskContext<TState, TPath, TOp>): void;
-
-	/**
-	 * TThe actual action the task performs.	 *
-	 *
-	 * The action function will only be ran if the condition is met and developers
-	 * can trust that the condition will be checked beforehand.
-	 *
-	 * The action function receives a view to the state, which allows
-	 * it to mutate the state. The action function should not return
-	 * anything.
-	 *
-	 * If the task operation is `create`, the task constructor will add as
-	 * condition that the property pointed by the lens is undefined. The value will
-	 * be created before calling the action function provided by the user.
-	 *
-	 * If the task operation is `delete`, the task constructor will add as a condition
-	 * that the property pointed by the lens is not undefined. The value will be deleted
-	 * automatically after the action functions provided by the user.
-	 *
-	 * @param view - A view to the state pointed by the lens.
-	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
-	 */
-
-	action(
-		s: View<TState, TPath>,
-		c: TaskContext<TState, TPath, TOp>,
-	): Promise<void>;
+		ctx: ContextWithSystem<TState, TPath, TOp>,
+	) => boolean;
 }
 
 /**
@@ -154,11 +87,63 @@ interface ActionSpec<
  */
 export interface ActionTask<
 	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> extends ActionSpec<TState, TPath, TOp> {
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+> extends TaskSpec<TState, TPath, TOp> {
 	/**
-	 * The task function grounds the task
+	 * The effect on the state that the task performs.
+	 *
+	 * The effect function will only be ran if the condition is met and developers
+	 * can trust that the condition will be checked beforehand.
+	 *
+	 * The effect function receives a view to the state, which allows
+	 * it to mutate the state. The effect function should not return
+	 * anything.
+	 *
+	 * If the task operation is `create`, the task constructor will add as
+	 * condition that the property pointed by the lens is undefined. The value will
+	 * be created before calling the effect function provided by the user.
+	 *
+	 * If the task operation is `delete`, the task constructor will add as a condition
+	 * that the property pointed by the lens is not undefined. The value will be deleted
+	 * automatically after the effect function provided by the user.
+	 *
+	 * @param view - A view to the state pointed by the lens.
+	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
+	 */
+	readonly effect: (
+		view: View<TState, TPath, TOp>,
+		ctx: ContextWithSystem<TState, TPath, TOp>,
+	) => void;
+
+	/**
+	 * TThe actual action the task performs.
+	 *
+	 * The action function will only be ran if the condition is met and developers
+	 * can trust that the condition will be checked beforehand.
+	 *
+	 * The action function receives a view to the state, which allows
+	 * it to mutate the state. The action function should not return
+	 * anything.
+	 *
+	 * If the task operation is `create`, the task constructor will add as
+	 * condition that the property pointed by the lens is undefined. The value will
+	 * be created before calling the action function provided by the user.
+	 *
+	 * If the task operation is `delete`, the task constructor will add as a condition
+	 * that the property pointed by the lens is not undefined. The value will be deleted
+	 * automatically after the action functions provided by the user.
+	 *
+	 * @param view - A view to the state pointed by the lens.
+	 * @param ctx -	The calling context for the task. It includes any lens properties and the system object
+	 */
+	readonly action: (
+		view: View<TState, TPath, TOp>,
+		ctx: ContextWithSystem<TState, TPath, TOp>,
+	) => Promise<void>;
+
+	/**
+	 * The task function binds the task to a context
 	 *
 	 * Grounding the task converts the specification into an instruction, that is,
 	 * something that can be evaluated by the planner. It does this by
@@ -168,36 +153,6 @@ export interface ActionTask<
 	 * MethodTask --- ground --> Method
 	 */
 	(ctx: TaskArgs<TState, TPath, TOp>): Action<TState, TPath, TOp>;
-}
-
-// A method definition
-export interface MethodSpec<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> extends TaskSpec<TState, TPath, TOp> {
-	/**
-	 * The method expansion. The default is 'detect', meaning the planner will try to execute
-	 * the instructions returned by the method in parallel and go back to sequential expansion
-	 * if conflicts are detected. If sequential is chosen, the planner will jump straight to
-	 * sequential expansion. This is a workaround to handle those cases where detection may fail
-	 * due to instructios that read data handled by a parallel branch.
-	 */
-	readonly expansion: MethodExpansion;
-
-	/**
-	 * The method to be called when the task is executed.
-	 *
-	 * The method should return a list of instructions to be used by the planner.
-	 * It should never modify the state object.
-	 *
-	 * if the method returns an empty list, this means there are no
-	 * further instructions that can be applied
-	 */
-	method(
-		s: Lens<TState, TPath>,
-		c: TaskContext<TState, TPath, TOp>,
-	): Instruction<TState> | Array<Instruction<TState>>;
 }
 
 /**
@@ -223,9 +178,32 @@ export interface MethodSpec<
  */
 export interface MethodTask<
 	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> extends MethodSpec<TState, TPath, TOp> {
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+> extends TaskSpec<TState, TPath, TOp> {
+	/**
+	 * The method expansion. The default is 'detect', meaning the planner will try to execute
+	 * the instructions returned by the method in parallel and go back to sequential expansion
+	 * if conflicts are detected. If sequential is chosen, the planner will jump straight to
+	 * sequential expansion. This is a workaround to handle those cases where detection may fail
+	 * due to instructios that read data handled by a parallel branch.
+	 */
+	readonly expansion: MethodExpansion;
+
+	/**
+	 * The method to be called when the task is executed.
+	 *
+	 * The method should return a list of instructions to be used by the planner.
+	 * It should never modify the state object.
+	 *
+	 * if the method returns an empty list, this means there are no
+	 * further instructions that can be applied
+	 */
+	readonly method: (
+		s: Lens<TState, TPath>,
+		c: ContextWithSystem<TState, TPath, TOp>,
+	) => Instruction<TState> | Array<Instruction<TState>>;
+
 	/**
 	 * The task function grounds the task
 	 *
@@ -242,10 +220,10 @@ export interface MethodTask<
 // Bind a task to a specific context
 function ground<
 	TState = unknown,
-	TPath extends PathString = Root,
+	TPath extends PathType = Root,
 	TOp extends TaskOp = 'update',
 >(
-	task: ActionSpec<TState, TPath, TOp> | MethodSpec<TState, TPath, TOp>,
+	task: Task<TState, TPath, TOp>,
 	args: TaskArgs<TState, TPath, TOp>,
 ): Instruction<TState, TPath, TOp> {
 	const templateParts = Path.split(task.lens);
@@ -278,13 +256,13 @@ function ground<
 
 	const condition = (s: TState) => {
 		const lens = Lens.from(s, path);
-		return task.condition(lens, {
+		return task.condition(lens as any, {
 			...context,
 			system: s,
 		});
 	};
 
-	if (isActionSpec(task)) {
+	if (isActionTask(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
 		const effect = (s: Ref<TState>) =>
 			taskEffect(View.from(s, path), { ...context, system: s._ });
@@ -336,29 +314,11 @@ function ground<
 }
 
 /**
- * Check if a task or an instruction is an action
- */
-function isActionSpec<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
->(
-	t: ActionSpec<TState, TPath, TOp> | MethodSpec<TState, TPath, TOp>,
-): t is ActionSpec<TState, TPath, TOp> {
-	return (
-		(t as any).effect != null &&
-		typeof (t as any).effect === 'function' &&
-		(t as any).action != null &&
-		typeof (t as any).action === 'function'
-	);
-}
-
-/**
  * Check if a task is a method
  */
 function isMethodTask<
 	TState = unknown,
-	TPath extends PathString = Root,
+	TPath extends PathType = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is MethodTask<TState, TPath, TOp> {
 	return (t as any).method != null && typeof (t as any).method === 'function';
@@ -369,7 +329,7 @@ function isMethodTask<
  */
 function isActionTask<
 	TState = unknown,
-	TPath extends PathString = Root,
+	TPath extends PathType = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>): t is ActionTask<TState, TPath, TOp> {
 	return (
@@ -385,63 +345,27 @@ function isActionTask<
  */
 export type Task<
 	TState = unknown,
-	TPath extends PathString = Root,
+	TPath extends PathType = Root,
 	TOp extends TaskOp = 'update',
 > = ActionTask<TState, TPath, TOp> | MethodTask<TState, TPath, TOp>;
-
-/**
- * Method task properties for the task constructor
- */
-export type MethodTaskProps<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> = Partial<Omit<MethodSpec<TState, TPath, TOp>, 'method' | 'id' | 'lens'>> &
-	Pick<MethodSpec<TState, TPath, TOp>, 'method'> & { lens?: TPath };
-
-/**
- * Action task properties for the task constructor
- */
-export type ActionTaskProps<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
-> =
-	| ((Partial<Omit<ActionSpec<TState, TPath, TOp>, 'effect' | 'id' | 'lens'>> &
-			Pick<ActionSpec<TState, TPath, TOp>, 'effect'>) & { lens?: TPath })
-	| ((Partial<Omit<ActionSpec<TState, TPath, TOp>, 'action' | 'id' | 'lens'>> &
-			Pick<ActionSpec<TState, TPath, TOp>, 'action'>) & { lens?: TPath });
-
-function isActionProps<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
->(
-	x: ActionTaskProps<TState, TPath, TOp> | MethodTaskProps<TState, TPath, TOp>,
-): x is ActionTaskProps<TState, TPath, TOp> {
-	return (
-		typeof (x as any).effect === 'function' ||
-		typeof (x as any).action === 'function'
-	);
-}
 
 /**
  * Construct a new task (action or method) from a task specification
  */
 function from<
 	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
->(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
-function from<
-	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
 >(t: MethodTaskProps<TState, TPath, TOp>): MethodTask<TState, TPath, TOp>;
 function from<
 	TState = unknown,
-	TPath extends PathString = Root,
-	TOp extends TaskOp = 'update',
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+>(t: ActionTaskProps<TState, TPath, TOp>): ActionTask<TState, TPath, TOp>;
+function from<
+	TState = unknown,
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
 >(
 	taskProps:
 		| ActionTaskProps<TState, TPath, TOp>
@@ -475,7 +399,7 @@ function from<
 
 	// The task properties
 	const tProps = (() => {
-		if (isActionProps(taskProps)) {
+		if (ActionTaskProps.is(taskProps)) {
 			const {
 				effect: taskEffect = () => void 0,
 				action: taskAction = async (v, c) => taskEffect(v, c),
@@ -555,17 +479,17 @@ function from<
 	const tSpec = { id, ...tProps };
 
 	const t = Object.assign((ctx: TaskArgs<TState, TPath, TOp>) => {
-		return ground(tSpec, ctx);
+		return ground(tSpec as Task<TState, TPath, TOp>, ctx);
 	}, tSpec);
 
 	return t;
 }
 
 interface TaskBuilder<TState> {
-	from<TPath extends PathString = Root, TOp extends TaskOp = 'update'>(
+	from<TPath extends PathType = Root, TOp extends TaskOp = 'update'>(
 		t: ActionTaskProps<TState, TPath, TOp>,
 	): ActionTask<TState, TPath, TOp>;
-	from<TPath extends PathString = Root, TOp extends TaskOp = 'update'>(
+	from<TPath extends PathType = Root, TOp extends TaskOp = 'update'>(
 		t: MethodTaskProps<TState, TPath, TOp>,
 	): MethodTask<TState, TPath, TOp>;
 }
