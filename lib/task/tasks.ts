@@ -407,24 +407,7 @@ function from<
 
 			let effect = taskEffect;
 			let action = taskAction;
-			if (op === 'create') {
-				effect = (v, c) => {
-					// TODO: the {} will not fit every type so we need to assume that
-					// the task will initialize the sub-state in a proper way. If we had
-					// some sort of validation model from the state we could validate after
-					// applying the effect or avoid the need for initializer tasks as the
-					// initial state of an entity would be knowable
-					v._ = {} as Lens<TState, TPath>;
-
-					return taskEffect(v, c);
-				};
-
-				action = async (v, c) => {
-					v._ = {} as Lens<TState, TPath>;
-
-					return await taskAction(v, c);
-				};
-			} else if (op === 'delete') {
+			if (op === 'delete') {
 				// If the task defines a delete operation for the value pointed by
 				// the lens, then we need to delete the property after the action succeeds
 				effect = (v, c) => {

@@ -60,7 +60,7 @@ describe('Tasks', () => {
 			op: 'create',
 			lens: '/props/:propId',
 			effect: (state, { target }) => {
-				expect(state._).to.not.be.undefined;
+				expect(state._).to.be.undefined;
 				state._ = target;
 				effectFn();
 			},
