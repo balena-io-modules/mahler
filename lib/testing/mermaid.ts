@@ -6,6 +6,7 @@ import {
 	EmptyNode,
 	ActionNode,
 	ForkNode,
+	SearchFailed,
 } from '../planner';
 import { Method, Action, Instruction } from '../task';
 import { Node } from '../planner';
@@ -379,7 +380,7 @@ class Diagram {
 
 		const node = DiagramNode.fromId(`${this.parent}-err`);
 		// Go up the stack to the level the search can continue
-		if (e.cause === 'search-failed') {
+		if (e === SearchFailed) {
 			if (this.depth > 0) {
 				this.depth--;
 				this.parent = DiagramNode.level(this.depth);

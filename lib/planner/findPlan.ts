@@ -14,6 +14,7 @@ import { Action, Instruction, Method, MethodExpansion, Task } from '../task';
 import { EmptyNode, Node } from './node';
 import { Plan } from './plan';
 import {
+	Aborted,
 	ConditionNotMet,
 	LoopDetected,
 	MergeFailed,
@@ -395,11 +396,10 @@ export function findPlan<TState = any>({
 	});
 
 	if (depth >= maxSearchDepth) {
-		return {
-			success: false,
+		throw new Aborted(
+			`Maximum search depth reached (${maxSearchDepth})`,
 			stats,
-			error: SearchFailed(depth, true),
-		};
+		);
 	}
 
 	for (const operation of ops) {
@@ -479,6 +479,6 @@ export function findPlan<TState = any>({
 	return {
 		success: false,
 		stats,
-		error: SearchFailed(depth),
+		error: SearchFailed,
 	};
 }

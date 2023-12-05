@@ -141,26 +141,8 @@ describe('Mermaid', () => {
 					34364f2 -.- d1{ }
 					d1 -.- 936cc5a("-1")
 					936cc5a -.- d2{ }
-					d1 -.- 1c690f1("+1")
-					1c690f1 -.- d2{ }
-					d1 -.- e747dfa("+2")
-					e747dfa -.- d2{ }
-					d0 -.- a596de3("+1")
-					a596de3 -.- d1{ }
-					d1 -.- 936cc5a("-1")
-					936cc5a -.- d2{ }
-					d1 -.- 1c690f1("+1")
-					1c690f1 -.- d2{ }
-					d1 -.- e747dfa("+2")
-					e747dfa -.- d2{ }
-					d0 -.- 1e5e1c7("+2")
-					1e5e1c7 -.- d1{ }
-					d1 -.- 936cc5a("-1")
-					936cc5a -.- d2{ }
-					d1 -.- 1c690f1("+1")
-					1c690f1 -.- d2{ }
-					d1 -.- e747dfa("+2")
-					e747dfa -.- d2{ }
+					d2 -.- d2-err[ ]
+					d2-err:::error
 					start:::error
 					classDef error stroke:#f00
 			`.trim(),
