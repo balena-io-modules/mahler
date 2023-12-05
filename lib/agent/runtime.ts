@@ -4,7 +4,7 @@ import { assert } from '../assert';
 import { Operation } from '../operation';
 import { diff } from '../distance';
 import { Observer, Subscription } from '../observable';
-import { EmptyNode, Node, Planner } from '../planner';
+import { EmptyNode, Node, Planner, SearchFailed } from '../planner';
 import { Ref } from '../ref';
 import { Sensor } from '../sensor';
 import { Target } from '../target';
@@ -35,7 +35,7 @@ class ActionRunFailed extends Error {
 
 class ActionConditionFailed extends Error {
 	constructor(readonly action: Action) {
-		super(`Conditions for action '${action.description}' not met`);
+		super(`Condition for action '${action.description}' not met`);
 	}
 }
 
@@ -46,8 +46,8 @@ class Cancelled extends Error {
 }
 
 class PlanNotFound extends Error {
-	constructor() {
-		super('Plan not found');
+	constructor(cause: unknown) {
+		super('Plan not found', { cause });
 	}
 }
 
@@ -126,7 +126,7 @@ export class Runtime<TState> {
 
 		if (!result.success) {
 			// Jump to the catch below
-			throw new PlanNotFound();
+			throw new PlanNotFound(result.error);
 		}
 
 		return result;
@@ -258,9 +258,16 @@ export class Runtime<TState> {
 				} catch (e) {
 					found = false;
 					if (e instanceof PlanNotFound) {
-						logger.warn('no plan found');
+						if (e.cause !== SearchFailed) {
+							logger.error(
+								'no plan found, reason:',
+								(e.cause as Error).message ?? e.cause,
+							);
+						} else {
+							logger.warn('no plan found');
+						}
 					} else if (e instanceof ActionConditionFailed) {
-						logger.warn(`${e.action.description}: condition not met`);
+						logger.warn(`${e.action.description}: condition failed`);
 					} else if (e instanceof ActionRunFailed) {
 						logger.error(`${e.action.description}: failed`, e.cause);
 					} else if (e instanceof Cancelled) {

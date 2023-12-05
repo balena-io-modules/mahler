@@ -144,7 +144,7 @@ export class Aborted extends PlanningError {
 		cause: unknown,
 		public stats: PlanningStats,
 	) {
-		super(`Planning aborted: ${(cause as Error).message ?? cause}`, cause);
+		super((cause as Error).message ?? cause, cause);
 	}
 }
 
