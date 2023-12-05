@@ -600,4 +600,30 @@ describe('Planner', () => {
 			expect(false);
 		});
 	});
+
+	it('limits maximum search depth while recursing methods', function () {
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			// There is as bug here
+			method: (_, { target }): Instruction<number> => inc({ target }),
+			description: 'inc1',
+		});
+
+		const planner = Planner.from<number>({
+			tasks: [inc],
+			config: { maxSearchDepth: 5 },
+		});
+
+		const result = planner.findPlan(0, 1);
+		expect(result.success).to.be.false;
+		// Method recursion does not change stats, which is why the expected value
+		// is 0
+		expect(result.stats.maxDepth).to.equal(0);
+	});
+
+	it.skip('simple travel problem', async () => {
+		// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
+		// the available cash, some actions may be possible
+		expect(false);
+	});
 });

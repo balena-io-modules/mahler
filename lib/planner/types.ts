@@ -136,7 +136,6 @@ export const LoopDetected = new PlanningError(
 export const MethodExpansionEmpty = new PlanningError(
 	'No instructions were returned by this method',
 );
-export const RecursionDetected = new PlanningError('A recursion was detected');
 export const SearchFailed = new PlanningError(
 	'No more applicable tasks found at this search depth',
 );

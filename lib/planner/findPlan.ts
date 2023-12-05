@@ -20,7 +20,6 @@ import {
 	MergeFailed,
 	MethodExpansionEmpty,
 	PlannerConfig,
-	RecursionDetected,
 	SearchFailed,
 } from './types';
 import { isTaskApplicable } from './utils';
@@ -33,7 +32,7 @@ interface PlanningState<TState = any> {
 	trace: PlannerConfig<TState>['trace'];
 	initialPlan: Plan<TState>;
 	callStack?: Array<Method<TState>>;
-	maxSearchDepth?: number;
+	maxSearchDepth: number;
 }
 
 function findLoop<T>(id: string, node: Node<T> | null): boolean {
@@ -100,11 +99,24 @@ function tryAction<TState = any>(
 // Expand the method in a sequential way
 function trySequential<TState = any>(
 	method: Method<TState>,
-	{ initialPlan, callStack = [], ...pState }: PlanningState<TState>,
+	{
+		initialPlan,
+		callStack = [],
+		maxSearchDepth,
+		...pState
+	}: PlanningState<TState>,
 ): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
 	assert(initialPlan.success);
+
+	// Protect against infinite recursion
+	if (callStack.length > maxSearchDepth) {
+		throw new Aborted(
+			`Maximum search depth ${maxSearchDepth}	reached on recursion`,
+			initialPlan.stats,
+		);
+	}
 
 	const output = method(initialPlan.state);
 	const instructions = Array.isArray(output) ? output : [output];
@@ -117,6 +129,7 @@ function trySequential<TState = any>(
 			...pState,
 			initialPlan: plan,
 			callStack: cStack,
+			maxSearchDepth,
 		});
 
 		if (!res.success) {
@@ -181,19 +194,23 @@ function findTail<TState = any>(
 
 function tryParallel<TState = any>(
 	parallel: Method<TState>,
-	{ trace, initialPlan, callStack = [], ...pState }: PlanningState<TState>,
+	{
+		trace,
+		initialPlan,
+		callStack = [],
+		maxSearchDepth,
+		...pState
+	}: PlanningState<TState>,
 ): Plan<TState> {
 	assert(initialPlan.success);
 
-	// look task in the call stack
-	if (callStack.find((p) => Method.equals(p, parallel))) {
-		return {
-			success: false,
-			stats: initialPlan.stats,
-			error: RecursionDetected,
-		};
+	// Protect against infinite recursion
+	if (callStack.length > maxSearchDepth) {
+		throw new Aborted(
+			`Maximum search depth ${maxSearchDepth}	reached on recursion`,
+			initialPlan.stats,
+		);
 	}
-
 	const output = parallel(initialPlan.state);
 	const instructions = Array.isArray(output) ? output : [output];
 
@@ -218,6 +235,7 @@ function tryParallel<TState = any>(
 			trace,
 			initialPlan: plan,
 			callStack: cStack,
+			maxSearchDepth,
 		});
 
 		if (!res.success) {
@@ -273,6 +291,7 @@ function tryParallel<TState = any>(
 			trace,
 			initialPlan,
 			callStack,
+			maxSearchDepth,
 			...pState,
 		});
 	}
@@ -359,7 +378,7 @@ export function findPlan<TState = any>({
 	depth = 0,
 	initialPlan,
 	callStack = [],
-	maxSearchDepth = 1000,
+	maxSearchDepth,
 }: PlanningState<TState>): Plan<TState> {
 	// Something went wrong if the initial plan
 	// given to this function is a failure
@@ -430,6 +449,7 @@ export function findPlan<TState = any>({
 				operation,
 				initialPlan,
 				callStack,
+				maxSearchDepth,
 			});
 
 			if (!taskPlan.success) {
