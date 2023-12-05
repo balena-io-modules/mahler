@@ -17,7 +17,6 @@ import {
 	Aborted,
 	ConditionNotMet,
 	LoopDetected,
-	MergeFailed,
 	MethodExpansionEmpty,
 	PlannerConfig,
 	SearchFailed,
@@ -306,12 +305,7 @@ function tryParallel<TState = any>(
 	);
 
 	// Now we can apply changes from parallel branches
-	let state: TState;
-	try {
-		state = applyPatch(initialPlan.state, pendingChanges);
-	} catch (e: any) {
-		return { success: false, stats: initialPlan.stats, error: MergeFailed(e) };
-	}
+	const state = applyPatch(initialPlan.state, pendingChanges);
 
 	return {
 		success: true,
@@ -461,15 +455,9 @@ export function findPlan<TState = any>({
 			// expansion didn't add any tasks so it makes no sense to go to a
 			// deeper level
 			if (taskPlan.start !== initialPlan.start) {
-				let state: TState;
-				try {
-					// applyPatch makes a copy of the source object so we only want to
-					// perform this operation if the instruction suceeded
-					state = applyPatch(initialPlan.state, taskPlan.pendingChanges);
-				} catch (e: any) {
-					trace(MergeFailed(e));
-					continue;
-				}
+				// applyPatch makes a copy of the source object so we only want to
+				// perform this operation if the instruction suceeded
+				const state = applyPatch(initialPlan.state, taskPlan.pendingChanges);
 
 				const res = findPlan({
 					depth: depth + 1,

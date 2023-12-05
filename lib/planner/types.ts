@@ -139,9 +139,6 @@ export const MethodExpansionEmpty = new PlanningError(
 export const SearchFailed = new PlanningError(
 	'No more applicable tasks found at this search depth',
 );
-export const MergeFailed = (e: unknown) =>
-	new PlanningError('An error occurred when trying to merge changes', e);
-
 export class Aborted extends PlanningError {
 	constructor(
 		cause: unknown,
