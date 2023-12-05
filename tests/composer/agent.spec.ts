@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { console, expect } from '~/test-utils';
+import { logger, expect } from '~/test-utils';
 
 import { Agent } from 'mahler';
 import { planner } from './planner';
@@ -35,7 +35,7 @@ describe('composer/agent', () => {
 		const agent = Agent.from<App>({
 			initial: { name: appname, services: {}, images: {} },
 			planner,
-			opts: { minWaitMs: 1000, logger: console },
+			opts: { minWaitMs: 1000, logger },
 		});
 
 		agent.seek({

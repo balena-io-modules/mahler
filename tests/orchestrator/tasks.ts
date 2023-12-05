@@ -2,7 +2,7 @@ import * as Docker from 'dockerode';
 import * as tar from 'tar-stream';
 
 import { Task } from 'mahler';
-import { console } from '~/test-utils';
+import { logger } from '~/test-utils';
 import { Device, Service, ServiceStatus } from './state';
 import { getContainerName, getImageName, getRegistryAndName } from './utils';
 
@@ -65,7 +65,7 @@ export const fetchImage = Task.of<Device>().from({
 						}),
 				} as Docker.ImageBuildOptions)
 				.then((stream) => {
-					stream.on('data', (b) => console.debug(b.toString()));
+					stream.on('data', (b) => logger.debug(b.toString()));
 					stream.on('error', reject);
 					stream.on('close', reject);
 					stream.on('end', resolve);
@@ -81,7 +81,7 @@ export const fetchImage = Task.of<Device>().from({
 			.getImage(target.name)
 			.remove()
 			.catch((e) =>
-				console.warn(`could not remove image tag '${target.name}'`, e),
+				logger.warn(`could not remove image tag '${target.name}'`, e),
 			);
 
 		image._ = {

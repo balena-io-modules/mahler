@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { console, expect } from '~/test-utils';
+import { logger, expect } from '~/test-utils';
 
 import { Agent, UNDEFINED } from 'mahler';
 import { planner } from './planner';
@@ -41,7 +41,7 @@ describe('orchestrator/agent', () => {
 				images: {},
 			},
 			planner,
-			opts: { minWaitMs: 1000, logger: console },
+			opts: { minWaitMs: 1000, logger },
 		});
 
 		agent.seek({
@@ -112,7 +112,7 @@ describe('orchestrator/agent', () => {
 			.to.have.property('Running')
 			.that.equals(false);
 
-		console.info('Restarting container');
+		logger.info('Restarting container');
 		agent.seek({
 			apps: {
 				a0: {
@@ -140,7 +140,7 @@ describe('orchestrator/agent', () => {
 			.that.equals(true);
 
 		// Update to a new release
-		console.info('Update to a new release');
+		logger.info('Update to a new release');
 		agent.seek({
 			apps: {
 				a0: {
@@ -178,7 +178,7 @@ describe('orchestrator/agent', () => {
 			.that.equals(true);
 
 		// Update to a new release
-		console.info('Uninstall app');
+		logger.info('Uninstall app');
 		agent.seek({
 			apps: {
 				a0: UNDEFINED,

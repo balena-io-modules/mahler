@@ -1,4 +1,4 @@
-import { expect, console as logger } from '~/test-utils';
+import { expect, logger } from '~/test-utils';
 import { Agent } from './agent';
 import { NoAction, Task } from './task';
 import { Sensor } from './sensor';
@@ -10,7 +10,7 @@ import { setTimeout } from 'timers/promises';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.from({ initial: 0, opts: { logger: logger } });
+			const agent = Agent.from({ initial: 0, opts: { logger } });
 			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
@@ -22,7 +22,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, logger: logger },
+				opts: { minWaitMs: 10, logger },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
@@ -32,7 +32,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, maxRetries: 2, logger: logger },
+				opts: { minWaitMs: 10, maxRetries: 2, logger },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
@@ -47,7 +47,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger: logger, minWaitMs: 10 },
+				opts: { logger, minWaitMs: 10 },
 				tasks: [inc],
 			});
 
@@ -83,7 +83,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger: logger },
+				opts: { logger },
 				tasks: [counter],
 			});
 
@@ -136,7 +136,7 @@ describe('Agent', () => {
 
 			const agent = Agent.from({
 				initial: { a: 0, b: 0 },
-				opts: { logger: logger, minWaitMs: 1 * 1000 },
+				opts: { logger, minWaitMs: 1 * 1000 },
 				tasks: [multiIncrement, byTwo, byOne],
 			});
 
@@ -166,7 +166,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger: logger, maxRetries: 0 },
+				opts: { logger, maxRetries: 0 },
 				tasks: [plusOne],
 			});
 
@@ -217,7 +217,7 @@ describe('Agent', () => {
 		});
 		const agent = Agent.from({
 			initial: { a: 0, b: 0 },
-			opts: { logger: logger, maxRetries: 0 },
+			opts: { logger, maxRetries: 0 },
 			tasks: [plusOne],
 		});
 
@@ -313,7 +313,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger: logger },
+				opts: { minWaitMs: 10, logger },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -330,7 +330,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger: logger },
+				opts: { minWaitMs: 10, logger },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -347,7 +347,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger: logger },
+				opts: { minWaitMs: 10, logger },
 			});
 
 			const states: Heater[] = [];

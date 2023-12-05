@@ -1,4 +1,4 @@
-import { expect, console } from '~/test-utils';
+import { expect, logger } from '~/test-utils';
 import { Planner } from './planner';
 import { Instruction, Task } from './task';
 import { plan, branch, fork, stringify } from './testing';
@@ -108,7 +108,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [take, put, move],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan(
@@ -298,7 +298,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan(
@@ -343,7 +343,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -385,7 +385,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -428,7 +428,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -498,7 +498,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [chunker, multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 			const result = planner.findPlan(
 				{ a: 0, b: 0, c: 0, d: 0 },
@@ -544,7 +544,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [conflictingIncrement, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
