@@ -107,6 +107,9 @@ function from<TState = any>({
 
 	return {
 		findPlan(current: TState, target: Target<TState>) {
+			// We clone the current state so the plan cannot be affected
+			// by external changes (e.g. from sensors)
+			current = structuredClone(current);
 			const time = performance.now();
 			trace({ event: 'start', target });
 			try {
