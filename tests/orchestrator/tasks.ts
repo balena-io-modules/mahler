@@ -25,7 +25,9 @@ export const fetchImage = Task.of<Device>().from({
 	lens: '/images/:imageTag',
 	effect: (image, { target }) => {
 		const { digest } = getRegistryAndName(target.name);
-		image._.name = target.name;
+		image._ = {
+			name: target.name,
+		};
 		if (digest) {
 			image._.contentHash = digest;
 		}
@@ -82,8 +84,10 @@ export const fetchImage = Task.of<Device>().from({
 				console.warn(`could not remove image tag '${target.name}'`, e),
 			);
 
-		image._.name = target.name;
-		image._.dockerId = dockerImage.Id;
+		image._ = {
+			name: target.name,
+			dockerId: dockerImage.Id,
+		};
 		if (digest) {
 			image._.contentHash = digest;
 		}
@@ -127,8 +131,10 @@ export const createApp = Task.of<Device>().from({
 	op: 'create',
 	lens: '/apps/:appUuid',
 	effect: (app, { target }) => {
-		app._.name = target.name;
-		app._.releases = {};
+		app._ = {
+			name: target.name,
+			releases: {},
+		};
 	},
 	// Without a description the initializer will default to "create '/apps/a0'"
 });
@@ -147,7 +153,7 @@ export const createRelease = Task.of<Device>().from({
 	lens: '/apps/:appUuid/releases/:releaseUuid',
 	// Return an empty release
 	effect: (release) => {
-		release._.services = {};
+		release._ = { services: {} };
 	},
 	// Without a function definition that defines what the parent 'State'
 	// object is, the compiler cannot infer the type of `ctx` so we just use
@@ -170,9 +176,11 @@ export const installService = Task.of<Device>().from({
 		// The image has already been downloaded
 		getImageName(ctx) in system.images,
 	effect: (service, { target }) => {
-		service._.image = target.image;
-		service._.command = target.command || [];
-		service._.status = 'created';
+		service._ = {
+			image: target.image,
+			command: target.command || [],
+			status: 'created',
+		};
 		service._.containerId = 'deadbeef';
 	},
 	action: async (service, { target, ...ctx }) => {
@@ -235,11 +243,13 @@ export const installService = Task.of<Device>().from({
 
 		const { Id: containerId, Created } = await container.inspect();
 
-		service._.image = target.image;
-		service._.command = target.command || [];
-		service._.status = 'created';
-		service._.containerId = containerId;
-		service._.createdAt = new Date(Created);
+		service._ = {
+			image: target.image,
+			command: target.command || [],
+			status: 'created',
+			containerId,
+			createdAt: new Date(Created),
+		};
 	},
 	description: ({ serviceName, appUuid, releaseUuid }) =>
 		`create container for service '${serviceName}' of app '${appUuid}' and release '${releaseUuid}'`,
@@ -347,7 +357,7 @@ export const migrateService = Task.of<Device>().from({
 		delete releases[currRelease].services[serviceName];
 
 		// Rename the container
-		await docker.getContainer(service._.containerId!).rename({
+		await docker.getContainer(currService.containerId!).rename({
 			name: getContainerName({ releaseUuid, serviceName }),
 		});
 

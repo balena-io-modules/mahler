@@ -29,7 +29,10 @@ const App = Domain.of<App>();
 export const fetchImage = App.task({
 	op: 'create',
 	lens: '/images/:imageName',
-	// The effect is inferred from the operation
+	effect: (image) => {
+		// Create an empty image
+		image._ = {};
+	},
 	action: async (image, { imageName }) => {
 		await new Promise((resolve, reject) =>
 			docker
@@ -46,7 +49,7 @@ export const fetchImage = App.task({
 		// Get the image using the name
 		const dockerImage = await docker.getImage(imageName).inspect();
 
-		image._.imageId = dockerImage.Id;
+		image._ = { imageId: dockerImage.Id };
 	},
 	description: ({ imageName }) => `pull image '${imageName}'`,
 });
@@ -82,10 +85,12 @@ export const installService = App.task({
 	lens: '/services/:serviceName',
 	condition: (_, { system, target }) => target.image in system.images,
 	effect: (service, { target }) => {
-		service._.image = target.image;
-		service._.command = target.command;
-		service._.status = 'created';
-		service._.containerId = 'deadbeef';
+		service._ = {
+			image: target.image,
+			command: target.command,
+			status: 'created',
+			containerId: 'deadbeef',
+		};
 	},
 	action: async (service, { target, serviceName, system: app }) => {
 		// This is our way to update the internal agent state, we look for
@@ -137,11 +142,13 @@ export const installService = App.task({
 
 		// TODO: here we should get the configuration from the container as docker
 		// sometimes ignores configurations that are unsupported by the underlying OS
-		service._.image = target.image;
-		service._.command = target.command;
-		service._.status = 'created';
-		service._.containerId = containerId;
-		service._.createdAt = new Date(Created);
+		service._ = {
+			image: target.image,
+			command: target.command,
+			status: 'created',
+			containerId,
+			createdAt: new Date(Created),
+		};
 	},
 	description: ({ serviceName }) =>
 		`install container for service '${serviceName}'`,
@@ -225,7 +232,9 @@ export const uninstallService = App.task({
 	op: '*',
 	lens: '/services/:serviceName',
 	condition: (service) =>
-		service.containerId != null && service.status !== 'running',
+		service != null &&
+		service.containerId != null &&
+		service.status !== 'running',
 	effect: (service) => {
 		// We need to purposely delete the service here, as the task
 		// operation is '*'
