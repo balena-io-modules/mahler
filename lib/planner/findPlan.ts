@@ -364,23 +364,15 @@ export function findPlan<TState = any>({
 	// given to this function is a failure
 	assert(initialPlan.success);
 
-	if (depth >= maxSearchDepth) {
-		return {
-			success: false,
-			stats: initialPlan.stats,
-			error: SearchFailed(depth, true),
-		};
-	}
+	const { stats } = initialPlan;
+	stats.maxDepth = depth > stats.maxDepth ? depth : stats.maxDepth;
 
 	// Get the list of operations from the patch
 	const ops = distance(initialPlan.state);
 
-	const { stats } = initialPlan;
-
 	// If there are no operations left, we have reached
 	// the target
 	if (ops.length === 0) {
-		const sMaxDepth = stats.maxDepth < depth ? depth : stats.maxDepth;
 		trace({
 			event: 'found',
 			prev: initialPlan.start,
@@ -389,7 +381,7 @@ export function findPlan<TState = any>({
 			success: true,
 			start: initialPlan.start,
 			state: initialPlan.state,
-			stats: { ...stats, maxDepth: sMaxDepth },
+			stats,
 			pendingChanges: [],
 		};
 	}
@@ -401,6 +393,14 @@ export function findPlan<TState = any>({
 		prev: initialPlan.start,
 		operations: ops,
 	});
+
+	if (depth >= maxSearchDepth) {
+		return {
+			success: false,
+			stats,
+			error: SearchFailed(depth, true),
+		};
+	}
 
 	for (const operation of ops) {
 		// Find the tasks that are applicable to the operations
@@ -478,10 +478,7 @@ export function findPlan<TState = any>({
 
 	return {
 		success: false,
-		stats: {
-			...stats,
-			maxDepth: stats.maxDepth < depth ? depth : stats.maxDepth,
-		},
+		stats,
 		error: SearchFailed(depth),
 	};
 }

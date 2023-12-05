@@ -103,6 +103,70 @@ describe('Mermaid', () => {
 		);
 	});
 
+	it('max search reached failed plan', function () {
+		const dec = Task.of<number>().from({
+			// There is as bug here
+			condition: (state, { target }) => state < target,
+			effect: (state) => --state._,
+			description: '-1',
+		});
+
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			// There is as bug here
+			effect: (state) => --state._,
+			description: '+1',
+		});
+
+		const inc2 = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			// There is as bug here
+			effect: (state) => --state._,
+			description: '+2',
+		});
+
+		const trace = mermaid();
+		const planner = Planner.from<number>({
+			tasks: [dec, inc, inc2],
+			config: { maxSearchDepth: 2, trace },
+		});
+
+		planner.findPlan(0, 1);
+		expect(trace.render()).to.deep.equal(
+			dedent`
+				graph TD
+					start(( ))
+					start -.- d0{ }
+					d0 -.- 34364f2("-1")
+					34364f2 -.- d1{ }
+					d1 -.- 936cc5a("-1")
+					936cc5a -.- d2{ }
+					d1 -.- 1c690f1("+1")
+					1c690f1 -.- d2{ }
+					d1 -.- e747dfa("+2")
+					e747dfa -.- d2{ }
+					d0 -.- a596de3("+1")
+					a596de3 -.- d1{ }
+					d1 -.- 936cc5a("-1")
+					936cc5a -.- d2{ }
+					d1 -.- 1c690f1("+1")
+					1c690f1 -.- d2{ }
+					d1 -.- e747dfa("+2")
+					e747dfa -.- d2{ }
+					d0 -.- 1e5e1c7("+2")
+					1e5e1c7 -.- d1{ }
+					d1 -.- 936cc5a("-1")
+					936cc5a -.- d2{ }
+					d1 -.- 1c690f1("+1")
+					1c690f1 -.- d2{ }
+					d1 -.- e747dfa("+2")
+					e747dfa -.- d2{ }
+					start:::error
+					classDef error stroke:#f00
+			`.trim(),
+		);
+	});
+
 	it('single action plan with branching', function () {
 		const inc = Task.of<number>().from({
 			condition: (state, { target }) => state < target,

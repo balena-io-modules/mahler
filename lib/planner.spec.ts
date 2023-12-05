@@ -562,6 +562,38 @@ describe('Planner', () => {
 			);
 		});
 
+		it('limits maximum search depth', function () {
+			const dec = Task.of<number>().from({
+				// There is as bug here
+				condition: (state, { target }) => state < target,
+				effect: (state) => --state._,
+				description: '-1',
+			});
+
+			const inc = Task.of<number>().from({
+				condition: (state, { target }) => state < target,
+				// There is as bug here
+				effect: (state) => --state._,
+				description: '+1',
+			});
+
+			const inc2 = Task.of<number>().from({
+				condition: (state, { target }) => state < target,
+				// There is as bug here
+				effect: (state) => --state._,
+				description: '+1 bis',
+			});
+
+			const planner = Planner.from<number>({
+				tasks: [dec, inc, inc2],
+				config: { maxSearchDepth: 2 },
+			});
+
+			const result = planner.findPlan(0, 1);
+			expect(result.success).to.be.false;
+			expect(result.stats.maxDepth).to.equal(2);
+		});
+
 		it.skip('simple travel problem', async () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 			// the available cash, some actions may be possible
