@@ -80,13 +80,23 @@ function reversePlan<T>(
 }
 
 function from<TState = any>({
-	tasks = [],
+	tasks: inputTasks = [],
 	config = {},
 }: {
 	tasks?: Array<Task<TState, any, any>>;
 	config?: Partial<PlannerConfig<TState>>;
 }): Planner<TState> {
-	// TODO: remove repeated tasks
+	const ids = new Set<string>();
+	let tasks: Array<Task<TState, any, any>> = [];
+
+	// Remove repeated tasks
+	for (const task of inputTasks) {
+		if (!ids.has(task.id)) {
+			ids.add(task.id);
+			tasks.push(task);
+		}
+	}
+
 	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
 		if (Task.isMethod(a) && Task.isAction(b)) {

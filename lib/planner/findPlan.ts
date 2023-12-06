@@ -437,7 +437,7 @@ export function findPlan<TState = any>({
 
 			const taskPlan = tryInstruction(task(ctx), {
 				depth,
-				distance: distance,
+				distance,
 				tasks,
 				trace,
 				operation,
@@ -461,7 +461,7 @@ export function findPlan<TState = any>({
 
 				const res = findPlan({
 					depth: depth + 1,
-					distance: distance,
+					distance,
 					tasks,
 					trace,
 					initialPlan: {
