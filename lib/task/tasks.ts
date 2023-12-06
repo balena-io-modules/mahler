@@ -244,7 +244,10 @@ function ground<
 		}),
 	) as Path<TPath>;
 
-	const target = (args as any).target;
+	// We clone the target before passing it to the task as an action
+	// could assign it to the state and modify it and we don't want actions
+	// from methods altering the target from the parent method
+	const target = structuredClone((args as any).target);
 	const lensCtx = Lens.context<TState, TPath>(task.lens, path, target);
 	const context = Context.from<TState, TPath, TOp>(lensCtx);
 
