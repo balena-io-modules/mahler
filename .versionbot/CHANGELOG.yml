@@ -1,4 +1,121 @@
 - commits:
+    - subject: Remove duplicate tasks when constructing Planner
+      hash: c0b3421d1d7a45a92cf09c7c958837f13b606e5c
+      body: |
+        Tasks have a unique id generated from their string representation. We
+        want to avoid testing the same actions twice as that can mess up with
+        planning and increase planning time.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Clone target when grounding tasks
+      hash: 78ad9bf1eaddddc1f1bd7db782804072e4b32b2d
+      body: |
+        This ensures that the target state remains read-only and actions
+        returned from methods cannot modify the target from other actions on the
+        same call chain.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Rename test `console` as `logger`
+      hash: 11aa9e7fa74f7cc0f7b0044fbd4d73c63815631a
+      body: |
+        The name `console` caused too many problemas as an override of the
+        default console.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Improve error messaging for failed plans on runtime
+      hash: f009fba93cc9b216e8cccc28af327232bd096a8f
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Clone the current state before planning
+      hash: 7c29469c03eec204275840c8138117126849168f
+      body: |
+        The state could be changed while planning by a sensor so
+        we need to clone it in advance.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Do not catch applyPatch errors.
+      hash: 70891a2a8a9356e989b4ba6a53dc5c959b35b043
+      body: |
+        The only way that `applyPatch` could fail is if conflict detection fails
+        in which case is better to have planning fail.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Allow method recursion
+      hash: 59ab7f2f6674d62dcf9d01140cec5acafa351e26
+      body: |
+        This was forbidden before but now is allowed and limite by
+        maximumSearchDepth
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Refactor planner to allow errors to abort search
+      hash: 0ad88d258a644c95b1c97c73acbbee95b31e9b4c
+      body: |
+        For some errors, like reaching maximum search depth, we want to abort
+        the search altogether since they mean there is a bug in the task
+        definition that could lead to space explosion. This refactors planning
+        errors to allow for this
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Fix maxSearchDepth on Planner
+      hash: 68df19f532230ea1050f12d2310e8b86b91c3c2b
+      body: |
+        The `maxSearchDepth` configuration option on planner was not working
+        correctly. This adds tests to prevent regressions
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix mermaid diagramming on search failures
+      hash: 1d6790b349ddd69f249d83ac04ae0cb661e73d6f
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Do not initialize objects for `create` actions
+      hash: 962a221c0c83c35631a388ad544a8a46bd1bbea3
+      body: |
+        Initializing the object was a bad decision we cannot know what the
+        target type is at runtime, thus we could be initializing an array or a
+        number as an object.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Improve input types for task constructors
+      hash: 7c8ff3561d5781e8a7bc25142246f56eb8008f3e
+      body: |
+        The `condition` and `method` operations now receive readonly objects in
+        the general case. If the method is `create` the compiler now will warn
+        when trying to assign a value to a View on Action methods
+
+        This is a major change as code that previously would compile will no
+        longer compile.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+  version: 3.0.0
+  title: ""
+  date: 2023-12-06T17:34:23.966Z
+- commits:
     - subject: Fix observe so new object assignments are also reported
       hash: ec3081bc7da8ab0875417b3d566efd5a5485063d
       body: >
