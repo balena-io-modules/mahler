@@ -1,15 +1,15 @@
 import assert from './assert';
 import { Identity } from './identity';
 import { isArrayIndex } from './is-array-index';
-import { Path, PathString } from './path';
+import { Path, PathType } from './path';
 import { Pointer } from './pointer';
 
-export type Lens<TState, TPath extends PathString> = LensContext<
+export type Lens<TState, TPath extends PathType> = LensContext<
 	TState,
 	TPath
 >['target'];
 
-export type LensContext<TState, TPath extends PathString> = LensWithSlash<
+export type LensContext<TState, TPath extends PathType> = LensWithSlash<
 	TState,
 	TPath,
 	object
@@ -18,7 +18,7 @@ export type LensContext<TState, TPath extends PathString> = LensWithSlash<
 // A lens to evaluate paths starting with a slash
 type LensWithSlash<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	TProps extends NonNullable<unknown>,
 > = TPath extends `/${infer TTail}`
 	? LensWithoutSlash<TChildState, TPath, TTail, TProps> // If the path starts with a slash, evaluate the remaining part of the path
@@ -30,8 +30,8 @@ type LensWithSlash<
 // A lens to evaluate paths that start without a slash, e.g. `key1/key2` or `key`
 type LensWithoutSlash<
 	TChildState,
-	TPath extends PathString,
-	TSubPath extends PathString,
+	TPath extends PathType,
+	TSubPath extends PathType,
 	TProps extends NonNullable<unknown>,
 > = TSubPath extends `${infer THead}/${infer TTail}`
 	? LensOnCompoundPathWithParameter<TChildState, TPath, THead, TTail, TProps> // If the path is compound, evaluate it recursively
@@ -40,7 +40,7 @@ type LensWithoutSlash<
 // The lens for an operation on a single path, e.g. `:param` or `key`
 type LensOnSinglePathWithParameter<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	TParam extends string,
 	TProps extends NonNullable<unknown>,
 > = TParam extends `:${infer Arg}`
@@ -63,7 +63,7 @@ type LensOnSinglePathWithParameter<
 // or else it has to be an empty path '' in order to be valid
 type LensOnSinglePath<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	TKey,
 	TProps extends NonNullable<unknown>,
 > = TKey extends ''
@@ -76,7 +76,7 @@ type LensOnSinglePath<
 // The type of a change for an empty path, where the key is an empty string
 type LensOnEmptyPath<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	TProps extends NonNullable<unknown>,
 > = Identity<
 	TProps & {
@@ -88,9 +88,9 @@ type LensOnEmptyPath<
 // Utility type to check if the key is a parameter
 type LensOnCompoundPathWithParameter<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	THead extends string,
-	TTail extends PathString,
+	TTail extends PathType,
 	TProps extends NonNullable<unknown>,
 > = THead extends `:${infer Arg}` // Check if the key is a route parameters first
 	? TChildState extends Array<infer U> // Immediately check if the object is an array, in which case continue the evaluation o the tail
@@ -107,9 +107,9 @@ type LensOnCompoundPathWithParameter<
 // A compound path without parameters
 type LensOnCompoundPath<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	THead,
-	TTail extends PathString,
+	TTail extends PathType,
 	TProps extends NonNullable<unknown>,
 > = THead extends keyof TChildState
 	? LensWithoutSlash<TChildState[THead], TPath, TTail, TProps>
@@ -118,9 +118,9 @@ type LensOnCompoundPath<
 // The type of a lens on a path referencing an array, where the first part of the path is a valid index on the array
 type LensOnArray<
 	TChildState,
-	TPath extends PathString,
+	TPath extends PathType,
 	THead,
-	TTail extends PathString,
+	TTail extends PathType,
 	TProps extends NonNullable<unknown>,
 > = TChildState extends Array<infer U> // If the object of type S is an array
 	? THead extends `${number}` // and the key is a number
@@ -156,7 +156,7 @@ function params(template: Path, path: Path) {
 	return args;
 }
 
-function context<TState, TPath extends PathString>(
+function context<TState, TPath extends PathType>(
 	lens: Path<TPath>,
 	path: Path,
 	target: Lens<TState, TPath>,
@@ -172,7 +172,7 @@ function context<TState, TPath extends PathString>(
 	};
 }
 
-function createLens<TState, TPath extends PathString>(
+function createLens<TState, TPath extends PathType>(
 	s: TState,
 	p: Path<TPath>,
 ): Lens<TState, TPath> {

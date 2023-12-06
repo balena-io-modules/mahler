@@ -1,4 +1,4 @@
-import { expect, console } from '~/test-utils';
+import { expect, logger } from '~/test-utils';
 import { Planner } from './planner';
 import { Instruction, Task } from './task';
 import { plan, branch, fork, stringify } from './testing';
@@ -108,7 +108,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [take, put, move],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan(
@@ -298,7 +298,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan(
@@ -343,7 +343,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -385,7 +385,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -428,7 +428,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -498,7 +498,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [chunker, multiIncrement, byTwo, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 			const result = planner.findPlan(
 				{ a: 0, b: 0, c: 0, d: 0 },
@@ -544,7 +544,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [conflictingIncrement, byOne],
-				config: { trace: console.trace },
+				config: { trace: logger.trace },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -562,10 +562,68 @@ describe('Planner', () => {
 			);
 		});
 
+		it('limits maximum search depth', function () {
+			const dec = Task.of<number>().from({
+				// There is as bug here
+				condition: (state, { target }) => state < target,
+				effect: (state) => --state._,
+				description: '-1',
+			});
+
+			const inc = Task.of<number>().from({
+				condition: (state, { target }) => state < target,
+				// There is as bug here
+				effect: (state) => --state._,
+				description: '+1',
+			});
+
+			const inc2 = Task.of<number>().from({
+				condition: (state, { target }) => state < target,
+				// There is as bug here
+				effect: (state) => --state._,
+				description: '+1 bis',
+			});
+
+			const planner = Planner.from<number>({
+				tasks: [dec, inc, inc2],
+				config: { maxSearchDepth: 2 },
+			});
+
+			const result = planner.findPlan(0, 1);
+			expect(result.success).to.be.false;
+			expect(result.stats.maxDepth).to.equal(2);
+		});
+
 		it.skip('simple travel problem', async () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 			// the available cash, some actions may be possible
 			expect(false);
 		});
+	});
+
+	it('limits maximum search depth while recursing methods', function () {
+		const inc = Task.of<number>().from({
+			condition: (state, { target }) => state < target,
+			// There is as bug here
+			method: (_, { target }): Instruction<number> => inc({ target }),
+			description: 'inc1',
+		});
+
+		const planner = Planner.from<number>({
+			tasks: [inc],
+			config: { maxSearchDepth: 5 },
+		});
+
+		const result = planner.findPlan(0, 1);
+		expect(result.success).to.be.false;
+		// Method recursion does not change stats, which is why the expected value
+		// is 0
+		expect(result.stats.maxDepth).to.equal(0);
+	});
+
+	it.skip('simple travel problem', async () => {
+		// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
+		// the available cash, some actions may be possible
+		expect(false);
 	});
 });

@@ -1,4 +1,4 @@
-export type PathString = string;
+export type PathType = string;
 
 type PathBrand = { __brand: 'Path' };
 export type Path<T extends string[] | string = string> = T extends string[]

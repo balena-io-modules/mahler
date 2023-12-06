@@ -122,62 +122,31 @@ export type PlanningEvent<TState> =
 			event: 'failed';
 	  };
 
-// Instruction condition failed error
-export const ConditionNotMet = {
-	event: 'error' as const,
-	cause: 'condition-failed' as const,
-};
-export type ConditionNotMet = typeof ConditionNotMet;
-
-// Loop detected error
-export const LoopDetected = {
-	event: 'error' as const,
-	cause: 'loop-detected' as const,
-};
-export type LoopDetected = typeof LoopDetected;
-
-// Expanding the method returned an empty array
-export const MethodExpansionEmpty = {
-	event: 'error' as const,
-	cause: 'method-expansion-empty' as const,
-};
-export type MethodExpansionEmpty = typeof MethodExpansionEmpty;
-
-// Recursion in a method detected error
-export const RecursionDetected = {
-	event: 'error' as const,
-	cause: 'recursion-detected' as const,
-};
-export type RecursionDetected = typeof RecursionDetected;
-
-export function SearchFailed(depth: number, atMaxDepth = false) {
-	return {
-		event: 'error' as const,
-		cause: 'search-failed' as const,
-		depth,
-		atMaxDepth,
-	};
+export class PlanningError extends Error {
+	event = 'error' as const;
+	constructor(reason: string, cause?: unknown) {
+		super(reason, { cause });
+	}
 }
 
-export type SearchFailed = ReturnType<typeof SearchFailed>;
-
-export function MergeFailed(failure: Error) {
-	return {
-		event: 'error' as const,
-		cause: 'merge-error' as const,
-		failure,
-	};
+export const ConditionNotMet = new PlanningError('Task condition was not met');
+export const LoopDetected = new PlanningError(
+	'A loop was introduced by the task',
+);
+export const MethodExpansionEmpty = new PlanningError(
+	'No instructions were returned by this method',
+);
+export const SearchFailed = new PlanningError(
+	'No more applicable tasks found at this search depth',
+);
+export class Aborted extends PlanningError {
+	constructor(
+		cause: unknown,
+		public stats: PlanningStats,
+	) {
+		super((cause as Error).message ?? cause, cause);
+	}
 }
-
-export type MergeFailed = ReturnType<typeof MergeFailed>;
-
-export type PlanningError =
-	| ConditionNotMet
-	| LoopDetected
-	| RecursionDetected
-	| MethodExpansionEmpty
-	| SearchFailed
-	| MergeFailed;
 
 export interface PlannerConfig<TState> {
 	/**

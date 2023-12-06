@@ -1,4 +1,4 @@
-import { expect, console as logger } from '~/test-utils';
+import { expect, logger } from '~/test-utils';
 
 import { Task, Agent, UNDEFINED } from 'mahler';
 import { Planner } from 'mahler/planner';

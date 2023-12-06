@@ -1,5 +1,5 @@
 import { Task, TaskOp } from '../task';
-import { Path, PathString, Root } from '../path';
+import { Path, PathType, Root } from '../path';
 import { Operation } from '../operation';
 
 /**
@@ -10,7 +10,7 @@ import { Operation } from '../operation';
  */
 export function isTaskApplicable<
 	TState = any,
-	TPath extends PathString = Root,
+	TPath extends PathType = Root,
 	TOp extends TaskOp = 'update',
 >(t: Task<TState, TPath, TOp>, o: Operation<any, any>) {
 	if (t.op !== '*' && t.op !== o.op) {

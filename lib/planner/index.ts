@@ -2,7 +2,7 @@ import { Distance } from '../distance';
 import { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
-import { PlannerConfig } from './types';
+import { Aborted, PlannerConfig } from './types';
 import { Plan } from './plan';
 import { Node } from './node';
 import { assert } from '../assert';
@@ -80,12 +80,23 @@ function reversePlan<T>(
 }
 
 function from<TState = any>({
-	tasks = [],
+	tasks: inputTasks = [],
 	config = {},
 }: {
 	tasks?: Array<Task<TState, any, any>>;
 	config?: Partial<PlannerConfig<TState>>;
 }): Planner<TState> {
+	const ids = new Set<string>();
+	let tasks: Array<Task<TState, any, any>> = [];
+
+	// Remove repeated tasks
+	for (const task of inputTasks) {
+		if (!ids.has(task.id)) {
+			ids.add(task.id);
+			tasks.push(task);
+		}
+	}
+
 	// Sort the tasks putting methods and redirects first
 	tasks = tasks.sort((a, b) => {
 		if (Task.isMethod(a) && Task.isAction(b)) {
@@ -106,33 +117,46 @@ function from<TState = any>({
 
 	return {
 		findPlan(current: TState, target: Target<TState>) {
+			// We clone the current state so the plan cannot be affected
+			// by external changes (e.g. from sensors)
+			current = structuredClone(current);
 			const time = performance.now();
 			trace({ event: 'start', target });
-			const res = findPlan({
-				initialPlan: {
-					success: true,
-					state: current,
-					start: null,
-					stats: { iterations: 0, maxDepth: 0, time: 0 },
-					pendingChanges: [],
-				},
-				distance: Distance.from(current, target),
-				tasks,
-				trace,
-				maxSearchDepth,
-			});
-			res.stats = { ...res.stats, time: performance.now() - time };
-			if (res.success) {
-				const start = reversePlan(res.start);
-				assert(!Array.isArray(start));
+			try {
+				const res = findPlan({
+					initialPlan: {
+						success: true,
+						state: current,
+						start: null,
+						stats: { iterations: 0, maxDepth: 0, time: 0 },
+						pendingChanges: [],
+					},
+					distance: Distance.from(current, target),
+					tasks,
+					trace,
+					maxSearchDepth,
+				});
+				res.stats = { ...res.stats, time: performance.now() - time };
+				if (res.success) {
+					const start = reversePlan(res.start);
+					assert(!Array.isArray(start));
 
-				res.start = start;
-				trace({ event: 'success', start });
-			} else {
-				trace({ event: 'failed' });
+					res.start = start;
+					trace({ event: 'success', start });
+				} else {
+					trace({ event: 'failed' });
+				}
+
+				return res;
+			} catch (e) {
+				if (e instanceof Aborted) {
+					trace(e);
+					trace({ event: 'failed' });
+
+					return { success: false, stats: e.stats, error: e };
+				}
+				throw e;
 			}
-
-			return res;
 		},
 	};
 }

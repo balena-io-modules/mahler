@@ -1,8 +1,9 @@
-import { Path, PathString } from '../path';
-import { TaskOp, Context } from './context';
+import { Path, PathType } from '../path';
+import { Context } from './context';
 import { Ref } from '../ref';
+import { AnyOp, Update, Create } from '../operation';
 
-interface Instance<TState, TPath extends PathString, TOp extends TaskOp> {
+interface Instance<TState, TPath extends PathType, TOp extends AnyOp> {
 	/**
 	 * The identifier for the task
 	 */
@@ -16,7 +17,7 @@ interface Instance<TState, TPath extends PathString, TOp extends TaskOp> {
 	/**
 	 * The target for the instruction
 	 */
-	readonly target: TOp extends 'update' | 'create'
+	readonly target: TOp extends Update | Create
 		? Context<TState, TPath, TOp>['target']
 		: undefined;
 
@@ -34,8 +35,8 @@ interface Instance<TState, TPath extends PathString, TOp extends TaskOp> {
 /** An action task that has been applied to a specific context */
 export interface Action<
 	TState = any,
-	TPath extends PathString = any,
-	TOp extends TaskOp = any,
+	TPath extends PathType = any,
+	TOp extends AnyOp = any,
 > extends Instance<TState, TPath, TOp> {
 	readonly _tag: 'action';
 
@@ -57,8 +58,8 @@ export type MethodExpansion =
 /** A method task that has been applied to a specific context */
 export interface Method<
 	TState = any,
-	TPath extends PathString = any,
-	TOp extends TaskOp = any,
+	TPath extends PathType = any,
+	TOp extends AnyOp = any,
 > extends Instance<TState, TPath, TOp> {
 	readonly _tag: 'method';
 
@@ -80,8 +81,8 @@ export interface Method<
 
 export type Instruction<
 	TState = any,
-	TPath extends PathString = any,
-	TOp extends TaskOp = any,
+	TPath extends PathType = any,
+	TOp extends AnyOp = any,
 > = Action<TState, TPath, TOp> | Method<TState, TPath, TOp>;
 
 /**

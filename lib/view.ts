@@ -1,18 +1,24 @@
 import { isArrayIndex } from './is-array-index';
-import { Path, PathString, Root } from './path';
+import { Path, PathType, Root } from './path';
 import { InvalidPointer } from './pointer';
 import { Ref } from './ref';
 import { Lens } from './lens';
+import { AnyOp, Create, Update } from './operation';
 
-export interface View<TState, TPath extends PathString = Root>
-	extends Ref<Lens<TState, TPath>> {
+export interface View<
+	TState,
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+> extends Ref<
+		TOp extends Create ? Lens<TState, TPath> | undefined : Lens<TState, TPath>
+	> {
 	delete(): void;
 }
 
 /**
  * Returns a view builder function from a given path
  */
-function createView<TState, TPath extends PathString>(
+function createView<TState, TPath extends PathType>(
 	ref: Ref<TState>,
 	path: Path<TPath>,
 ): View<TState, TPath> {
