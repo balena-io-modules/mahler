@@ -1,4 +1,17 @@
 - commits:
+    - subject: Export Task constructor prop types
+      hash: 667530c2c1d982f404bee4d9f2a2db2aad2fbb61
+      body: |
+        This was an oversight from v3 which dissallowed using the `Domain`
+        interface correctly.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.0.1
+  title: ""
+  date: 2023-12-12T14:08:39.332Z
+- commits:
     - subject: Remove duplicate tasks when constructing Planner
       hash: c0b3421d1d7a45a92cf09c7c958837f13b606e5c
       body: |
