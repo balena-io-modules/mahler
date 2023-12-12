@@ -4,8 +4,8 @@ type PathBrand = { __brand: 'Path' };
 export type Path<T extends string[] | string = string> = T extends string[]
 	? `/${PathArray<T>}` & PathBrand
 	: T extends string
-	  ? T & PathBrand
-	  : never;
+		? T & PathBrand
+		: never;
 
 export type Root = '/';
 

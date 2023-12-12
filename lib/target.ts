@@ -8,24 +8,24 @@ type IsOptional<S extends object, K extends keyof S> = Omit<S, K> extends S
 export type Target<S> = S extends any[] | ((...args: any) => any)
 	? S
 	: S extends object
-	  ? {
+		? {
 				[P in keyof S]?: IsOptional<S, P> extends true
 					? // Only optional properties can be deleted
-					  Target<S[P]> | UNDEFINED
+						Target<S[P]> | UNDEFINED
 					: Target<S[P]>;
-	    }
-	  : S;
+			}
+		: S;
 
 type WithOptional<S> = S extends any[] | ((...args: any) => any)
 	? S
 	: S extends object
-	  ? {
+		? {
 				[P in keyof S]: IsOptional<S, P> extends true
 					? // Only optional properties can be undefined
-					  WithOptional<S[P]> | undefined
+						WithOptional<S[P]> | undefined
 					: WithOptional<S[P]>;
-	    }
-	  : S;
+			}
+		: S;
 
 function globToRegExp(glob: string): RegExp {
 	const parts = glob.split('*');

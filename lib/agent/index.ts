@@ -131,10 +131,10 @@ export interface Agent<TState = any> extends Subscribable<TState> {
 type DeepPartial<T> = T extends any[] | ((...args: any[]) => any)
 	? T
 	: T extends object
-	  ? {
+		? {
 				[P in keyof T]?: DeepPartial<T[P]>;
-	    }
-	  : T;
+			}
+		: T;
 
 /**
  * Create a new agent
