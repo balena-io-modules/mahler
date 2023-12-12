@@ -25,7 +25,7 @@ type LensWithSlash<
 	: TProps & {
 			path: Path<TPath>;
 			target: unknown;
-	  }; // Otherwise, the path is invalid
+		}; // Otherwise, the path is invalid
 
 // A lens to evaluate paths that start without a slash, e.g. `key1/key2` or `key`
 type LensWithoutSlash<
@@ -50,13 +50,13 @@ type LensOnSinglePathWithParameter<
 				TPath,
 				number,
 				TProps & { [key in Arg]: number }
-		  >
+			>
 		: LensOnSinglePath<
 				TChildState,
 				TPath,
 				keyof TChildState,
 				TProps & { [key in Arg]: keyof TChildState }
-		  >
+			>
 	: LensOnSinglePath<TChildState, TPath, TParam, TProps>;
 
 // A lens on a single path, e.g. 'key'. In this case, the path is either a valid key for the object
@@ -69,9 +69,9 @@ type LensOnSinglePath<
 > = TKey extends ''
 	? LensOnEmptyPath<TChildState, TPath, TProps>
 	: // If the key is a valid key on the object of type S
-	  TKey extends keyof TChildState
-	  ? LensOnEmptyPath<TChildState[TKey], TPath, TProps> // Then evaluate the empty path
-	  : never; // If the key is not empty at this point, then the path is invalid
+		TKey extends keyof TChildState
+		? LensOnEmptyPath<TChildState[TKey], TPath, TProps> // Then evaluate the empty path
+		: never; // If the key is not empty at this point, then the path is invalid
 
 // The type of a change for an empty path, where the key is an empty string
 type LensOnEmptyPath<
@@ -101,7 +101,7 @@ type LensOnCompoundPathWithParameter<
 				keyof TChildState,
 				TTail,
 				TProps & { [K in Arg]: keyof TChildState }
-		  > // This is a compound path with a parameter. Add the key and continue evaluating
+			> // This is a compound path with a parameter. Add the key and continue evaluating
 	: LensOnCompoundPath<TChildState, TPath, THead, TTail, TProps>;
 
 // A compound path without parameters

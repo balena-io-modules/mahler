@@ -14,15 +14,15 @@ type ReadOnlyPrimitive =
 	| ((...args: any[]) => any)
 	| Date;
 
-export type ReadOnly<T> = T extends ReadOnlyPrimitive
+type ReadOnly<T> = T extends ReadOnlyPrimitive
 	? T
 	: T extends Array<infer U>
-	  ? Array<ReadOnly<U>>
-	  : T extends Map<infer K, infer V>
-	    ? Map<ReadOnly<K>, ReadOnly<V>>
-	    : T extends Set<infer M>
-	      ? Set<ReadOnly<M>>
-	      : { readonly [K in keyof T]: ReadOnly<T[K]> };
+		? Array<ReadOnly<U>>
+		: T extends Map<infer K, infer V>
+			? Map<ReadOnly<K>, ReadOnly<V>>
+			: T extends Set<infer M>
+				? Set<ReadOnly<M>>
+				: { readonly [K in keyof T]: ReadOnly<T[K]> };
 
 export type ContextWithSystem<
 	TState = unknown,
@@ -35,13 +35,13 @@ export type ContextWithSystem<
  * instance. The description does not receive the current state to allow actions to
  * be compared by their description (useful for testing and debugging).
  */
-export type DescriptionFn<
+type DescriptionFn<
 	TState = unknown,
 	TPath extends PathType = Root,
 	TOp extends AnyOp = Update,
 > = string | ((c: Context<TState, TPath, TOp>) => string);
 
-export type ConditionFn<
+type ConditionFn<
 	TState = unknown,
 	TPath extends PathType = Root,
 	TOp extends AnyOp = Update,
@@ -50,7 +50,7 @@ export type ConditionFn<
 	c: ReadOnly<ContextWithSystem<TState, TPath, TOp>>,
 ) => boolean;
 
-export type EffectFn<
+type EffectFn<
 	TState = unknown,
 	TPath extends PathType = Root,
 	TOp extends AnyOp = Update,
@@ -59,7 +59,7 @@ export type EffectFn<
 	ctx: ContextWithSystem<TState, TPath, TOp>,
 ) => void;
 
-export type ActionFn<
+type ActionFn<
 	TState = unknown,
 	TPath extends PathType = Root,
 	TOp extends AnyOp = Update,
@@ -68,7 +68,7 @@ export type ActionFn<
 	ctx: ContextWithSystem<TState, TPath, TOp>,
 ) => Promise<void>;
 
-export type MethodFn<
+type MethodFn<
 	TState = unknown,
 	TPath extends PathType = Root,
 	TOp extends AnyOp = Update,
@@ -205,21 +205,4 @@ export type MethodTaskProps<
 	 * further instructions that can be applied
 	 */
 	method: MethodFn<TState, TPath, TOp>;
-};
-
-function isActionProps<
-	TState = unknown,
-	TPath extends PathType = Root,
-	TOp extends AnyOp = Update,
->(
-	x: ActionTaskProps<TState, TPath, TOp> | MethodTaskProps<TState, TPath, TOp>,
-): x is ActionTaskProps<TState, TPath, TOp> {
-	return (
-		typeof (x as any).effect === 'function' ||
-		typeof (x as any).action === 'function'
-	);
-}
-
-export const ActionTaskProps = {
-	is: isActionProps,
 };
