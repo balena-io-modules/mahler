@@ -343,6 +343,21 @@ function isActionTask<
 	);
 }
 
+// We put this here instead of props so we don't export it externally when doing
+// export *	from props
+function isActionProps<
+	TState = unknown,
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+>(
+	x: ActionTaskProps<TState, TPath, TOp> | MethodTaskProps<TState, TPath, TOp>,
+): x is ActionTaskProps<TState, TPath, TOp> {
+	return (
+		typeof (x as any).effect === 'function' ||
+		typeof (x as any).action === 'function'
+	);
+}
+
 /**
  * A task is base unit of knowledge of an autonomous agent.
  */
@@ -402,7 +417,7 @@ function from<
 
 	// The task properties
 	const tProps = (() => {
-		if (ActionTaskProps.is(taskProps)) {
+		if (isActionProps(taskProps)) {
 			const {
 				effect: taskEffect = () => void 0,
 				action: taskAction = async (v, c) => taskEffect(v, c),
