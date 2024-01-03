@@ -1,4 +1,17 @@
 - commits:
+    - subject: Do not recurse into arrays when constructing Target
+      hash: c339d741843c65d3de1792f67ddf41540b46706e
+      body: |
+        The `Distance` module does not compare array elements, so the `Target`
+        constructor should not replace removed elements with `UNDEFINED`
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.0.2
+  title: ""
+  date: 2024-01-03T20:18:02.112Z
+- commits:
     - subject: Export Task constructor prop types
       hash: 667530c2c1d982f404bee4d9f2a2db2aad2fbb61
       body: |
