@@ -55,6 +55,10 @@ function from<S>(
 	while (queue.length > 0) {
 		const { s, t, p } = queue.shift()!;
 
+		// Don't recurse into arrays
+		if (Array.isArray(s) || Array.isArray(t)) {
+			continue;
+		}
 		for (const key of Object.keys(s)) {
 			if (key in t && t[key] === undefined && s[key] !== undefined) {
 				t[key] = UNDEFINED;

@@ -66,5 +66,16 @@ describe('Target', () => {
 				g: { h: 'hello' },
 			});
 		});
+
+		it('does not iterate into arrays', () => {
+			type S = {
+				a?: string[];
+			};
+
+			const state: S = { a: ['foo', 'bar'] };
+			expect(Target.from(state, {})).to.deep.equal({ a: UNDEFINED });
+			expect(Target.from(state, { a: ['foo'] })).to.deep.equal({ a: ['foo'] });
+			expect(Target.from(state, { a: ['bar'] })).to.deep.equal({ a: ['bar'] });
+		});
 	});
 });

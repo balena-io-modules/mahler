@@ -138,9 +138,8 @@ function* getOperations<S>(
  * Calculates the list of changes between the current state and the target
  */
 export function diff<S>(s: S, t: Target<S>): Array<Operation<S, any>> {
-	return [...getOperations(s, t)]
-		.filter(({ isLeaf }) => isLeaf)
-		.map(({ isLeaf, ...op }) => op);
+	const ops = [...getOperations(s, t)];
+	return ops.filter(({ isLeaf }) => isLeaf).map(({ isLeaf, ...op }) => op);
 }
 
 function from<S>(src: S, tgt: Target<S>): Distance<S> {
