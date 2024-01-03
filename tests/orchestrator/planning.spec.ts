@@ -120,7 +120,7 @@ describe('orchestrator/planning', () => {
 				},
 			},
 			keys: {},
-			images: [{ name: 'a0_main:r0' }],
+			images: { 'a0_main:r0': { name: 'alpine:latest' } },
 		};
 
 		const result = planner.findPlan(device, {
