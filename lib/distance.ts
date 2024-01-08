@@ -2,7 +2,7 @@ import { Operation } from './operation';
 import { Pointer } from './pointer';
 import { Path } from './path';
 import { Target, UNDEFINED } from './target';
-import { equals } from './json';
+import { deepEqual } from './utils';
 
 /**
  * A diff is a function that allows to find a list of pending operations to a
@@ -84,7 +84,7 @@ function* getOperations<S>(
 			}
 			// If the source value does exist, we do a deep comparison compare the source to the patched
 			// version and if they don't match, we add an `update` operation
-			else if (!equals(sValue, tValue)) {
+			else if (!deepEqual(sValue, tValue)) {
 				yield {
 					op: 'update',
 					path,
