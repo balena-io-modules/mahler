@@ -67,7 +67,41 @@ describe('Agent', () => {
 			agent.stop();
 		});
 
-		it('allows to use observables as actions', async () => {
+		it('it allows to query the agent state', async () => {
+			const inc = Task.from<number>({
+				condition: (state, { target }) => state < target,
+				effect: (state) => ++state._,
+				description: 'increment',
+			});
+			const agent = Agent.from({
+				initial: 0,
+				opts: { logger: logger, minWaitMs: 10 },
+				tasks: [inc],
+			});
+
+			expect(agent.status()).to.equal('stopped');
+			// Subscribe to the count
+			const count: number[] = [];
+			agent.subscribe((s) => count.push(s));
+
+			agent.seek(10);
+			await setTimeout(1);
+			expect(agent.status()).to.equal('running');
+
+			await expect(agent.wait()).to.eventually.deep.equal({
+				success: true,
+				state: 10,
+			});
+
+			expect(agent.status()).to.equal('idle');
+
+			// Intermediate states returned by the observable should be emitted by the agent
+			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			agent.stop();
+			expect(agent.status()).to.equal('stopping');
+		});
+
+		it('allows to observe changes by an action', async () => {
 			const counter = Task.from<number>({
 				condition: (state, { target }) => state < target,
 				effect: (state, { target }) => {
