@@ -1,4 +1,31 @@
 - commits:
+    - subject: Create UnorderedArray type
+      hash: 81c1405dca0e0cdb64b81e858fd2c5f926ac89f8
+      body: |
+        This is helpful for including lists of items in a state model but
+        changes in the array order should not be considered as a state change.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Export deepEqual as part of the `utils` namespace
+      hash: b3632995045fd4e93989339116d3c745446d2511
+      body: |
+        The `deepEqual` function is a key piece of how the distance to a target
+        is calculated, as it allows to compare between the current and target
+        state. This function is flexible to allow users to define their own
+        comparison operations by providing an `equals` function on their models.
+
+        This function may also come handy for users of the library, so we export
+        it as part of the `mahler/utils` namespace
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 3.1.0
+  title: ""
+  date: 2024-01-10T20:34:52.229Z
+- commits:
     - subject: Do not recurse into arrays when constructing Target
       hash: c339d741843c65d3de1792f67ddf41540b46706e
       body: |
