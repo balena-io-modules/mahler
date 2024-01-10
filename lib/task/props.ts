@@ -17,11 +17,11 @@ type ReadOnlyPrimitive =
 type ReadOnly<T> = T extends ReadOnlyPrimitive
 	? T
 	: T extends Array<infer U>
-		? Array<ReadOnly<U>>
+		? T & Array<ReadOnly<U>>
 		: T extends Map<infer K, infer V>
-			? Map<ReadOnly<K>, ReadOnly<V>>
+			? T & Map<ReadOnly<K>, ReadOnly<V>>
 			: T extends Set<infer M>
-				? Set<ReadOnly<M>>
+				? T & Set<ReadOnly<M>>
 				: { readonly [K in keyof T]: ReadOnly<T[K]> };
 
 export type ContextWithSystem<
