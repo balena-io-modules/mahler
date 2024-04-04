@@ -1,4 +1,15 @@
 - commits:
+    - subject: Update @balena/lint to v8
+      hash: b4e1df7fc323b72253990c82c0901e47fb738002
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.1.1
+  title: ""
+  date: 2024-04-04T01:54:24.721Z
+- commits:
     - subject: Create UnorderedArray type
       hash: 81c1405dca0e0cdb64b81e858fd2c5f926ac89f8
       body: |
@@ -941,7 +952,8 @@
 
         bodies (they were randomly generated previously). This will be useful
 
-        to automatically generate plan diagrams during testing without files changing
+        to automatically generate plan diagrams during testing without files
+        changing
 
         on each commit.
       footer:
@@ -1497,11 +1509,13 @@
       body: >
         Creating a new instance with `Diff.of` will now return a function to
 
-        calculate pending operations. This removes the public `patch` function as that
+        calculate pending operations. This removes the public `patch` function
+        as that
 
         is not used by the planner and that is replaced by a readonly property
 
-        returning the result of patching a source object with the provided target.
+        returning the result of patching a source object with the provided
+        target.
       footer:
         Change-type: minor
         change-type: minor
