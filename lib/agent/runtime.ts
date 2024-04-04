@@ -13,6 +13,7 @@ import { observe } from './observe';
 
 import {
 	AgentOpts,
+	AgentStatus,
 	Failure,
 	NotStarted,
 	Result,
@@ -51,6 +52,11 @@ class PlanNotFound extends Error {
 	}
 }
 
+export interface RuntimeState<TState> {
+	status: AgentStatus;
+	state: TState;
+}
+
 export class Runtime<TState> {
 	private promise: Promise<Result<TState>> = Promise.resolve({
 		success: false,
@@ -62,8 +68,16 @@ export class Runtime<TState> {
 	private subscribed: Subscription[] = [];
 	private stateRef: Ref<TState>;
 
+	get status(): AgentStatus {
+		if (this.running) {
+			return 'running';
+		}
+
+		return 'idle';
+	}
+
 	constructor(
-		private readonly observer: Observer<TState>,
+		private readonly observer: Observer<RuntimeState<TState>>,
 		state: TState,
 		private readonly target: Target<TState>,
 		private readonly planner: Planner<TState>,
@@ -83,14 +97,14 @@ export class Runtime<TState> {
 					this.start();
 				} else {
 					// Notify the observer of the new state
-					this.observer.next(s);
+					this.observer.next({ status: this.status, state: s });
 				}
 			}),
 		);
 	}
 
 	public get state() {
-		return this.stateRef._;
+		return structuredClone(this.stateRef._);
 	}
 
 	private findPlan() {
@@ -138,7 +152,13 @@ export class Runtime<TState> {
 			// local state without the need of comparisons later.
 			// The observe() wrapper allows to notify the observer from every
 			// change to some part of the state
-			await observe(action, this.observer)(this.stateRef);
+			await observe(action, {
+				next: (s: TState) => {
+					this.observer.next({ status: this.status, state: s });
+				},
+				error: () => void 0,
+				complete: () => void 0,
+			})(this.stateRef);
 		} catch (e) {
 			throw new ActionRunFailed(action, e);
 		}
@@ -222,7 +242,7 @@ export class Runtime<TState> {
 			let found = false;
 
 			// Send the initial state to the observer
-			this.observer.next(structuredClone(this.stateRef._));
+			this.observer.next({ status: this.status, state: this.state });
 			logger.info('applying new target state');
 			while (!this.stopped) {
 				try {
