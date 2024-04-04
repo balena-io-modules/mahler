@@ -1,7 +1,8 @@
 import assert from './assert';
-import { Identity } from './identity';
+import type { Identity } from './identity';
 import { isArrayIndex } from './is-array-index';
-import { Path, PathType } from './path';
+import type { PathType } from './path';
+import { Path } from './path';
 import { Pointer } from './pointer';
 
 export type Lens<TState, TPath extends PathType> = LensContext<
@@ -122,11 +123,12 @@ type LensOnArray<
 	THead,
 	TTail extends PathType,
 	TProps extends NonNullable<unknown>,
-> = TChildState extends Array<infer U> // If the object of type S is an array
-	? THead extends `${number}` // and the key is a number
-		? LensWithoutSlash<U, TPath, TTail, TProps>
-		: never
-	: never;
+> =
+	TChildState extends Array<infer U> // If the object of type S is an array
+		? THead extends `${number}` // and the key is a number
+			? LensWithoutSlash<U, TPath, TTail, TProps>
+			: never
+		: never;
 
 function params(template: Path, path: Path) {
 	const templateParts = Path.split(template);

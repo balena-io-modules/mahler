@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-import { Action } from '../task';
+import type { Action } from '../task';
 import { Pointer } from '../pointer';
 
 /**

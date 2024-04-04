@@ -1,5 +1,5 @@
 import Debug from 'debug';
-import { Logger } from 'mahler';
+import type { Logger } from 'mahler';
 
 // Create the default logger
 // Send logger.info() and logger.debug() output to stdout

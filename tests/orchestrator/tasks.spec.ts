@@ -1,7 +1,7 @@
 import * as Docker from 'dockerode';
 import { expect } from '~/test-utils';
 
-import { Device } from './state';
+import type { Device } from './state';
 import { fetch, installService, startService } from './tasks';
 import { zip } from 'mahler/testing';
 

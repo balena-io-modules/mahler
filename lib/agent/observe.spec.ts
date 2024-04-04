@@ -1,5 +1,5 @@
 import { expect } from '~/test-utils';
-import { Observer } from '../observable';
+import type { Observer } from '../observable';
 import { Ref } from '../ref';
 import { observe } from './observe';
 

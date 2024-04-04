@@ -1,14 +1,15 @@
 import { createHash } from 'crypto';
 
-import {
+import type {
 	PlanningEvent,
 	PlanningError,
 	EmptyNode,
 	ActionNode,
 	ForkNode,
-	SearchFailed,
 } from '../planner';
-import { Method, Action, Instruction } from '../task';
+import { SearchFailed } from '../planner';
+import type { Instruction } from '../task';
+import { Method, Action } from '../task';
 import { Node } from '../planner';
 import { assert } from '../assert';
 

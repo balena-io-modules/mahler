@@ -1,6 +1,7 @@
-import { Task, TaskOp } from '../task';
-import { Path, PathType, Root } from '../path';
-import { Operation } from '../operation';
+import type { Task, TaskOp } from '../task';
+import type { PathType, Root } from '../path';
+import { Path } from '../path';
+import type { Operation } from '../operation';
 
 /**
  * Identify if a task is applicable for a specific operation

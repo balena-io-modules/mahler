@@ -1,4 +1,5 @@
-import { Path, PathType, Root } from './path';
+import type { PathType, Root } from './path';
+import { Path } from './path';
 import { isArrayIndex } from './is-array-index';
 
 export type Pointer<O, P extends PathType> = PointerWithSlash<O, P>;

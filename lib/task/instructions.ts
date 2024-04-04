@@ -1,7 +1,7 @@
-import { Path, PathType } from '../path';
-import { Context } from './context';
-import { Ref } from '../ref';
-import { AnyOp, Update, Create } from '../operation';
+import type { Path, PathType } from '../path';
+import type { Context } from './context';
+import type { Ref } from '../ref';
+import type { AnyOp, Update, Create } from '../operation';
 
 interface Instance<TState, TPath extends PathType, TOp extends AnyOp> {
 	/**

@@ -1,6 +1,7 @@
 import * as Docker from 'dockerode';
 import { Domain } from 'mahler';
-import { App, Service, ServiceStatus } from './state';
+import type { Service, ServiceStatus } from './state';
+import { App } from './state';
 
 interface StatusError extends Error {
 	statusCode: number;

@@ -1,4 +1,5 @@
-import { Node, Plan } from '../planner';
+import type { Plan } from '../planner';
+import { Node } from '../planner';
 
 import { DAG } from './dag';
 

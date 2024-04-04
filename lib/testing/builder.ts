@@ -1,4 +1,5 @@
-import { DAG, Branch, Fork } from './dag';
+import type { Branch, Fork } from './dag';
+import { DAG } from './dag';
 
 interface PlanBuilder {
 	/**

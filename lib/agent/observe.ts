@@ -1,6 +1,6 @@
-import { Ref } from '../ref';
-import { Observer, Next } from '../observable';
-import { Operation } from '../operation';
+import type { Ref } from '../ref';
+import type { Observer, Next } from '../observable';
+import type { Operation } from '../operation';
 import { View } from '../view';
 import { Path } from '../path';
 

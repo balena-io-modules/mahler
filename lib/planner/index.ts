@@ -1,9 +1,10 @@
 import { Distance } from '../distance';
-import { Target } from '../target';
+import type { Target } from '../target';
 import { Task } from '../task';
 import { findPlan } from './findPlan';
-import { Aborted, PlannerConfig } from './types';
-import { Plan } from './plan';
+import type { PlannerConfig } from './types';
+import { Aborted } from './types';
+import type { Plan } from './plan';
 import { Node } from './node';
 import { assert } from '../assert';
 

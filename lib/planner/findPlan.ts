@@ -1,24 +1,23 @@
-import {
-	Operation as PatchOperation,
-	patch as applyPatch,
-	diff as createPatch,
-} from 'mahler-wasm';
+import type { Operation as PatchOperation } from 'mahler-wasm';
+import { patch as applyPatch, diff as createPatch } from 'mahler-wasm';
 
 import assert from '../assert';
-import { Distance } from '../distance';
+import type { Distance } from '../distance';
 import { Lens } from '../lens';
-import { Operation } from '../operation';
+import type { Operation } from '../operation';
 import { Pointer } from '../pointer';
 import { Ref } from '../ref';
-import { Action, Instruction, Method, MethodExpansion, Task } from '../task';
-import { EmptyNode, Node } from './node';
-import { Plan } from './plan';
+import type { Action, Instruction, Task } from '../task';
+import { Method, MethodExpansion } from '../task';
+import type { EmptyNode } from './node';
+import { Node } from './node';
+import type { Plan } from './plan';
+import type { PlannerConfig } from './types';
 import {
 	Aborted,
 	ConditionNotMet,
 	LoopDetected,
 	MethodExpansionEmpty,
-	PlannerConfig,
 	SearchFailed,
 } from './types';
 import { isTaskApplicable } from './utils';

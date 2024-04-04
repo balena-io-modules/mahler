@@ -2,13 +2,20 @@ import { createHash } from 'crypto';
 
 import assert from '../assert';
 import { Lens } from '../lens';
-import { AnyOp, Update } from '../operation';
-import { Path, PathType, Root } from '../path';
-import { Ref } from '../ref';
+import type { AnyOp, Update } from '../operation';
+import type { PathType, Root } from '../path';
+import { Path } from '../path';
+import type { Ref } from '../ref';
 import { View } from '../view';
-import { Context, TaskArgs, TaskOp } from './context';
-import { Action, Instruction, Method, MethodExpansion } from './instructions';
-import { ActionTaskProps, ContextWithSystem, MethodTaskProps } from './props';
+import type { TaskArgs, TaskOp } from './context';
+import { Context } from './context';
+import type { Action, Instruction, Method } from './instructions';
+import { MethodExpansion } from './instructions';
+import type {
+	ActionTaskProps,
+	ContextWithSystem,
+	MethodTaskProps,
+} from './props';
 
 interface TaskSpec<
 	TState = unknown,

@@ -1,9 +1,10 @@
 import { isArrayIndex } from './is-array-index';
-import { Path, PathType, Root } from './path';
+import type { PathType, Root } from './path';
+import { Path } from './path';
 import { InvalidPointer } from './pointer';
-import { Ref } from './ref';
-import { Lens } from './lens';
-import { AnyOp, Create, Update } from './operation';
+import type { Ref } from './ref';
+import type { Lens } from './lens';
+import type { AnyOp, Create, Update } from './operation';
 
 export interface View<
 	TState,

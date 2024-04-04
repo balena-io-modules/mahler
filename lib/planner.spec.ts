@@ -1,6 +1,7 @@
 import { expect, logger } from '~/test-utils';
 import { Planner } from './planner';
-import { Instruction, Task } from './task';
+import type { Instruction } from './task';
+import { Task } from './task';
 import { plan, branch, fork, stringify } from './testing';
 
 describe('Planner', () => {

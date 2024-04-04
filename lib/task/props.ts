@@ -1,9 +1,9 @@
-import { Lens } from '../lens';
-import { AnyOp, Update, Create } from '../operation';
-import { PathType, Root } from '../path';
-import { View } from '../view';
-import { Context } from './context';
-import { Instruction, MethodExpansion } from './instructions';
+import type { Lens } from '../lens';
+import type { AnyOp, Update, Create } from '../operation';
+import type { PathType, Root } from '../path';
+import type { View } from '../view';
+import type { Context } from './context';
+import type { Instruction, MethodExpansion } from './instructions';
 
 type ReadOnlyPrimitive =
 	| undefined

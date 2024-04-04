@@ -1,7 +1,7 @@
-import { Op } from '../operation';
-import { PathType, Root } from '../path';
-import { Identity } from '../identity';
-import { LensContext } from '../lens';
+import type { Op } from '../operation';
+import type { PathType, Root } from '../path';
+import type { Identity } from '../identity';
+import type { LensContext } from '../lens';
 
 export type TaskOp = Op | '*';
 

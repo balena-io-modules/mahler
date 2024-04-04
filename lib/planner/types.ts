@@ -1,8 +1,8 @@
-import { Operation } from 'lib/operation';
-import { Target } from '../target';
-import { Instruction, Method } from '../task';
+import type { Operation } from 'lib/operation';
+import type { Target } from '../target';
+import type { Instruction, Method } from '../task';
 
-import { Node } from './node';
+import type { Node } from './node';
 
 /**
  * Stats about the planning process
