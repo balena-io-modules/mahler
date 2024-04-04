@@ -1,9 +1,11 @@
-import { Lens } from './lens';
-import { Path, PathType } from './path';
-import { Ref } from './ref';
+import type { Lens } from './lens';
+import type { PathType } from './path';
+import { Path } from './path';
+import type { Ref } from './ref';
 import { View } from './view';
 
-import { Observable, Subscribable } from './observable';
+import type { Subscribable } from './observable';
+import { Observable } from './observable';
 
 /**
  * A Sensor function for type T is a function that returns a generator

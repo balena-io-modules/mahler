@@ -1,5 +1,6 @@
 import { Ref } from '../ref';
-import { Method, Action } from '../task';
+import type { Action } from '../task';
+import { Method } from '../task';
 
 function expand<T>(s: T, method: Method<T>): Array<Action<T, any, any>> {
 	if (!method.condition(s)) {

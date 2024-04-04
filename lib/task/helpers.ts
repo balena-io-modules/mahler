@@ -1,6 +1,6 @@
-import { Context, TaskOp } from './context';
-import { PathType, Root } from '../path';
-import { Action } from './instructions';
+import type { Context, TaskOp } from './context';
+import type { PathType, Root } from '../path';
+import type { Action } from './instructions';
 
 export const NoAction = async () => void 0;
 export const NoEffect = () => void 0;

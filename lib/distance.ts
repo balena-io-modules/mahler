@@ -1,7 +1,8 @@
-import { Operation } from './operation';
+import type { Operation } from './operation';
 import { Pointer } from './pointer';
 import { Path } from './path';
-import { Target, UNDEFINED } from './target';
+import type { Target } from './target';
+import { UNDEFINED } from './target';
 import { deepEqual } from './utils';
 
 /**

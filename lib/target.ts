@@ -1,9 +1,8 @@
 export const UNDEFINED: unique symbol = Symbol('m_undefined');
 export type UNDEFINED = typeof UNDEFINED;
 
-type IsOptional<S extends object, K extends keyof S> = Omit<S, K> extends S
-	? true
-	: false;
+type IsOptional<S extends object, K extends keyof S> =
+	Omit<S, K> extends S ? true : false;
 
 export type Target<S> = S extends any[] | ((...args: any) => any)
 	? S

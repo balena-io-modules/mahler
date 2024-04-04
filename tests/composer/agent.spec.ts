@@ -3,7 +3,7 @@ import { logger, expect } from '~/test-utils';
 
 import { Agent } from 'mahler';
 import { planner } from './planner';
-import { App } from './state';
+import type { App } from './state';
 
 const docker = new Docker();
 

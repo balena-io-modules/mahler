@@ -1,7 +1,7 @@
-import { Node } from './node';
-import { PlanningStats, PlanningError } from './types';
+import type { Node } from './node';
+import type { PlanningStats, PlanningError } from './types';
 
-import { Operation } from 'mahler-wasm';
+import type { Operation } from 'mahler-wasm';
 
 export type Plan<TState> =
 	| {

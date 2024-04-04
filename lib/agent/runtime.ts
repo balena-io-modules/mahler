@@ -1,25 +1,19 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import { assert } from '../assert';
-import { Operation } from '../operation';
+import type { Operation } from '../operation';
 import { diff } from '../distance';
-import { Observer, Subscription } from '../observable';
-import { EmptyNode, Node, Planner, SearchFailed } from '../planner';
+import type { Observer, Subscription } from '../observable';
+import type { EmptyNode, Planner } from '../planner';
+import { Node, SearchFailed } from '../planner';
 import { Ref } from '../ref';
-import { Sensor } from '../sensor';
-import { Target } from '../target';
-import { Action } from '../task';
+import type { Sensor } from '../sensor';
+import type { Target } from '../target';
+import type { Action } from '../task';
 import { observe } from './observe';
 
-import {
-	AgentOpts,
-	Failure,
-	NotStarted,
-	Result,
-	Stopped,
-	Timeout,
-	UnknownError,
-} from './types';
+import type { AgentOpts, Result } from './types';
+import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
 
 /**
  * Internal error

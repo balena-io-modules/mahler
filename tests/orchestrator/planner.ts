@@ -1,7 +1,7 @@
 import { Planner } from 'mahler/planner';
 import { logger } from '~/test-utils';
 
-import { Device } from './state';
+import type { Device } from './state';
 import {
 	fetch,
 	createApp,

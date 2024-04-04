@@ -1,5 +1,5 @@
-import { Path, PathType, Root } from './path';
-import { Pointer } from './pointer';
+import type { Path, PathType, Root } from './path';
+import type { Pointer } from './pointer';
 
 export type Create = 'create';
 export type Delete = 'delete';

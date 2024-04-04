@@ -3,7 +3,7 @@ import { mermaid } from 'mahler/testing';
 
 export const trace = mermaid();
 
-import { App } from './state';
+import type { App } from './state';
 import {
 	fetchServiceImage,
 	installService,

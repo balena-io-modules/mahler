@@ -3,7 +3,7 @@ import { expect } from '~/test-utils';
 import { UNDEFINED } from 'mahler';
 import { plan, stringify } from 'mahler/testing';
 import { planner } from './planner';
-import { ServiceStatus } from './state';
+import type { ServiceStatus } from './state';
 
 describe('orchestrator/planning', () => {
 	it('updates the app/release state if it has not been set', () => {

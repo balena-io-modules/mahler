@@ -1,12 +1,14 @@
 import assert from '../assert';
 import { NullLogger } from '../logger';
-import { Subscribable, Subject } from '../observable';
+import type { Subscribable } from '../observable';
+import { Subject } from '../observable';
 import { Planner } from '../planner';
-import { Sensor } from '../sensor';
-import { Target } from '../target';
-import { Task } from '../task';
+import type { Sensor } from '../sensor';
+import type { Target } from '../target';
+import type { Task } from '../task';
 import { Runtime } from './runtime';
-import { AgentOpts, NotStarted, Result } from './types';
+import type { AgentOpts, Result } from './types';
+import { NotStarted } from './types';
 
 export * from './types';
 

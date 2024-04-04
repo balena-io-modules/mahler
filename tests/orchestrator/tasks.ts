@@ -3,7 +3,7 @@ import * as tar from 'tar-stream';
 
 import { Task } from 'mahler';
 import { logger } from '~/test-utils';
-import { Device, Service, ServiceStatus } from './state';
+import type { Device, Service, ServiceStatus } from './state';
 import { getContainerName, getImageName, getRegistryAndName } from './utils';
 
 interface StatusError extends Error {

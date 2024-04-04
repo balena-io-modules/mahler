@@ -2,7 +2,8 @@ import dedent from 'dedent';
 import { expect } from '~/test-utils';
 import { mermaid } from './mermaid';
 import { Planner } from '../planner';
-import { Instruction, Task } from '../task';
+import type { Instruction } from '../task';
+import { Task } from '../task';
 
 describe('Mermaid', () => {
 	it('empty plan', function () {

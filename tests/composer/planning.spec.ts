@@ -1,7 +1,7 @@
 import { expect } from '~/test-utils';
 
 import { planner } from './planner';
-import { ServiceStatus } from './state';
+import type { ServiceStatus } from './state';
 import { plan, stringify } from 'mahler/testing';
 
 describe('composer/planning', () => {
