@@ -2,7 +2,7 @@ import { expect } from '~/test-utils';
 import { Target, UNDEFINED } from './target';
 
 describe('Target', () => {
-	describe('from', () => {
+	describe('fromStrict', () => {
 		it('adds UNDEFINED symbols for missing values on the target', () => {
 			type S = {
 				a: number;
@@ -18,7 +18,7 @@ describe('Target', () => {
 			};
 
 			expect(
-				Target.from(state, {
+				Target.fromStrict(state, {
 					a: 1,
 					c: { d: { e: 3, f: undefined } },
 					g: { h: 'hello' },
@@ -48,7 +48,7 @@ describe('Target', () => {
 			};
 
 			expect(
-				Target.from(
+				Target.fromStrict(
 					state,
 					{
 						a: 1,
@@ -73,9 +73,13 @@ describe('Target', () => {
 			};
 
 			const state: S = { a: ['foo', 'bar'] };
-			expect(Target.from(state, {})).to.deep.equal({ a: UNDEFINED });
-			expect(Target.from(state, { a: ['foo'] })).to.deep.equal({ a: ['foo'] });
-			expect(Target.from(state, { a: ['bar'] })).to.deep.equal({ a: ['bar'] });
+			expect(Target.fromStrict(state, {})).to.deep.equal({ a: UNDEFINED });
+			expect(Target.fromStrict(state, { a: ['foo'] })).to.deep.equal({
+				a: ['foo'],
+			});
+			expect(Target.fromStrict(state, { a: ['bar'] })).to.deep.equal({
+				a: ['bar'],
+			});
 		});
 	});
 });
