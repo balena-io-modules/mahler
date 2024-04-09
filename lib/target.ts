@@ -10,7 +10,7 @@ type IsOptional<S extends object, K extends keyof S> =
  * A Target in Mahler is by default 'relative', meaning that only property
  * changes and additions should be considered when comparing current and
  * target states for planning. Property deletion need to be done explicitely
- * via the `UNDEFINED` symbol. This allows a cleeaner interface for for
+ * via the `UNDEFINED` symbol. This allows a cleaner interface for for
  * defining system targets and allows the system state to have additional properties
  * than the target.
  *

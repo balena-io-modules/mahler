@@ -4,7 +4,7 @@ import type { Subscribable } from '../observable';
 import { Subject } from '../observable';
 import { Planner } from '../planner';
 import type { Sensor } from '../sensor';
-import type { Target } from '../target';
+import type { Target, StrictTarget } from '../target';
 import type { Task } from '../task';
 import { Runtime } from './runtime';
 import type { AgentOpts, Result } from './types';
@@ -88,7 +88,7 @@ export * from './types';
  */
 export interface Agent<TState = any> extends Subscribable<TState> {
 	/**
-	 * Tells the agent to seek a new target.
+	 * Tells the agent to seek a new (relative) target.
 	 *
 	 * The method doesn't wait for a result.
 	 *
@@ -99,6 +99,23 @@ export interface Agent<TState = any> extends Subscribable<TState> {
 	 * @param target - The target to seek
 	 */
 	seek(target: Target<TState>): void;
+
+	/**
+	 * Tells the agent to seek a new strict target.
+	 *
+	 * A strict target means that the final state of the agent should
+	 * look exactly like the given target, with the exception of those properties
+	 * matching one of the `strictIgnore` globs in the Agent options.
+	 *
+	 * The method doesn't wait for a result.
+	 *
+	 * If the agent is already seeking a plan, this will cancel
+	 * the current execution and wait for it to be stopped
+	 * before starting a new run.
+	 *
+	 * @param target - The target to seek
+	 */
+	seekStrict(target: StrictTarget<TState>): void;
 
 	/**
 	 * Wait for the agent to reach the given target or
@@ -191,6 +208,7 @@ function from<TState>({
 		maxWaitMs: 5 * 60 * 1000,
 		minWaitMs: 1 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.minWaitMs,
+		strictIgnore: [],
 		...userOpts,
 		logger: { ...NullLogger, ...userOpts.logger },
 	};
@@ -212,27 +230,47 @@ function from<TState>({
 
 	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
 
+	function seekInternal(target: Target<TState>, strict: false): void;
+	function seekInternal(target: StrictTarget<TState>, strict: true): void;
+	function seekInternal(
+		target: Target<TState> | StrictTarget<TState>,
+		strict: boolean,
+	) {
+		// We don't want seek to be an asynchronous call, so we
+		// wrap the runtime in a promise. This way, we can ensure
+		// that operations are always working on the right runtime,
+		// when the target changes or the agent is stopped
+		setupRuntime = setupRuntime.then((runtime) => {
+			// Flatten the promise chain to avoid memory leaks
+			setupRuntime = (async () => {
+				if (runtime != null) {
+					await runtime.stop();
+					state = runtime.state;
+				}
+
+				runtime = new Runtime(
+					subject,
+					state,
+					target,
+					planner,
+					sensors,
+					opts,
+					strict,
+				);
+				runtime.start();
+
+				return runtime;
+			})();
+			return setupRuntime;
+		});
+	}
+
 	return {
 		seek(target) {
-			// We don't want seek to be an asynchronous call, so we
-			// wrap the runtime in a promise. This way, we can ensure
-			// that operations are always working on the right runtime,
-			// when the target changes or the agent is stopped
-			setupRuntime = setupRuntime.then((runtime) => {
-				// Flatten the promise chain to avoid memory leaks
-				setupRuntime = (async () => {
-					if (runtime != null) {
-						await runtime.stop();
-						state = runtime.state;
-					}
-
-					runtime = new Runtime(subject, state, target, planner, sensors, opts);
-					runtime.start();
-
-					return runtime;
-				})();
-				return setupRuntime;
-			});
+			seekInternal(target, false);
+		},
+		seekStrict(target) {
+			seekInternal(target, true);
 		},
 		stop() {
 			void setupRuntime.then((runtime) => {

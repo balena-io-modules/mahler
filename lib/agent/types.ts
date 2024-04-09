@@ -36,6 +36,12 @@ export interface AgentOpts {
 	 * A Logger instance to use for reporting
 	 */
 	logger: Logger;
+
+	/**
+	 * List of globs to ignore when converting a strict target to a relative target
+	 * when using `seekStrict`
+	 */
+	strictIgnore: string[];
 }
 
 /**
