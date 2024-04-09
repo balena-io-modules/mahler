@@ -106,15 +106,24 @@ function fromStrict<S>(
 			continue;
 		}
 		for (const key of Object.keys(s)) {
+			// If the target is explicitely set as `undefined` replace
+			// the target with the `UNDEFINED` symbol
 			if (key in t && t[key] === undefined && s[key] !== undefined) {
 				t[key] = UNDEFINED;
-			} else if (ignore.some((r) => r.test(`${p}/${key}`))) {
+			}
+			// If the key doesn't exist on the target but the path
+			// matches one the globs, ignore it
+			else if (!(key in t) && ignore.some((r) => r.test(`${p}/${key}`))) {
 				continue;
-			} else if (!(key in t)) {
+			}
+			// If the path does not match any glob, mark the element to be
+			// deleted
+			else if (!(key in t)) {
 				// UNDEFINED means delete the value
 				t[key] = UNDEFINED;
-			} else if (typeof t[key] === 'object') {
-				// If the value is an object, we need to recurse
+			}
+			// Otherwise, if the value is an object, we need to recurse
+			else if (typeof t[key] === 'object') {
 				queue.push({ s: s[key], t: t[key], p: `${p}/${key}` });
 			}
 		}

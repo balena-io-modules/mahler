@@ -55,7 +55,26 @@ describe('Target', () => {
 						c: { d: { e: 3, f: undefined } },
 						g: { h: 'hello' },
 					},
-					['/b', '*/g', '/c/*/f'],
+					['/b', '/g', '/c/*/f'],
+				),
+			).to.deep.equal({
+				a: 1,
+				c: {
+					d: { e: 3, f: UNDEFINED },
+					h: UNDEFINED,
+				},
+				g: { h: 'hello', i: UNDEFINED },
+			});
+
+			expect(
+				Target.fromStrict(
+					state,
+					{
+						a: 1,
+						c: { d: { e: 3, f: undefined } },
+						g: { h: 'hello' },
+					},
+					['/b', '*/g/*', '/c/*/f'],
 				),
 			).to.deep.equal({
 				a: 1,
