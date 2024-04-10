@@ -340,6 +340,23 @@ describe('Agent', () => {
 			agent.stop();
 		});
 
+		it('it should terminate once the strict target has been reached', async () => {
+			const roomTemp = 30;
+			resistorOn = true;
+			const agent = Agent.from({
+				initial: { roomTemp, resistorOn },
+				tasks: [turnOn, turnOff, wait],
+				sensors: [termometer(roomTemp)],
+				opts: { minWaitMs: 10, logger },
+			});
+			agent.seekStrict({ roomTemp: 20, resistorOn: false });
+			await expect(agent.wait(1000)).to.eventually.deep.equal({
+				success: true,
+				state: { roomTemp: 20, resistorOn: false },
+			}).fulfilled;
+			agent.stop();
+		});
+
 		it('it should allow observers to subcribe to the agent state', async () => {
 			const roomTemp = 18;
 			resistorOn = false;

@@ -8,7 +8,8 @@ import type { EmptyNode, Planner } from '../planner';
 import { Node, SearchFailed } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
-import type { Target } from '../target';
+import type { StrictTarget } from '../target';
+import { Target } from '../target';
 import type { Action } from '../task';
 import { observe } from './observe';
 
@@ -59,10 +60,11 @@ export class Runtime<TState> {
 	constructor(
 		private readonly observer: Observer<TState>,
 		state: TState,
-		private readonly target: Target<TState>,
+		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
 		sensors: Array<Sensor<TState>>,
 		private readonly opts: AgentOpts,
+		private readonly strict: boolean,
 	) {
 		this.stateRef = Ref.of(state);
 		// add subscribers to sensors
@@ -102,7 +104,18 @@ export class Runtime<TState> {
 			return ['delete', o.path];
 		};
 
-		const changes = diff(this.stateRef._, this.target);
+		let target: Target<TState>;
+		if (this.strict) {
+			target = Target.fromStrict(
+				this.stateRef._,
+				this.target as StrictTarget<TState>,
+				this.opts.strictIgnore,
+			);
+		} else {
+			target = this.target;
+		}
+
+		const changes = diff(this.stateRef._, target);
 		logger.debug(
 			`looking for a plan, pending changes:${
 				changes.length > 0 ? '' : ' none'

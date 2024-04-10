@@ -349,6 +349,17 @@ agent.seek({ counter: 3, lastRead: UNDEFINED });
 agent.seek({ counter: 3, lastRead: undefined });
 ```
 
+You can also use the `seekStrict` function of `Agent` to tell the agent to look for the exact state given as the target
+
+```ts
+// This tells the agent the exact system state that
+// we want to see at the end of the run.
+agent.seekStrict({ counter: 3, needsWrite: true });
+
+// The above is equivalent to
+agent.seek({ counter: 3, lastRead: UNDEFINED });
+```
+
 We'll learn later how we can add an `op` property to tasks to tell Mahler when a task is applicable to a `delete` [operation](#operations).
 
 One last thing before moving on from this topic. What if you assign a required value the value of `UNDEFINED`?
