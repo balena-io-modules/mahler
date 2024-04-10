@@ -1,4 +1,19 @@
 - commits:
+    - subject: Add test utility to run a task
+      hash: dec36689c8b617fa7455d548d2c96867dea8b952
+      body: |
+        The `runTask` function in test utils receives a task, the current state
+        and the task arguments and returns the result of running the task. If
+        the task is a method, it will expand the method sequentially and run all
+        the returned actions.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 3.3.0
+  title: ""
+  date: 2024-04-10T23:58:31.934Z
+- commits:
     - subject: Fix UnorderedArray comparison failing for undefined
       hash: 154c008145c74948e4c4f75106503de2088c8294
       body: ""
