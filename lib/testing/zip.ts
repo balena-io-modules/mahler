@@ -4,7 +4,9 @@ import { Method } from '../task';
 
 function expand<T>(s: T, method: Method<T>): Array<Action<T, any, any>> {
 	if (!method.condition(s)) {
-		return [];
+		throw new Error(
+			`${method.description}: condition not met for expanding method`,
+		);
 	}
 
 	const res = method(s);
@@ -35,7 +37,9 @@ export function zip<T>(
 
 		for (const action of actions) {
 			if (!action.condition(s)) {
-				return s;
+				throw new Error(
+					`${action.description}: condition not met for running action`,
+				);
 			}
 			await action(ref);
 		}
