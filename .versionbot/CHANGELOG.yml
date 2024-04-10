@@ -1,4 +1,15 @@
 - commits:
+    - subject: Fix UnorderedArray comparison failing for undefined
+      hash: 154c008145c74948e4c4f75106503de2088c8294
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.2.1
+  title: ""
+  date: 2024-04-10T20:11:55.169Z
+- commits:
     - subject: Add support for 'strict' targets on the Agent interface
       hash: baa757c42c0c0f978b9f195901f3f42e9c769344
       body: >
