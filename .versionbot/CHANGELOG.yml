@@ -1,4 +1,74 @@
 - commits:
+    - subject: Add support for 'strict' targets on the Agent interface
+      hash: baa757c42c0c0f978b9f195901f3f42e9c769344
+      body: >
+        A Target in Mahler is by default 'relative', meaning that only property
+
+        changes and additions should be considered when comparing current and
+
+        target states for planning. Property deletion need to be done
+        explicitely
+
+        via the `UNDEFINED` symbol. This allows a cleaner interface for for
+
+        defining system targets and allows the system state to have additional
+        properties
+
+        than the target.
+
+
+        A 'relative' target is the opposite to a 'strict' (or absolute) target,
+        where what is passed to
+
+        the planner/agent describes exactly the desired state of the system is.
+
+
+        This PR introduces the `StrictTarget` type and the `seekStrict` method
+
+        on the `Agent` interface. This allows users some additional flexibility
+
+        to specify an absolute state of the final system.
+
+
+        Example: let's say we are modelling the state of two variables `x` and
+        `y`.
+
+
+        Given the current state `{x: 0}`, the target state `{y: 1}` means that
+        the
+
+        planner needs to only to find a task that can create the variable `y`
+        and increase its
+
+        value to `1`. The final expected state should be `{x: 0, y:1}` (assuming
+        nothing else changes `x`).
+
+
+        If the goal was to remove the variable `x` at the same time that
+        variable `y` is introduced, the
+
+        relative target would need to be `{x: UNDEFINED, y: 1}`
+
+
+        The equivalent strict target in this case is just `{y: 1}`.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Fix issue with ignore globs
+      hash: fc71930c6dc56d386a588d2a7d646c8f314a7de5
+      body: |
+        The conversion from strict to relative target was not recursing into
+        the sub-objects if a glob match was found. This is not the right
+        behavior
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.2.0
+  title: ""
+  date: 2024-04-10T15:02:21.191Z
+- commits:
     - subject: Update @balena/lint to v8
       hash: b4e1df7fc323b72253990c82c0901e47fb738002
       body: ""
