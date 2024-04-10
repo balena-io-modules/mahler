@@ -43,7 +43,7 @@ class UnorderedArrayImpl<T> extends Array<T> implements UnorderedArray<T> {
 	equals(other: ArrayLike<T>): boolean {
 		// If the arrays have different length then return false
 		// immediately
-		if (this.length !== other.length) {
+		if (other == null || this.length !== other.length) {
 			return false;
 		}
 
