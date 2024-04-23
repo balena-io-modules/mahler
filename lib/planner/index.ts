@@ -22,14 +22,14 @@ export interface Planner<TState = any> {
 }
 
 function reversePlan<T>(
-	curr: Node<T> | null,
+	root: Node<T> | null,
 	prev: Node<T> | null = null,
 ): Node<T> | null | [Node<T>, Node<T> | null] {
-	if (curr == null) {
+	if (root == null) {
 		return prev;
 	}
 
-	if (Node.isFork(curr)) {
+	if (Node.isFork(root)) {
 		// When reversing a fork node, we are turning the node
 		// into an empty node. For this reason, we create the empty node
 		// first that we pass as the `prev` argument to the recursive call to
@@ -40,7 +40,7 @@ function reversePlan<T>(
 		// this will run until finding an empty node, at which point it will
 		// return. The ends will be disconected so we will need to join them
 		// as part of a new fork node
-		const ends = curr.next.map((n) => reversePlan(n, empty));
+		const ends = root.next.map((n) => reversePlan(n, empty));
 		const forkNext: Array<Node<T>> = [];
 		let next: Node<T> | null = null;
 		for (const node of ends) {
@@ -64,10 +64,10 @@ function reversePlan<T>(
 		return reversePlan(next, fork);
 	}
 
-	if (Node.isAction(curr)) {
-		const next = curr.next;
-		curr.next = prev;
-		return reversePlan(next, curr);
+	if (Node.isAction(root)) {
+		const next = root.next;
+		root.next = prev;
+		return reversePlan(next, root);
 	}
 
 	// If the node is empty, that means
@@ -77,7 +77,7 @@ function reversePlan<T>(
 	// If empty we want the fork to handle
 	// the continuation, so we need to return
 	// the previous and next nodes of the empty node
-	return [prev, curr.next];
+	return [prev, root.next];
 }
 
 function from<TState = any>({

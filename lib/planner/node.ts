@@ -3,10 +3,12 @@ import { createHash } from 'crypto';
 import type { Action } from '../task';
 import { Pointer } from '../pointer';
 
+import * as dag from '../dag';
+
 /**
  * An action node defines an executable step of a plan
  */
-export interface ActionNode<TState> {
+export interface ActionNode<TState> extends dag.Value {
 	/**
 	 * Unique id for the node. This is calculated from the
 	 * action metadata and the current runtime state expected
@@ -30,7 +32,7 @@ export interface ActionNode<TState> {
  * by the existence of a parallel task. A fork node can
  * have zero or more next nodes.
  */
-export interface ForkNode<TState> {
+export interface ForkNode<TState> extends dag.Fork {
 	next: Array<Node<TState>>;
 }
 
@@ -39,7 +41,7 @@ export interface ForkNode<TState> {
  * use to indicate an empty step at the start of the plan, or a joining of the branches
  * created by the split node.
  */
-export interface EmptyNode<TState> {
+export interface EmptyNode<TState> extends dag.Join {
 	next: Node<TState> | null;
 }
 
@@ -49,15 +51,11 @@ export type Node<TState> =
 	| EmptyNode<TState>;
 
 function isActionNode<TState>(n: Node<TState>): n is ActionNode<TState> {
-	return (n as ActionNode<TState>).action !== undefined;
+	return dag.isValue(n);
 }
 
 function isForkNode<TState>(n: Node<TState>): n is ForkNode<TState> {
-	return (
-		(n as any).action === undefined &&
-		(n as any).next !== undefined &&
-		Array.isArray((n as any).next)
-	);
+	return dag.isFork(n);
 }
 
 export const Node = {
@@ -70,6 +68,8 @@ export const Node = {
 
 		// md5 should be good enough for this purpose
 		// and it's the fastest of the available options
+		// TODO: this is sensitive to key reordering, we might
+		// need sorting before, but we need to benchmark first
 		const id = createHash('md5')
 			.update(
 				JSON.stringify({
@@ -81,21 +81,17 @@ export const Node = {
 			)
 			.digest('hex');
 
-		return {
+		return dag.Node.value({
 			id,
 			action: a,
 			next: null,
-		};
+		});
 	},
 	empty<TState>(next: Node<TState> | null): EmptyNode<TState> {
-		return {
-			next,
-		};
+		return dag.Node.join(next) as EmptyNode<TState>;
 	},
 	fork<TState>(next: Array<Node<TState>>): ForkNode<TState> {
-		return {
-			next,
-		};
+		return dag.Node.fork(next) as ForkNode<TState>;
 	},
 	isAction: isActionNode,
 	isFork: isForkNode,
