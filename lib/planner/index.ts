@@ -5,8 +5,8 @@ import { findPlan } from './findPlan';
 import type { PlannerConfig } from './types';
 import { Aborted } from './types';
 import type { Plan } from './plan';
-import { Node } from './node';
 import { assert } from '../assert';
+import * as DAG from '../dag';
 
 export * from './types';
 export * from './plan';
@@ -19,65 +19,6 @@ export interface Planner<TState = any> {
 	 * cannot be found.
 	 */
 	findPlan(current: TState, target: Target<TState>): Plan<TState>;
-}
-
-function reversePlan<T>(
-	root: Node<T> | null,
-	prev: Node<T> | null = null,
-): Node<T> | null | [Node<T>, Node<T> | null] {
-	if (root == null) {
-		return prev;
-	}
-
-	if (Node.isFork(root)) {
-		// When reversing a fork node, we are turning the node
-		// into an empty node. For this reason, we create the empty node
-		// first that we pass as the `prev` argument to the recursive call to
-		// reversePlan for each of the children
-		const empty = Node.empty(prev);
-
-		// We then recursively call reversePlan on each of the branches,
-		// this will run until finding an empty node, at which point it will
-		// return. The ends will be disconected so we will need to join them
-		// as part of a new fork node
-		const ends = root.next.map((n) => reversePlan(n, empty));
-		const forkNext: Array<Node<T>> = [];
-		let next: Node<T> | null = null;
-		for (const node of ends) {
-			// If this fails the algorithm has a bug
-			assert(node != null && Array.isArray(node));
-
-			// We get the pointers from the fork node end
-			const [p, n] = node;
-
-			// The prev pointer of the fork end will be part of the
-			// next list of the fork node
-			forkNext.push(p);
-
-			// Every next pointer should be the same, so we just assign it here
-			next = n;
-		}
-
-		const fork = Node.fork(forkNext);
-
-		// We continue the recursion here
-		return reversePlan(next, fork);
-	}
-
-	if (Node.isAction(root)) {
-		const next = root.next;
-		root.next = prev;
-		return reversePlan(next, root);
-	}
-
-	// If the node is empty, that means
-	// that a previous node must exist
-	assert(prev != null);
-
-	// If empty we want the fork to handle
-	// the continuation, so we need to return
-	// the previous and next nodes of the empty node
-	return [prev, root.next];
 }
 
 function from<TState = any>({
@@ -139,7 +80,7 @@ function from<TState = any>({
 				});
 				res.stats = { ...res.stats, time: performance.now() - time };
 				if (res.success) {
-					const start = reversePlan(res.start);
+					const start = DAG.reverse(res.start);
 					assert(!Array.isArray(start));
 
 					res.start = start;
