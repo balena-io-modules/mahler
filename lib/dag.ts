@@ -41,7 +41,7 @@ export function isFork(n: Node): n is Fork {
 }
 
 type Visitor<T> =
-	| { done: true; exited: boolean; acc: T }
+	| { done: true; exited?: boolean; acc: T }
 	| { done: false; node: Join; acc: T };
 
 interface Coords {
@@ -63,9 +63,10 @@ interface Coords {
 	index: number;
 }
 
-// Utility function to visit every node while applying
-// a reducer function
-function visit<T, N extends Node>(
+// Utility function to visit every node in the DAG in a
+// depth first fashion, applying a reducer function to every
+// node
+function iter<T, N extends Node>(
 	root: Node | null,
 	initial: T,
 	reducer: (acc: T, n: N, coords: Coords) => T,
@@ -86,17 +87,11 @@ function visit<T, N extends Node>(
 	}
 
 	if (isValue(root)) {
-		return visit(
-			root.next,
-			reducer(initial, root as N, coords),
-			reducer,
-			exit,
-			{
-				...coords,
-				index: coords.index + 1,
-				depth: coords.depth + 1,
-			},
-		);
+		return iter(root.next, reducer(initial, root as N, coords), reducer, exit, {
+			...coords,
+			index: coords.index + 1,
+			depth: coords.depth + 1,
+		});
 	}
 
 	// Process the node, we need to increase the fork index before
@@ -105,7 +100,7 @@ function visit<T, N extends Node>(
 		initial = reducer(initial, root as N, coords);
 		let res = null;
 		for (const [index, bNode] of root.next.entries()) {
-			const r = visit(bNode, initial, reducer, exit, {
+			const r = iter(bNode, initial, reducer, exit, {
 				...coords,
 				index: 0,
 				branch: index,
@@ -129,19 +124,16 @@ function visit<T, N extends Node>(
 			next = res.node.next;
 		}
 
-		return visit(next, initial, reducer, exit, {
+		return iter(next, initial, reducer, exit, {
 			...coords,
 			depth: coords.depth + 1,
 		});
 	}
 
 	// if the first node of the graph is a JOIN then
-	// we need to continue processing normally
+	// we just ignore it
 	if (coords.depth === 0) {
-		return visit(root.next, initial, reducer, exit, {
-			...coords,
-			depth: coords.depth + 1,
-		});
+		return iter(root.next, initial, reducer, exit, coords);
 	}
 
 	return { done: false, node: root, acc: initial };
@@ -155,55 +147,146 @@ function visit<T, N extends Node>(
  * reached, branches are traversed in order until a join node (or a null) is found
  * before continuing with the following branch
  */
-export function iterate<T>(
+export function reduceWhile<T>(
 	node: Node | null,
 	initial: T,
 	reducer?: (acc: T, n: Node, c: Coords) => T,
 	exit?: (acc: T) => boolean,
 ): T;
-export function iterate<T, N extends Node>(
+export function reduceWhile<T, N extends Node>(
 	node: N | null,
 	initial: T,
 	reducer?: (acc: T, n: N, c: Coords) => T,
 	exit?: (acc: T) => boolean,
 ): T;
-export function iterate<T, N extends Node>(
+export function reduceWhile<T, N extends Node>(
 	node: N | null,
 	initial: T,
 	reducer: (acc: T, n: N, c: Coords) => T = (acc) => acc,
 	exit: (acc: T) => boolean = () => false,
 ): T {
-	const res = visit(node, initial, reducer, exit);
+	const res = iter(node, initial, reducer, exit);
 	return res.acc;
 }
 
-/**
- * Apply a reducer function to every element of the dag and return the
- * accumulated result
- *
- * The order of evaluation is given by the traverse function
- */
-export function reduce<T>(
-	node: Node | null,
-	reducer: (acc: T, v: Value) => T,
+// Traverse the DAG following branches of a forking node in parallel
+// and combining results after
+function iterParallel<V extends Value, F extends Fork, J extends Join, T>(
+	root: Node | null,
 	initial: T,
-): T;
-export function reduce<T, V extends Value>(
-	node: Node | null,
-	reducer: (acc: T, v: V) => T,
+	reducer: (acc: T, n: V | F, coords: Coords) => T,
+	combiner: (acc: T[], n: J) => T,
+	coords: Coords = { fork: 0, branch: 0, index: 0, depth: 0 },
+): Visitor<T> {
+	type N = V | F | J;
+	if (root == null) {
+		return { done: true, acc: initial };
+	}
+
+	if (isValue(root)) {
+		return iterParallel(
+			root.next as N,
+			reducer(initial, root as V, coords),
+			reducer,
+			combiner,
+			{
+				...coords,
+				index: coords.index + 1,
+				depth: coords.depth + 1,
+			},
+		);
+	}
+
+	if (isFork(root)) {
+		// Call the reducer with the fork node first
+		initial = reducer(initial, root as F, coords);
+
+		// Then call each branch independently
+		const ends = root.next.map((n, branch) =>
+			iterParallel(n as N, initial, reducer, combiner, {
+				...coords,
+				index: 0,
+				branch,
+				fork: coords.fork + 1,
+				depth: coords.depth + 1,
+			}),
+		);
+
+		assert(ends.length > 0, 'Malformed DAG found, empty Fork node');
+		const [res] = ends;
+		assert(!res.done, 'Malformed DAG found, disconnected fork branch');
+
+		// Combine the results from the branches passing the
+		// join node
+		const acc = combiner(
+			ends.map((r) => r.acc),
+			res.node as J,
+		);
+
+		return iterParallel(res.node.next as N, acc, reducer, combiner, {
+			...coords,
+			depth: coords.depth + 1,
+		});
+	}
+
+	// If the first node of the graph is a join, we ignore it
+	if (coords.depth === 0) {
+		return iterParallel(root.next as N, initial, reducer, combiner, coords);
+	}
+
+	return { done: false, node: root, acc: initial };
+}
+
+function reduceCombine<V extends Value, F extends Fork, J extends Join, T>(
+	root: Node | null,
 	initial: T,
-): T;
-export function reduce<T, V extends Value>(
-	node: Node | null,
-	reducer: (acc: T, v: V) => T,
-	initial: T,
+	reducer: (acc: T, n: V | F, coords: Coords) => T,
+	combiner: (acc: T[], n: J) => T,
 ): T {
-	return iterate(node, initial, (acc, n) => {
-		if (isValue(n)) {
-			return reducer(acc, n as V);
-		}
-		return acc;
-	});
+	// The any below is because typescript is being weird in interpreting the types
+	const res = iterParallel(root, initial, reducer as any, combiner);
+	return res.acc;
+}
+
+export function mapReduce<T>(
+	root: Node | null,
+	initial: T,
+	mapper: (v: Value, acc: T) => T,
+	reducer: (acc: T[]) => T,
+): T;
+export function mapReduce<T, V extends Value>(
+	root: Node | null,
+	initial: T,
+	mapper: (v: V, acc: T) => T,
+	reducer: (acc: T[]) => T,
+): T;
+export function mapReduce<T, V extends Value>(
+	root: Node | null,
+	initial: T,
+	mapper: (v: V, acc: T) => T,
+	reducer: (acc: T[]) => T,
+): T {
+	return reduceCombine(
+		root,
+		initial,
+		(acc, n) => (isValue(n) ? mapper(n as V, acc) : acc),
+		reducer,
+	);
+}
+
+export function reverse<N extends Node>(root: N | null): N | null {
+	return reduceCombine(
+		root,
+		null,
+		(prev: N | null, n): N => {
+			if (isValue(n)) {
+				n.next = prev;
+				return n as N;
+			}
+			return Node.join(prev) as N;
+		},
+		(nodes) => Node.fork(nodes.filter((n) => n != null) as N[]) as N,
+	);
 }
 
 /**
@@ -221,7 +304,7 @@ export function find<V extends Value>(
 	root: Node | null,
 	condition: (v: V) => boolean,
 ): V | null {
-	return iterate(
+	return reduceWhile(
 		root,
 		null,
 		// Select the node if it matches the condition
@@ -229,37 +312,6 @@ export function find<V extends Value>(
 		// Exit as soon as the node is found
 		(v) => v != null,
 	);
-}
-
-/**
- * Return true if every element in the dag satisfies the predicate
- */
-export function every(
-	node: Node | null,
-	predicate: (v: Value) => boolean,
-): boolean;
-export function every<V extends Value>(
-	node: Node | null,
-	predicate: (v: V) => boolean,
-): boolean;
-export function every<V extends Value>(
-	node: Node | null,
-	predicate: (v: V) => boolean,
-): boolean {
-	return iterate(
-		node,
-		true,
-		(res, t) => (isValue(t) ? res && predicate(t as V) : res),
-		// Exit on the first false result
-		(res) => !res,
-	);
-}
-
-function indentIf(r: number, cond = true) {
-	if (!cond) {
-		return '';
-	}
-	return '  '.repeat(r);
 }
 
 /**
@@ -299,7 +351,14 @@ export function toString<V extends Value>(
 	root: Node | null,
 	toStr: (v: V) => string,
 ): string {
-	const res = iterate(
+	function indentIf(r: number, cond = true) {
+		if (!cond) {
+			return '';
+		}
+		return '  '.repeat(r);
+	}
+
+	const res = reduceWhile(
 		root,
 		{ str: '', indent: -2 },
 		(acc, node, { fork, branch, index }) => {

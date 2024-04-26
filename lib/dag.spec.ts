@@ -1,7 +1,9 @@
 import dedent from 'dedent';
 import { expect } from '~/test-utils';
 import type { Value } from './dag';
-import { find, every, iterate, reduce, Node, toString } from './dag';
+import { find, reduceWhile, Node, toString, mapReduce, reverse } from './dag';
+import type { Label } from './testing';
+import { plan, branch, fork } from './testing';
 
 import { spy } from 'sinon';
 
@@ -17,7 +19,7 @@ const Element = {
 };
 
 describe('DAG', () => {
-	describe('iterate', () => {
+	describe('reduceWhile', () => {
 		it('visits every node in a DAG', () => {
 			const root = Node.fork();
 			const left = Element.of(0, 'L0');
@@ -36,36 +38,93 @@ describe('DAG', () => {
 			join.next = Element.of(6, 'N3');
 
 			const inc = spy((i) => i + 1);
-			const res = iterate(root, 0, inc);
+			const res = reduceWhile(root, 0, inc);
 
 			expect(res).to.equal(9);
 			expect(inc.getCalls().length).to.equal(9);
 		});
 	});
 
-	describe('reduce', () => {
-		it('visits every value node in a DAG', () => {
-			const root = Node.fork();
-			const left = Element.of(0, 'L0');
-			left.next = Element.of(1, 'L1');
-			left.next.next = Element.of(2, 'L2');
+	describe('mapReduce', () => {
+		it('combines the results from forking DAG', () => {
+			const root = plan()
+				.fork(branch('h', 'e', 'l', 'l', 'o'), branch('w', 'o', 'r', 'l', 'd'))
+				.root();
+			expect(
+				mapReduce(
+					root,
+					'',
+					(l: Label, s) => s + l.id,
+					(acc) => acc.join(' '),
+				),
+			).to.equal('hello world');
+		});
 
-			const join = Node.join();
-			left.next.next.next = join;
+		it('combines the results from multiple forks', () => {
+			const root = plan()
+				.fork(branch('h', 'e', 'l', 'l', 'o'), branch('m', 'y'), branch(''))
+				.fork(
+					branch('b', 'a', 'b', 'y', ','),
+					branch('d', 'a', 'r', 'l', 'i', 'n', 'g'),
+				)
+				.root();
+			expect(
+				mapReduce(
+					root,
+					'',
+					(l: Label, s) => s + l.id,
+					(acc) => acc.join(' '),
+				),
+			).to.equal('hello my baby, hello my darling');
+		});
+	});
 
-			const rght = Element.of(3, 'R0');
-			rght.next = Element.of(4, 'R1');
-			rght.next.next = Element.of(5, 'R2');
-			rght.next.next.next = join;
-			root.next = [left, rght];
+	describe('reverse', () => {
+		it('reverses linked list', () => {
+			const root = plan().actions('a', 'b', 'c', 'd').root();
+			expect(toString(reverse(root), (l: Label) => l.id)).to.deep.equal(
+				plan().actions('d', 'c', 'b', 'a').end(),
+			);
+		});
 
-			join.next = Element.of(6, 'N3');
+		it('reverses forking dag', () => {
+			const root = plan()
+				.action('a')
+				.fork(branch('b', 'c'), branch('d', 'e'))
+				.action('f')
+				.root();
+			expect(toString(reverse(root), (l: Label) => l.id)).to.deep.equal(
+				plan()
+					.action('f')
+					.fork(branch('c', 'b'), branch('e', 'd'))
+					.action('a')
+					.end(),
+			);
+		});
 
-			const inc = spy((i) => i + 1);
-			const res = reduce(root, inc, 0);
-
-			expect(res).to.equal(7);
-			expect(inc.getCalls().length).to.equal(7);
+		it('reverses complex dag', () => {
+			const root = plan()
+				.action('a')
+				.fork(
+					branch(fork(branch('b0', 'c0'), branch('b1', 'c1'))),
+					branch('d', 'e'),
+				)
+				.action('f')
+				.fork(branch('g', 'h'), branch(fork(branch('i'), branch('j'))))
+				.action('k')
+				.root();
+			expect(toString(reverse(root), (l: Label) => l.id)).to.deep.equal(
+				plan()
+					.action('k')
+					.fork(branch('h', 'g'), branch(fork(branch('i'), branch('j'))))
+					.action('f')
+					.fork(
+						branch(fork(branch('c0', 'b0'), branch('c1', 'b1'))),
+						branch('e', 'd'),
+					)
+					.action('a')
+					.end(),
+			);
 		});
 	});
 
@@ -114,31 +173,6 @@ describe('DAG', () => {
 			expect(lookup1.getCalls().length).to.equal(7);
 		});
 
-		// NOTE: the current DAG traversal algorithm is DFS, which
-		// makes this search of the first element on the graph more
-		// expensive than it needs to be, as it requires inspecting every
-		// branch. Once we find other usages for BPS, we can re-write find
-		// to use that
-		it.skip('finds first element in a branching dag', () => {
-			const root = Node.fork();
-			const left = Element.of(0, 'A');
-			left.next = Element.of(1, 'B');
-			left.next.next = Element.of(2, 'C');
-			left.next.next.next = Element.of(3, 'D');
-			const rght = Element.of(4, 'B');
-			rght.next = Element.of(5, 'C');
-			rght.next.next = Element.of(6, 'A');
-			rght.next.next.next = Element.of(7, 'D');
-			root.next = [left, rght];
-
-			expect(find(root, (n: Element) => n.data === 'C'))
-				.to.have.property('id')
-				.that.equals(5);
-			expect(find(root, (n: Element) => n.data === 'A'))
-				.to.have.property('id')
-				.that.equals(0);
-		});
-
 		it('finds element in a branching dag with continuation', () => {
 			const root = Node.fork();
 			const left = Element.of(0, 'L0');
@@ -170,18 +204,18 @@ describe('DAG', () => {
 		});
 
 		it('finds element in a DAG starting with JOIN node', () => {
-			const fork = Node.fork();
-			const root = Node.join(fork);
+			const forkNode = Node.fork();
+			const root = Node.join(forkNode);
 			const left = Element.of(0, 'A');
 
-			const join = Node.join();
-			left.next = join;
+			const joinNode = Node.join();
+			left.next = joinNode;
 
 			const rght = Element.of(0, 'B');
-			rght.next = join;
-			fork.next = [left, rght];
+			rght.next = joinNode;
+			forkNode.next = [left, rght];
 
-			join.next = Element.of(1, 'C');
+			joinNode.next = Element.of(1, 'C');
 
 			const res0 = find(root, (n: Element) => n.data === 'A');
 			expect(res0).to.not.be.null;
@@ -190,29 +224,6 @@ describe('DAG', () => {
 			const res1 = find(root, (n: Element) => n.data === 'B');
 			expect(res1).to.not.be.null;
 			expect(res1).to.have.property('data').that.equals('B');
-		});
-	});
-
-	describe('every', () => {
-		it('visits every element in the dag', () => {
-			const root = Node.fork();
-			const left = Element.of(0, 'A');
-			left.next = Element.of(1, 'B');
-			left.next.next = Element.of(2, 'C');
-			left.next.next.next = Element.of(3, 'D');
-			const rght = Element.of(4, 'B');
-			rght.next = Element.of(5, 'D');
-			rght.next.next = Element.of(6, 'E');
-			rght.next.next.next = Element.of(7, 'F');
-			root.next = [left, rght];
-
-			expect(every(root, (n: Element) => n.id < 6)).to.be.false;
-
-			const filter = spy((n: Element) => n.id < 8);
-			expect(every(root, filter)).to.be.true;
-
-			// Every node was visited
-			expect(filter.getCalls().length).to.equal(8);
 		});
 	});
 
@@ -262,8 +273,8 @@ describe('DAG', () => {
 
 		it('converts a complex dag to string representation', () => {
 			const root = Element.of(0, 'A');
-			const fork = Node.fork();
-			root.next = fork;
+			const forkNode = Node.fork();
+			root.next = forkNode;
 			const left = Element.of(0, 'B');
 			left.next = Element.of(0, 'C');
 
@@ -288,7 +299,7 @@ describe('DAG', () => {
 			rght.next = Element.of(0, 'H');
 			rght.next.next = Element.of(0, 'I');
 			rght.next.next.next = join;
-			fork.next = [left, rght];
+			forkNode.next = [left, rght];
 
 			join.next = Element.of(0, 'J');
 			join.next.next = Element.of(0, 'K');
