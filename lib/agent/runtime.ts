@@ -1,11 +1,10 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import { assert } from '../assert';
 import type { Operation } from '../operation';
 import { diff } from '../distance';
 import type { Observer, Subscription } from '../observable';
-import type { EmptyNode, Planner } from '../planner';
-import { Node, SearchFailed } from '../planner';
+import type { ActionNode, Planner, Node } from '../planner';
+import { SearchFailed } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
 import type { StrictTarget } from '../target';
@@ -15,6 +14,8 @@ import { observe } from './observe';
 
 import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
+
+import * as DAG from '../dag';
 
 /**
  * Internal error
@@ -151,47 +152,34 @@ export class Runtime<TState> {
 		}
 	}
 
-	private async runPlan(
-		node: Node<TState> | null,
-	): Promise<undefined | EmptyNode<TState>> {
+	private async runPlan(node: Node<TState> | null) {
 		const { logger } = this.opts;
 
-		if (node == null) {
-			return;
-		}
+		return await DAG.mapReduce(
+			node,
+			Promise.resolve(),
+			async (v: ActionNode<TState>, prev) => {
+				// Wait for the previous action to complete
+				await prev;
 
-		if (Node.isAction(node)) {
-			const { action } = node;
+				const { action } = v;
 
-			if (this.stopped) {
-				throw new Cancelled();
-			}
+				if (this.stopped) {
+					throw new Cancelled();
+				}
 
-			if (!action.condition(this.stateRef._)) {
-				throw new ActionConditionFailed(action);
-			}
+				if (!action.condition(this.stateRef._)) {
+					throw new ActionConditionFailed(action);
+				}
 
-			logger.info(`${action.description}: running ...`);
-			await this.runAction(action);
-			logger.info(`${action.description}: success`);
-
-			return await this.runPlan(node.next);
-		}
-
-		if (Node.isFork(node)) {
-			// Run children in parallel. Continue following the plan when reaching the
-			// empty node only for one of the branches
-			const [empty] = await Promise.all(node.next.map((n) => this.runPlan(n)));
-
-			// There should always be at least one branch in the fork because
-			// of the way the planner is implemented
-			assert(empty !== undefined);
-
-			return await this.runPlan(empty.next);
-		}
-
-		// We return the node
-		return node;
+				logger.info(`${action.description}: running ...`);
+				await this.runAction(action);
+				logger.info(`${action.description}: success`);
+			},
+			async (actions) => {
+				await Promise.all(actions);
+			},
+		);
 	}
 
 	start() {
@@ -201,25 +189,13 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		const flatten = <T>(
-			node: Node<T> | null,
-			accum: string[],
-		): Node<T> | null => {
-			if (node == null) {
-				return null;
-			}
-
-			if (Node.isAction(node)) {
-				accum.push(node.action.description);
-				return flatten(node.next, accum);
-			}
-
-			if (Node.isFork(node)) {
-				const [next] = node.next.map((n) => flatten(n, accum));
-				return flatten(next, accum);
-			}
-
-			return node.next;
+		const flatten = <T>(node: Node<T> | null) => {
+			return DAG.mapReduce(
+				node,
+				[],
+				(a: ActionNode<T>, acc: string[]) => acc.concat([a.action.description]),
+				(s) => ([] as string[]).concat(...s),
+			);
 		};
 
 		this.promise = (async () => {
@@ -245,10 +221,8 @@ export class Runtime<TState> {
 						};
 					}
 
-					const plan: string[] = [];
-					flatten(start, plan);
 					logger.debug('plan found, will execute the following actions:');
-					plan.map((action) => logger.debug('-', action));
+					flatten(start).map((action) => logger.debug('-', action));
 
 					// Execute the plan
 					await this.runPlan(start);
