@@ -171,14 +171,14 @@ export function reduceWhile<T, N extends Node>(
 
 // Traverse the DAG following branches of a forking node in parallel
 // and combining results after
-function iterParallel<V extends Value, F extends Fork, J extends Join, T>(
+function iterParallel<V extends Value, T>(
 	root: Node | null,
 	initial: T,
-	reducer: (acc: T, n: V | F, coords: Coords) => T,
-	combiner: (acc: T[], n: J) => T,
+	reducer: (acc: T, n: V | Fork, coords: Coords) => T,
+	combiner: (acc: T[], n: Join) => T,
 	coords: Coords = { fork: 0, branch: 0, index: 0, depth: 0 },
 ): Visitor<T> {
-	type N = V | F | J;
+	type N = V | Fork | Join;
 	if (root == null) {
 		return { done: true, acc: initial };
 	}
@@ -199,7 +199,7 @@ function iterParallel<V extends Value, F extends Fork, J extends Join, T>(
 
 	if (isFork(root)) {
 		// Call the reducer with the fork node first
-		initial = reducer(initial, root as F, coords);
+		initial = reducer(initial, root, coords);
 
 		// Then call each branch independently
 		const ends = root.next.map((n, branch) =>
@@ -220,7 +220,7 @@ function iterParallel<V extends Value, F extends Fork, J extends Join, T>(
 		// join node
 		const acc = combiner(
 			ends.map((r) => r.acc),
-			res.node as J,
+			res.node,
 		);
 
 		return iterParallel(res.node.next as N, acc, reducer, combiner, {
@@ -237,14 +237,14 @@ function iterParallel<V extends Value, F extends Fork, J extends Join, T>(
 	return { done: false, node: root, acc: initial };
 }
 
-function reduceCombine<V extends Value, F extends Fork, J extends Join, T>(
+function reduceCombine<V extends Value, T>(
 	root: Node | null,
 	initial: T,
-	reducer: (acc: T, n: V | F, coords: Coords) => T,
-	combiner: (acc: T[], n: J) => T,
+	reducer: (acc: T, n: V | Fork, coords: Coords) => T,
+	combiner: (acc: T[], n: Join) => T,
 ): T {
 	// The any below is because typescript is being weird in interpreting the types
-	const res = iterParallel(root, initial, reducer as any, combiner);
+	const res = iterParallel(root, initial, reducer, combiner);
 	return res.acc;
 }
 
@@ -392,14 +392,20 @@ export function toString<V extends Value>(
 	return res.str.trim();
 }
 
+export function createFork(next: Node[] = []): Fork {
+	return { _tag: 'fork', next };
+}
+
+export function createJoin(next: Node | null = null): Join {
+	return { _tag: 'join', next };
+}
+
+export function createValue<T extends object>(data: T): Value & T {
+	return { _tag: 'value', next: null, ...data };
+}
+
 export const Node = {
-	value<T extends object>(data: T): Value & T {
-		return { _tag: 'value', next: null, ...data };
-	},
-	fork(next: Node[] = []): Fork {
-		return { _tag: 'fork', next };
-	},
-	join(next: Node | null = null): Join {
-		return { _tag: 'join', next };
-	},
+	value: createValue,
+	fork: createFork,
+	join: createJoin,
 };

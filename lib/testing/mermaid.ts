@@ -1,17 +1,13 @@
 import { createHash } from 'crypto';
 
-import type {
-	PlanningEvent,
-	PlanningError,
-	EmptyNode,
-	ActionNode,
-	ForkNode,
-} from '../planner';
+import type { PlanningEvent, PlanningError } from '../planner';
 import { SearchFailed } from '../planner';
 import type { Instruction } from '../task';
 import { Method, Action } from '../task';
-import { Node } from '../planner';
+import { PlanAction } from '../planner';
 import { assert } from '../assert';
+
+import * as DAG from '../dag';
 
 function htmlEncode(s: string) {
 	return s.replace(/"/g, () => '&quot;');
@@ -26,7 +22,7 @@ function hash(o: any) {
 
 function instructionId(s: any, i: Method | Action): string {
 	if (Action.is(i)) {
-		const n = Node.of(s, i);
+		const n = PlanAction.from(s, i);
 		return n.id;
 	}
 
@@ -44,31 +40,31 @@ interface DiagramNode {
 	isAction(): boolean;
 }
 
-function fromNode<T>(n: EmptyNode<T> | null, map: DiagramAdjacency): undefined;
+function fromNode(n: DAG.Join | null, map: DiagramAdjacency): undefined;
 function fromNode<T>(
-	n: ActionNode<T> | ForkNode<T>,
+	n: PlanAction<T> | DAG.Fork,
 	map: DiagramAdjacency,
 ): DiagramNode;
-function fromNode<T>(
-	n: Node<T> | null,
+function fromNode(
+	n: DAG.Node | null,
 	map: DiagramAdjacency,
 ): DiagramNode | undefined;
-function fromNode<T>(
-	node: Node<T> | null,
-	map: DiagramAdjacency,
+function fromNode(
+	node: DAG.Node | null,
+	adj: DiagramAdjacency,
 ): DiagramNode | undefined {
 	if (node == null) {
 		return;
 	}
 
-	if (Node.isAction(node)) {
+	if (PlanAction.is(node)) {
 		// Action nodes always have a parent on the diagram
-		const parent = map.get(DiagramNode.fromId(node.id));
+		const parent = adj.get(DiagramNode.fromId(node.id));
 		return DiagramNode.action(node, parent.id);
 	}
 
-	if (Node.isFork(node)) {
-		const actions = node.next.filter(Node.isAction);
+	if (DAG.isFork(node)) {
+		const actions = node.next.filter(PlanAction.is);
 		if (actions.length > 0) {
 			// In this case we just use id of the first action in the
 			// fork as we really should not have multiple fork nodes in the
@@ -76,9 +72,9 @@ function fromNode<T>(
 			return DiagramNode.fromId(`j${actions[0].id.substring(0, 7)}`);
 		}
 
-		const forks = node.next.filter(Node.isFork);
+		const forks = node.next.filter(DAG.isFork);
 		if (forks.length > 0) {
-			const ids = forks.map((f) => fromNode(f, map)).map((n) => n.id);
+			const ids = forks.map((f) => fromNode(f, adj)).map((n) => n!.id);
 			return DiagramNode.fromId(hash(ids));
 		}
 
@@ -107,7 +103,7 @@ const DiagramNode = {
 		return DiagramNode.fromId(`d${depth}`);
 	},
 
-	action<T>(n: ActionNode<T>, parentId: string) {
+	action<T>(n: PlanAction<T>, parentId: string) {
 		return {
 			id: n.id,
 			toString() {
@@ -124,7 +120,7 @@ const DiagramNode = {
 	instruction<T>(s: T, i: Instruction<T, any, any>, parentId?: string) {
 		if (Action.is(i)) {
 			assert(parentId != null);
-			const n = Node.of(s, i);
+			const n = PlanAction.from(s, i);
 			return DiagramNode.action(n, parentId);
 		}
 
@@ -195,10 +191,10 @@ class Diagram {
 
 	private drawJoins(
 		child: DiagramNode,
-		prev: Node<any> | null,
+		prev: DAG.Node | null,
 		first = true,
 	): DiagramNode | undefined {
-		if (prev == null || !(Node.isFork(prev) || Node.isAction(prev))) {
+		if (prev == null || !(DAG.isFork(prev) || PlanAction.is(prev))) {
 			return;
 		}
 
@@ -215,7 +211,7 @@ class Diagram {
 			}
 		}
 
-		if (Node.isAction(prev)) {
+		if (PlanAction.is(prev)) {
 			if (!first) {
 				this.graph.push(`	${pNode} -.- ${child}`);
 				this.adjacency.set(child, pNode);
@@ -238,23 +234,23 @@ class Diagram {
 	}
 
 	drawPlan(
-		node: Node<any> | null,
+		node: DAG.Node | null,
 		prev: DiagramNode,
-	): [EmptyNode<any>, DiagramNode] | undefined {
+	): [DAG.Join, DiagramNode] | undefined {
 		if (node == null) {
 			// If we reached the end of the plan, add a stop node
 			this.graph.push(`	${prev} --> ${DiagramNode.stop()}`);
 			return;
 		}
 
-		if (Node.isAction(node)) {
+		if (PlanAction.is(node)) {
 			const parent = this.adjacency.get(DiagramNode.fromId(node.id));
 			const child = DiagramNode.action(node, parent.id);
 			this.graph.push(`	${prev} --> ${child}`, `	${child}:::selected`);
 			return this.drawPlan(node.next, child);
 		}
 
-		if (Node.isFork(node)) {
+		if (DAG.isFork(node)) {
 			const join = DiagramNode.fromNode(node, this.adjacency);
 			const fork = DiagramNode.fromId('f' + join.id);
 			this.graph.push(`	${prev} --> ${fork}(( ))`, `	${fork}:::selected`);
@@ -270,7 +266,7 @@ class Diagram {
 		}
 
 		// If the node is an empty node, ignore it
-		return [node, prev];
+		return [node as DAG.Join, prev];
 	}
 
 	onStart(): DiagramNode {

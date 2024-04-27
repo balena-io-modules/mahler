@@ -9,8 +9,7 @@ import { Pointer } from '../pointer';
 import { Ref } from '../ref';
 import type { Action, Instruction, Task } from '../task';
 import { Method, MethodExpansion } from '../task';
-import type { ActionNode } from './node';
-import { Node } from './node';
+import { PlanAction } from './node';
 import type { Plan } from './plan';
 import type { PlannerConfig } from './types';
 import {
@@ -43,12 +42,12 @@ function tryAction<TState = any>(
 	assert(initialPlan.success);
 
 	// Generate an id for the potential node
-	const node = Node.of(initialPlan.state, action);
+	const node = PlanAction.from(initialPlan.state, action);
 	const id = node.id;
 
 	// Detect loops in the plan
 	if (
-		DAG.find(initialPlan.start, (a: ActionNode<TState>) => a.id === id) != null
+		DAG.find(initialPlan.start, (a: PlanAction<TState>) => a.id === id) != null
 	) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
@@ -69,7 +68,7 @@ function tryAction<TState = any>(
 	}
 
 	// We create the plan reversed so we can backtrack easily
-	const start = DAG.Node.value({ id, action, next: initialPlan.start });
+	const start = DAG.createValue({ id, action, next: initialPlan.start });
 
 	return {
 		success: true,
@@ -181,7 +180,7 @@ function tryParallel<TState = any>(
 		return initialPlan;
 	}
 
-	const empty = Node.empty(initialPlan.start);
+	const empty = DAG.createJoin(initialPlan.start);
 
 	const plan: Plan<TState> = {
 		...initialPlan,
@@ -222,7 +221,7 @@ function tryParallel<TState = any>(
 		// empty node created earlier
 		const last = DAG.find(
 			branch.start,
-			(a: ActionNode<TState>) => a.next === empty,
+			(a: PlanAction<TState>) => a.next === empty,
 		);
 
 		assert(last != null);
@@ -263,7 +262,7 @@ function tryParallel<TState = any>(
 	}
 
 	// We add the fork node
-	const start = Node.fork(results.map((r) => r.start!));
+	const start = DAG.createFork(results.map((r) => r.start!));
 
 	// Since we already checked conflicts, we can just concat the changes
 	const pendingChanges = results.reduce(

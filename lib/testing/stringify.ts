@@ -1,4 +1,4 @@
-import type { Plan, ActionNode } from '../planner';
+import type { Plan, PlanAction } from '../planner';
 import { toString } from '../dag';
 
 /**
@@ -31,5 +31,5 @@ export function stringify<T>(p: Plan<T>): string {
 		throw new Error('Plan not found');
 	}
 
-	return toString(p.start, (a: ActionNode<T>) => a.action.description);
+	return toString(p.start, (a: PlanAction<T>) => a.action.description);
 }

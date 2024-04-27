@@ -1,14 +1,15 @@
 import { createHash } from 'crypto';
 
-import type { Action } from '../task';
+import { Action } from '../task';
 import { Pointer } from '../pointer';
 
-import * as dag from '../dag';
+import type { Join, Fork } from '../dag';
+import * as DAG from '../dag';
 
 /**
  * An action node defines an executable step of a plan
  */
-export interface ActionNode<TState> extends dag.Value {
+export interface PlanAction<TState> extends DAG.Value {
 	/**
 	 * Unique id for the node. This is calculated from the
 	 * action metadata and the current runtime state expected
@@ -20,46 +21,21 @@ export interface ActionNode<TState> extends dag.Value {
 	 * The action to execute
 	 */
 	readonly action: Action<TState, any, any>;
+}
 
+export type PlanNode<TState> = PlanAction<TState> | Fork | Join;
+
+function isPlanAction<TState>(n: DAG.Node): n is PlanAction<TState> {
+	return (
+		DAG.isValue(n) && (n as any).action != null && Action.is((n as any).action)
+	);
+}
+
+export const PlanAction = {
 	/**
-	 * The next step in the plan.
+	 * Create a new Plan action node from a given action and a state
 	 */
-	next: Node<TState> | null;
-}
-
-/**
- * A fork node defines a branching in the plan created
- * by the existence of a parallel task. A fork node can
- * have zero or more next nodes.
- */
-export interface ForkNode<TState> extends dag.Fork {
-	next: Array<Node<TState>>;
-}
-
-/**
- * An empty node is a node that doesn't specify a specific action but can be
- * use to indicate an empty step at the start of the plan, or a joining of the branches
- * created by the split node.
- */
-export interface EmptyNode<TState> extends dag.Join {
-	next: Node<TState> | null;
-}
-
-export type Node<TState> =
-	| ActionNode<TState>
-	| ForkNode<TState>
-	| EmptyNode<TState>;
-
-function isActionNode<TState>(n: Node<TState>): n is ActionNode<TState> {
-	return dag.isValue(n);
-}
-
-function isForkNode<TState>(n: Node<TState>): n is ForkNode<TState> {
-	return dag.isFork(n);
-}
-
-export const Node = {
-	of<TState>(s: TState, a: Action<TState, any, any>): ActionNode<TState> {
+	from<TState>(s: TState, a: Action<TState, any, any>): PlanAction<TState> {
 		// We don't use the full state to calculate the
 		// id as there may be changes in the state that have nothing
 		// to do with the action. We just use the part of the state
@@ -81,18 +57,11 @@ export const Node = {
 			)
 			.digest('hex');
 
-		return dag.Node.value({
+		return DAG.createValue({
 			id,
 			action: a,
 			next: null,
 		});
 	},
-	empty<TState>(next: Node<TState> | null): EmptyNode<TState> {
-		return dag.Node.join(next) as EmptyNode<TState>;
-	},
-	fork<TState>(next: Array<Node<TState>>): ForkNode<TState> {
-		return dag.Node.fork(next) as ForkNode<TState>;
-	},
-	isAction: isActionNode,
-	isFork: isForkNode,
+	is: isPlanAction,
 };

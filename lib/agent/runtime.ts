@@ -3,7 +3,7 @@ import { setTimeout as delay } from 'timers/promises';
 import type { Operation } from '../operation';
 import { diff } from '../distance';
 import type { Observer, Subscription } from '../observable';
-import type { ActionNode, Planner, Node } from '../planner';
+import type { PlanAction, Planner, PlanNode } from '../planner';
 import { SearchFailed } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
@@ -152,13 +152,13 @@ export class Runtime<TState> {
 		}
 	}
 
-	private async runPlan(node: Node<TState> | null) {
+	private async runPlan(node: PlanNode<TState> | null) {
 		const { logger } = this.opts;
 
 		return await DAG.mapReduce(
 			node,
 			Promise.resolve(),
-			async (v: ActionNode<TState>, prev) => {
+			async (v: PlanAction<TState>, prev) => {
 				// Wait for the previous action to complete
 				await prev;
 
@@ -189,11 +189,11 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		const flatten = <T>(node: Node<T> | null) => {
+		const flatten = <T>(node: PlanNode<T> | null) => {
 			return DAG.mapReduce(
 				node,
 				[],
-				(a: ActionNode<T>, acc: string[]) => acc.concat([a.action.description]),
+				(a: PlanAction<T>, acc: string[]) => acc.concat([a.action.description]),
 				(s) => ([] as string[]).concat(...s),
 			);
 		};
