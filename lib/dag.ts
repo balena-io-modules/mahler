@@ -163,6 +163,16 @@ function reduceWhile<T, N extends Node>(
 	return res.acc;
 }
 
+export function reduce<T, V extends Value>(
+	node: Node | null,
+	reducer: (acc: T, v: V) => T,
+	initial: T,
+): T {
+	return reduceWhile(node, initial, (acc, n) =>
+		isValue(n) ? reducer(acc, n as V) : acc,
+	);
+}
+
 // Traverse the DAG following branches of a forking node in parallel
 // and combining results after
 function traverseCombine<V extends Value, T>(

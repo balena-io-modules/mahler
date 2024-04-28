@@ -190,11 +190,10 @@ export class Runtime<TState> {
 		const { logger } = this.opts;
 
 		const flatten = <T>(node: PlanNode<T> | null) => {
-			return DAG.mapReduce(
+			return DAG.reduce(
 				node,
+				(acc: string[], a: PlanAction<T>) => acc.concat([a.action.description]),
 				[],
-				(a: PlanAction<T>, acc: string[]) => acc.concat([a.action.description]),
-				(s) => ([] as string[]).concat(...s),
 			);
 		};
 

@@ -1,7 +1,7 @@
 import dedent from 'dedent';
 import { expect } from '~/test-utils';
 import type { Value } from './dag';
-import { find, Node, toString, mapReduce, reverse } from './dag';
+import { find, Node, toString, mapReduce, reverse, reduce } from './dag';
 import type { Label } from './testing';
 import { plan, branch, fork } from './testing';
 
@@ -19,6 +19,31 @@ const Element = {
 };
 
 describe('DAG', () => {
+	describe('reduce', () => {
+		it('combines the results from forking DAG', () => {
+			const root = plan()
+				.fork(
+					branch('h', 'e', 'l', 'l', 'o'),
+					branch(',', ' '),
+					branch('w', 'o', 'r', 'l', 'd'),
+				)
+				.root();
+			expect(reduce(root, (s, l: Label) => s + l.id, '')).to.equal(
+				'hello, world',
+			);
+		});
+
+		it('combines the results from multiple forks', () => {
+			const root = plan()
+				.fork(branch('h', 'e', 'l', 'l', 'o'), branch(',', ' '))
+				.fork(branch('i', 't', "'", 's'), branch(' '), branch('m', 'e'))
+				.root();
+			expect(reduce(root, (s, l: Label) => s + l.id, '')).to.equal(
+				"hello, it's me",
+			);
+		});
+	});
+
 	describe('mapReduce', () => {
 		it('combines the results from forking DAG', () => {
 			const root = plan()
