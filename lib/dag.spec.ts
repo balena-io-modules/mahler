@@ -1,7 +1,7 @@
 import dedent from 'dedent';
 import { expect } from '~/test-utils';
 import type { Value } from './dag';
-import { find, reduceWhile, Node, toString, mapReduce, reverse } from './dag';
+import { find, Node, toString, mapReduce, reverse } from './dag';
 import type { Label } from './testing';
 import { plan, branch, fork } from './testing';
 
@@ -19,32 +19,6 @@ const Element = {
 };
 
 describe('DAG', () => {
-	describe('reduceWhile', () => {
-		it('visits every node in a DAG', () => {
-			const root = Node.fork();
-			const left = Element.of(0, 'L0');
-			left.next = Element.of(1, 'L1');
-			left.next.next = Element.of(2, 'L2');
-
-			const join = Node.join();
-			left.next.next.next = join;
-
-			const rght = Element.of(3, 'R0');
-			rght.next = Element.of(4, 'R1');
-			rght.next.next = Element.of(5, 'R2');
-			rght.next.next.next = join;
-			root.next = [left, rght];
-
-			join.next = Element.of(6, 'N3');
-
-			const inc = spy((i) => i + 1);
-			const res = reduceWhile(root, 0, inc);
-
-			expect(res).to.equal(9);
-			expect(inc.getCalls().length).to.equal(9);
-		});
-	});
-
 	describe('mapReduce', () => {
 		it('combines the results from forking DAG', () => {
 			const root = plan()
@@ -160,6 +134,10 @@ describe('DAG', () => {
 			rght.next.next = Element.of(6, 'R2');
 			rght.next.next.next = Element.of(7, 'R3');
 			root.next = [left, rght];
+
+			const join = Node.join();
+			left.next.next.next.next = join;
+			rght.next.next.next.next = join;
 
 			const res = find(root, (n: Element) => n.data === '10');
 			expect(res).to.be.null;

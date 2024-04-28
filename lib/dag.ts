@@ -66,7 +66,7 @@ interface Coords {
 // Utility function to visit every node in the DAG in a
 // depth first fashion, applying a reducer function to every
 // node
-function iter<T, N extends Node>(
+function traverse<T, N extends Node>(
 	root: Node | null,
 	initial: T,
 	reducer: (acc: T, n: N, coords: Coords) => T,
@@ -87,11 +87,17 @@ function iter<T, N extends Node>(
 	}
 
 	if (isValue(root)) {
-		return iter(root.next, reducer(initial, root as N, coords), reducer, exit, {
-			...coords,
-			index: coords.index + 1,
-			depth: coords.depth + 1,
-		});
+		return traverse(
+			root.next,
+			reducer(initial, root as N, coords),
+			reducer,
+			exit,
+			{
+				...coords,
+				index: coords.index + 1,
+				depth: coords.depth + 1,
+			},
+		);
 	}
 
 	// Process the node, we need to increase the fork index before
@@ -100,7 +106,7 @@ function iter<T, N extends Node>(
 		initial = reducer(initial, root as N, coords);
 		let res = null;
 		for (const [index, bNode] of root.next.entries()) {
-			const r = iter(bNode, initial, reducer, exit, {
+			const r = traverse(bNode, initial, reducer, exit, {
 				...coords,
 				index: 0,
 				branch: index,
@@ -124,16 +130,16 @@ function iter<T, N extends Node>(
 			next = res.node.next;
 		}
 
-		return iter(next, initial, reducer, exit, {
+		return traverse(next, initial, reducer, exit, {
 			...coords,
-			depth: coords.depth + 1,
+			depth: coords.depth + 2,
 		});
 	}
 
 	// if the first node of the graph is a JOIN then
 	// we just ignore it
 	if (coords.depth === 0) {
-		return iter(root.next, initial, reducer, exit, coords);
+		return traverse(root.next, initial, reducer, exit, coords);
 	}
 
 	return { done: false, node: root, acc: initial };
@@ -147,36 +153,24 @@ function iter<T, N extends Node>(
  * reached, branches are traversed in order until a join node (or a null) is found
  * before continuing with the following branch
  */
-export function reduceWhile<T>(
-	node: Node | null,
-	initial: T,
-	reducer?: (acc: T, n: Node, c: Coords) => T,
-	exit?: (acc: T) => boolean,
-): T;
-export function reduceWhile<T, N extends Node>(
-	node: N | null,
-	initial: T,
-	reducer?: (acc: T, n: N, c: Coords) => T,
-	exit?: (acc: T) => boolean,
-): T;
-export function reduceWhile<T, N extends Node>(
+function reduceWhile<T, N extends Node>(
 	node: N | null,
 	initial: T,
 	reducer: (acc: T, n: N, c: Coords) => T = (acc) => acc,
 	exit: (acc: T) => boolean = () => false,
 ): T {
-	const res = iter(node, initial, reducer, exit);
+	const res = traverse(node, initial, reducer, exit);
 	return res.acc;
 }
 
 // Traverse the DAG following branches of a forking node in parallel
 // and combining results after
-function iterParallel<V extends Value, T>(
+function traverseCombine<V extends Value, T>(
 	root: Node | null,
 	initial: T,
-	reducer: (acc: T, n: V | Fork, coords: Coords) => T,
+	reducer: (acc: T, n: V | Fork) => T,
 	combiner: (acc: T[], n: Join) => T,
-	coords: Coords = { fork: 0, branch: 0, index: 0, depth: 0 },
+	depth = 0,
 ): Visitor<T> {
 	type N = V | Fork | Join;
 	if (root == null) {
@@ -184,32 +178,22 @@ function iterParallel<V extends Value, T>(
 	}
 
 	if (isValue(root)) {
-		return iterParallel(
+		return traverseCombine(
 			root.next as N,
-			reducer(initial, root as V, coords),
+			reducer(initial, root as V),
 			reducer,
 			combiner,
-			{
-				...coords,
-				index: coords.index + 1,
-				depth: coords.depth + 1,
-			},
+			depth + 1,
 		);
 	}
 
 	if (isFork(root)) {
 		// Call the reducer with the fork node first
-		initial = reducer(initial, root, coords);
+		initial = reducer(initial, root);
 
 		// Then call each branch independently
-		const ends = root.next.map((n, branch) =>
-			iterParallel(n as N, initial, reducer, combiner, {
-				...coords,
-				index: 0,
-				branch,
-				fork: coords.fork + 1,
-				depth: coords.depth + 1,
-			}),
+		const ends = root.next.map((n) =>
+			traverseCombine(n as N, initial, reducer, combiner, depth + 1),
 		);
 
 		assert(ends.length > 0, 'Malformed DAG found, empty Fork node');
@@ -223,15 +207,18 @@ function iterParallel<V extends Value, T>(
 			res.node,
 		);
 
-		return iterParallel(res.node.next as N, acc, reducer, combiner, {
-			...coords,
-			depth: coords.depth + 1,
-		});
+		return traverseCombine(
+			res.node.next as N,
+			acc,
+			reducer,
+			combiner,
+			depth + 2,
+		);
 	}
 
 	// If the first node of the graph is a join, we ignore it
-	if (coords.depth === 0) {
-		return iterParallel(root.next as N, initial, reducer, combiner, coords);
+	if (depth === 0) {
+		return traverseCombine(root.next as N, initial, reducer, combiner, depth);
 	}
 
 	return { done: false, node: root, acc: initial };
@@ -240,11 +227,11 @@ function iterParallel<V extends Value, T>(
 function reduceCombine<V extends Value, T>(
 	root: Node | null,
 	initial: T,
-	reducer: (acc: T, n: V | Fork, coords: Coords) => T,
+	reducer: (acc: T, n: V | Fork) => T,
 	combiner: (acc: T[], n: Join) => T,
 ): T {
 	// The any below is because typescript is being weird in interpreting the types
-	const res = iterParallel(root, initial, reducer, combiner);
+	const res = traverseCombine(root, initial, reducer, combiner);
 	return res.acc;
 }
 
