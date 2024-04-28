@@ -9,8 +9,7 @@ import { Pointer } from '../pointer';
 import { Ref } from '../ref';
 import type { Action, Instruction, Task } from '../task';
 import { Method, MethodExpansion } from '../task';
-import type { EmptyNode } from './node';
-import { Node } from './node';
+import { PlanAction } from './node';
 import type { Plan } from './plan';
 import type { PlannerConfig } from './types';
 import {
@@ -21,6 +20,7 @@ import {
 	SearchFailed,
 } from './types';
 import { isTaskApplicable } from './utils';
+import * as DAG from '../dag';
 
 interface PlanningState<TState = any> {
 	distance: Distance<TState>;
@@ -33,23 +33,6 @@ interface PlanningState<TState = any> {
 	maxSearchDepth: number;
 }
 
-function findLoop<T>(id: string, node: Node<T> | null): boolean {
-	if (node == null) {
-		return false;
-	}
-
-	if (Node.isAction(node)) {
-		return node.id === id || findLoop(id, node.next);
-	}
-
-	if (Node.isFork(node)) {
-		return node.next.some((n) => findLoop(id, n));
-	}
-
-	// If the node is empty, ignore it
-	return false;
-}
-
 function tryAction<TState = any>(
 	action: Action<TState>,
 	{ initialPlan, callStack = [] }: PlanningState<TState>,
@@ -59,11 +42,13 @@ function tryAction<TState = any>(
 	assert(initialPlan.success);
 
 	// Generate an id for the potential node
-	const node = Node.of(initialPlan.state, action);
+	const node = PlanAction.from(initialPlan.state, action);
 	const id = node.id;
 
 	// Detect loops in the plan
-	if (findLoop(id, initialPlan.start)) {
+	if (
+		DAG.find(initialPlan.start, (a: PlanAction<TState>) => a.id === id) != null
+	) {
 		return { success: false, stats: initialPlan.stats, error: LoopDetected };
 	}
 
@@ -83,7 +68,7 @@ function tryAction<TState = any>(
 	}
 
 	// We create the plan reversed so we can backtrack easily
-	const start = { id, action, next: initialPlan.start };
+	const start = DAG.createValue({ id, action, next: initialPlan.start });
 
 	return {
 		success: true,
@@ -167,29 +152,6 @@ function findConflict(
 	}
 }
 
-function findTail<TState = any>(
-	empty: EmptyNode<TState>,
-	node: Node<TState> | null,
-) {
-	if (node == null) {
-		return null;
-	}
-
-	if (Node.isAction(node)) {
-		if (node.next === empty) {
-			return node;
-		}
-		return findTail(empty, node.next);
-	}
-
-	if (Node.isFork(node)) {
-		return findTail(empty, node.next[0]);
-	}
-
-	// The current node should not be the empty node we are looking for
-	return findTail(empty, node.next);
-}
-
 function tryParallel<TState = any>(
 	parallel: Method<TState>,
 	{
@@ -218,7 +180,7 @@ function tryParallel<TState = any>(
 		return initialPlan;
 	}
 
-	const empty = Node.empty(initialPlan.start);
+	const empty = DAG.createJoin(initialPlan.start);
 
 	const plan: Plan<TState> = {
 		...initialPlan,
@@ -255,7 +217,12 @@ function tryParallel<TState = any>(
 	// and connect the last action in the branch directly to the existing plan
 	if (results.length === 1) {
 		const branch = results[0];
-		const last = findTail(empty, branch.start);
+		// Find the first node for which the next element is the
+		// empty node created earlier
+		const last = DAG.find(
+			branch.start,
+			(a: PlanAction<TState>) => a.next === empty,
+		);
 
 		assert(last != null);
 
@@ -295,7 +262,7 @@ function tryParallel<TState = any>(
 	}
 
 	// We add the fork node
-	const start = Node.fork(results.map((r) => r.start!));
+	const start = DAG.createFork(results.map((r) => r.start!));
 
 	// Since we already checked conflicts, we can just concat the changes
 	const pendingChanges = results.reduce(

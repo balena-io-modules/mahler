@@ -1,34 +1,5 @@
-import type { Plan } from '../planner';
-import { Node } from '../planner';
-
-import { DAG } from './dag';
-
-function toDAG<T>(n: Node<T> | null, s: DAG): Node<T> | null {
-	if (n == null) {
-		return null;
-	}
-
-	if (Node.isAction(n)) {
-		s.push(n.action.description);
-		return toDAG(n.next, s);
-	}
-
-	if (Node.isFork(n)) {
-		const branches: DAG[] = [];
-		let next: Node<T> | null = null;
-		for (const branch of n.next) {
-			const br: DAG = [];
-			branches.push(br);
-
-			next = toDAG(branch, br);
-		}
-		s.push(branches);
-
-		return toDAG(next, s);
-	}
-
-	return n.next;
-}
+import type { Plan, PlanAction } from '../planner';
+import { toString } from '../dag';
 
 /**
  * Returns a compact string representation of the plan, useful for debugging
@@ -60,8 +31,5 @@ export function stringify<T>(p: Plan<T>): string {
 		throw new Error('Plan not found');
 	}
 
-	const plan: DAG = [];
-	toDAG(p.start, plan);
-
-	return DAG.toString(plan);
+	return toString(p.start, (a: PlanAction<T>) => a.action.description);
 }

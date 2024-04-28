@@ -2,7 +2,7 @@ import type { Operation } from 'lib/operation';
 import type { Target } from '../target';
 import type { Instruction, Method } from '../task';
 
-import type { Node } from './node';
+import type { PlanNode } from './node';
 
 /**
  * Stats about the planning process
@@ -44,7 +44,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The last node in the plan
 			 */
-			prev: Node<TState> | null;
+			prev: PlanNode<TState> | null;
 			/**
 			 * The current state at this planning stage
 			 */
@@ -73,7 +73,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The previous node in the plan
 			 */
-			prev: Node<TState> | null;
+			prev: PlanNode<TState> | null;
 
 			/**
 			 * The instruction chosen
@@ -102,7 +102,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The last node added to the plan
 			 */
-			prev: Node<TState> | null;
+			prev: PlanNode<TState> | null;
 	  }
 	| {
 			/**
@@ -113,7 +113,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The start node of the plan
 			 */
-			start: Node<TState> | null;
+			start: PlanNode<TState> | null;
 	  }
 	| {
 			/**

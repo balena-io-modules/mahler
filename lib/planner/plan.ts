@@ -1,4 +1,4 @@
-import type { Node } from './node';
+import type { PlanNode } from './node';
 import type { PlanningStats, PlanningError } from './types';
 
 import type { Operation } from 'mahler-wasm';
@@ -14,7 +14,7 @@ export type Plan<TState> =
 			 * The initial step in the plan. If the start
 			 * node is null, that means the plan is empty.
 			 */
-			start: Node<TState> | null;
+			start: PlanNode<TState> | null;
 
 			/**
 			 * The expected state at the end of the plan. This is
