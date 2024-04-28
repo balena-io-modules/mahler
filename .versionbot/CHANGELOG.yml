@@ -1,4 +1,82 @@
 - commits:
+    - subject: Expose `reduce` function on the DAG module
+      hash: 2db3f077da03d2c39f5f9b8f3ba9e0b9338e71dd
+      body: |
+        It's a simpler alternative to mapReduce when all is needed is sequential
+        evaluation of the DAG
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Refactor planner node module to use DAG types
+      hash: fbd24537688ea6842a66f3663e3e351e79de3f0b
+      body: |
+        Replace usage of specific planner ForkNode and EmptyNode with the
+        general Fork and Join from DAG. Rename planner `Node` and `ActionNode`
+        to `PlanNode` and `PlanAction` for better readability.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Use DAG operations in agent runtime
+      hash: 2f34d845df225e3faa049ad0195871f4bad054c3
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Use DAG.reverse in planner
+      hash: ea5efa9ee31d9649e4a9dbdd654f4a6119b8b4d7
+      body: |
+        This replaces the reversePlan method with DAG.reverse which is the more
+        generic version and is also better tested.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Add mapReduce and reverse methods to DAG
+      hash: e63bf046a8d06baa29459bd0b58593999ea2df07
+      body: |
+        These two operations rely on parallel traversal and will be used to
+        replace operations in the planner and the agent
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Generate real DAGs using the PlanBuilder interface
+      hash: ea8015b44990bb9ef37cf9ef5ed71ac18e10aa80
+      body: |
+        Before this interface would use an alternative DAG representation to
+        simplify the plan creation.
+
+        Actually generating plans means that we can use the plan builder to
+        test DAG algorithms as well.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Use dag module in planner and testing modules
+      hash: fcd6bf06ee1b86379f96260140faa0e7726e12a7
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Create generic DAG interface and methods
+      hash: 991ae3a905f86b13fb0eb2c05e099a86cd698b22
+      body: |
+        Operations like DAG traversal and modifications are re-written many
+        times on this library, and none of them are tested properly. This
+        creates an internal DAG library to be able to reduce operations
+        also reducing code
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 3.4.0
+  title: ""
+  date: 2024-04-28T19:56:27.997Z
+- commits:
     - subject: Add test utility to run a task
       hash: dec36689c8b617fa7455d548d2c96867dea8b952
       body: |
