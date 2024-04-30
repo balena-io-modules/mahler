@@ -1,4 +1,30 @@
 - commits:
+    - subject: Use parallel plan representation when debugging
+      hash: 59d9fa9f35a8e617c1d7e08cdd662dbf2ee06026
+      body: |
+        This makes logs clearer about the sequence of operations
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Settle parallel branches before re-planning
+      hash: 6f04dcf321b9f23fd079a7580bdcf85a499cdc6e
+      body: |
+        The agent runtime now runs parallel branches with `Promise.allSettled`
+        instead of `Promise.all`. After the execution is finished, if any of
+        the branches returns a failure, the plan execution is interrupted and
+        re-planning proceeds. This prevents moving on too soon when a failure is
+        encountered and causing unnecessary re-plans. This also moves logging
+        earlier in the plan execution to get feedback as soon as an action is
+        executed successfully or it fails.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.4.1
+  title: ""
+  date: 2024-04-30T22:38:06.694Z
+- commits:
     - subject: Expose `reduce` function on the DAG module
       hash: 2db3f077da03d2c39f5f9b8f3ba9e0b9338e71dd
       body: |
