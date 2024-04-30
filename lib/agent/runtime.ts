@@ -240,14 +240,6 @@ export class Runtime<TState> {
 
 		const { logger } = this.opts;
 
-		const flatten = <T>(node: PlanNode<T> | null) => {
-			return DAG.reduce(
-				node,
-				(acc: string[], a: PlanAction<T>) => acc.concat([a.action.description]),
-				[],
-			);
-		};
-
 		this.promise = (async () => {
 			this.running = true;
 
@@ -272,7 +264,9 @@ export class Runtime<TState> {
 					}
 
 					logger.debug('plan found, will execute the following actions:');
-					flatten(start).map((action) => logger.debug('-', action));
+					DAG.toString(start, (a: PlanAction<TState>) => a.action.description)
+						.split('\n')
+						.map((action) => logger.debug(action));
 
 					// Execute the plan
 					await this.runPlan(start);
