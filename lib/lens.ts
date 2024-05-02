@@ -16,6 +16,14 @@ export type LensContext<TState, TPath extends PathType> = LensWithSlash<
 	object
 >;
 
+/**
+ * The arguments from the lens
+ */
+export type LensArgs<TState, TPath extends PathType> = Omit<
+	LensContext<TState, TPath>,
+	'target' | 'path'
+>;
+
 // A lens to evaluate paths starting with a slash
 type LensWithSlash<
 	TChildState,
@@ -183,5 +191,6 @@ function createLens<TState, TPath extends PathType>(
 
 export const Lens = {
 	context,
+	args: params,
 	from: createLens,
 };
