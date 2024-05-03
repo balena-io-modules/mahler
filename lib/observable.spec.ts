@@ -176,6 +176,24 @@ describe('Observable', () => {
 		subscriber.unsubscribe();
 	});
 
+	it('allows filtering values', async () => {
+		const o = interval(10).filter((x) => x % 2 === 0);
+
+		// Add a subscriber
+		const next = stub();
+		const subscriber = o.subscribe(next);
+
+		await clock.tickAsync(50);
+
+		// Only now the sensor function should be called
+		expect(next).to.have.been.calledThrice;
+		expect(next).to.have.been.calledWith(0);
+		expect(next).to.have.been.calledWith(2);
+		expect(next).to.have.been.calledWith(4);
+
+		subscriber.unsubscribe();
+	});
+
 	it('propagates errors', async () => {
 		const letters = Observable.from(
 			(function* () {

@@ -19,7 +19,17 @@ export interface Subscribable<T> {
 }
 
 export interface Observable<T> extends Subscribable<T> {
+	/**
+	 * Transform a stream of values passing it through
+	 * a mapping function
+	 */
 	map<U>(f: (t: T) => U): Observable<U>;
+
+	/**
+	 * Create a new stream only for values that match a
+	 * certain filtering function
+	 */
+	filter(f: (t: T) => boolean): Observable<T>;
 }
 
 /**
@@ -110,7 +120,7 @@ function isSyncIterable<T>(x: unknown): x is Iterable<T> {
 	return x != null && typeof x === 'object' && Symbol.iterator in x;
 }
 
-function iIterable<T>(x: unknown): x is AsyncIterable<T> | Iterable<T> {
+function isIterable<T>(x: unknown): x is AsyncIterable<T> | Iterable<T> {
 	return (
 		x != null &&
 		typeof x === 'object' &&
@@ -209,7 +219,7 @@ function multiplexIterable<T>(input: Iterable<T> | AsyncIterable<T>) {
 
 function from<T>(input: ObservableInput<T>): Observable<T> {
 	let items: () => AsyncIterable<T>;
-	if (iIterable(input)) {
+	if (isIterable(input)) {
 		items = multiplexIterable(input);
 	}
 	const self: Observable<T> = {
@@ -253,6 +263,9 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 		map<U>(f: (t: T) => U): Observable<U> {
 			return from(map(self, f));
 		},
+		filter(f: (t: T) => boolean): Observable<T> {
+			return from(filter(self, f));
+		},
 	};
 
 	return self;
@@ -264,6 +277,17 @@ function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
 			return o.subscribe({
 				...subscriber,
 				next: (t) => subscriber.next(f(t)),
+			});
+		},
+	};
+}
+
+function filter<T>(o: Subscribable<T>, f: (t: T) => boolean): Subscribable<T> {
+	return {
+		subscribe(subscriber: Observer<T>): Subscription {
+			return o.subscribe({
+				...subscriber,
+				next: (t) => f(t) && subscriber.next(t),
 			});
 		},
 	};
@@ -282,4 +306,5 @@ export const Observable = {
 	from,
 	is,
 	map,
+	filter,
 };
