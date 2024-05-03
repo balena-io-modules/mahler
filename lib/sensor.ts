@@ -16,7 +16,8 @@ export type SensorFn<T, P extends PathType = '/'> = (
 	args: LensArgs<T, P>,
 ) =>
 	| AsyncGenerator<Lens<T, P>, never | void | Lens<T, P>, void>
-	| Generator<Lens<T, P>, never | void, void | undefined>;
+	| Generator<Lens<T, P>, never | void, void | undefined>
+	| Subscribable<Lens<T, P>>;
 
 /**
  * A sensor receives a reference to a global state and
