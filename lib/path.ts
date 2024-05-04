@@ -64,7 +64,12 @@ function from<const T extends string | string[]>(p: T): Path<T> {
 	return res as Path<T>;
 }
 
+function join<T extends string | string[]>(p: Path, s: T) {
+	return from(split(p).concat(s));
+}
+
 export const Path = {
 	from,
 	split,
+	join,
 };
