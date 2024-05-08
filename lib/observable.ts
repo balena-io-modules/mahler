@@ -1,3 +1,5 @@
+import { promisify } from 'util';
+
 export type Next<T> = (t: T) => void;
 
 export interface Observer<T> {
@@ -272,6 +274,9 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 }
 
 function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
+	// QUESTION: should we memoize f so it's called at most once with
+	// each value? Currently, it will be N*M times where N is the number of subscriptors
+	// and M is the number of calls per subscriptor
 	return {
 		subscribe(subscriber: Observer<U>): Subscription {
 			return o.subscribe({
@@ -301,10 +306,30 @@ function is<T>(x: unknown): x is Observable<T> {
 	return isSubscribable<T>(x) && typeof (x as any).map === 'function';
 }
 
+/**
+ * Utility function to return a value on an interval.
+ * This is a useful observable to build new observables from
+ */
+export function interval(periodMs: number): Observable<number> {
+	// We use promisify instead of `timers/promises` because it works
+	// works for testing with sinon faketimers
+	const sleep = promisify(setTimeout);
+	return Observable.from(
+		(async function* () {
+			let i = 0;
+			while (true) {
+				await sleep(periodMs);
+				yield i++;
+			}
+		})(),
+	);
+}
+
 export const Observable = {
 	of,
 	from,
 	is,
 	map,
 	filter,
+	interval,
 };

@@ -6,6 +6,9 @@ import { Sensor } from './sensor';
 import { stub } from 'sinon';
 
 import { setTimeout } from 'timers/promises';
+import { Observable } from './observable';
+import * as memoizee from 'memoizee';
+import { UNDEFINED } from './target';
 
 describe('Agent', () => {
 	describe('basic operations', () => {
@@ -387,6 +390,231 @@ describe('Agent', () => {
 			]);
 
 			agent.stop();
+		});
+	});
+
+	// A more complex example that the heater, for a multi-room
+	// temperature control system
+	describe('Climate controller', () => {
+		type ClimateControl = {
+			[room: string]: { temperature: number; heaterOn: boolean };
+		};
+		const INITIAL_STATE: ClimateControl = {
+			office: { temperature: 15, heaterOn: false },
+			bedroom: { temperature: 15, heaterOn: false },
+		};
+		const buildingState = structuredClone(INITIAL_STATE);
+
+		// Reset the state before each test
+		beforeEach(() => {
+			Object.assign(buildingState, INITIAL_STATE);
+		});
+
+		// Memoize the update function so it's called at most per counter
+		// eslint-disable-next-line
+		const updateTemp = memoizee((_) =>
+			Object.fromEntries(
+				Object.entries(buildingState).map(([roomName, roomState]) =>
+					roomState.heaterOn
+						? [roomName, ++roomState.temperature]
+						: [roomName, --roomState.temperature],
+				),
+			),
+		);
+
+		// Global monitor of temperature
+		// this simulates temperature change on rooms of a building
+		// the temperature of each room will drop 1 degree every
+		// 10ms if the heater is off and increase 1 degree if heater is on
+		const climateMonitor = Observable.interval(10).map(updateTemp);
+
+		const roomSensor = Sensor.of<ClimateControl>().from({
+			lens: '/:room/temperature',
+			sensor: ({ room }) => climateMonitor.map((climate) => climate[room]),
+		});
+
+		const turnOn = Task.of<ClimateControl>().from({
+			lens: '/:room',
+			condition: (room, { target }) =>
+				room.temperature < target.temperature && !room.heaterOn,
+			effect(room, { target }) {
+				// Turning the resistor on does not change the temperature
+				// immediately, but the effect is that the temperature eventually
+				// will reach that point
+				room._.temperature = target.temperature;
+				room._.heaterOn = true;
+			},
+			async action(room) {
+				room._.heaterOn = true;
+			},
+			description: ({ room }) => `turn heater on in ${room}`,
+		});
+
+		const turnOff = Task.of<ClimateControl>().from({
+			lens: '/:room',
+			condition: (room, { target }) =>
+				room.temperature > target.temperature && room.heaterOn,
+			effect(room, { target }) {
+				// Turning the resistor on does not change the temperature
+				// immediately, but the effect is that the temperature eventually
+				// will reach that point
+				room._.temperature = target.temperature;
+				room._.heaterOn = false;
+			},
+			async action(room) {
+				room._.heaterOn = false;
+			},
+			description: ({ room }) => `turn heater off in ${room}`,
+		});
+
+		const wait = Task.of<ClimateControl>().from({
+			lens: '/:room',
+			condition: (room, { target }) =>
+				// We have not reached the target but the resistor is already off
+				(room.temperature > target.temperature && !room.heaterOn) ||
+				// We have not reached the target but the resistor is already on
+				(room.temperature < target.temperature && room.heaterOn),
+			effect: (room, { target }) => {
+				room._.temperature = target.temperature;
+			},
+			action: NoAction,
+			description: ({ room, target }) =>
+				`wait for temperature in ${room} to reach ${target.temperature}`,
+		});
+
+		const addRoom = Task.of<ClimateControl>().from({
+			op: 'create',
+			lens: '/:room',
+			effect(room, { target }) {
+				room._ = target;
+			},
+		});
+
+		const removeRoom = Task.of<ClimateControl>().from({
+			op: 'delete',
+			lens: '/:room',
+			effect() {
+				/* noop */
+			},
+		});
+
+		it('should allow controlling the tempereture of a single room', async () => {
+			const climateControl = Agent.from({
+				initial: INITIAL_STATE,
+				tasks: [turnOn, turnOff, wait, addRoom],
+				sensors: [roomSensor],
+				opts: { minWaitMs: 10, logger },
+			});
+
+			climateControl.subscribe((s) => {
+				// Update the building state when
+				// the agent state changes
+				Object.assign(buildingState, s);
+			});
+
+			climateControl.seek({ bedroom: { temperature: 20 } });
+			await expect(climateControl.wait(300)).to.be.fulfilled;
+			expect(climateControl.state().bedroom).to.deep.equal({
+				temperature: 20,
+				heaterOn: true,
+			});
+
+			climateControl.stop();
+			await setTimeout(50);
+		});
+
+		it('should allow controlling the temperature of multiple rooms', async () => {
+			const climateControl = Agent.from({
+				initial: INITIAL_STATE,
+				tasks: [turnOn, turnOff, wait, addRoom],
+				sensors: [roomSensor],
+				opts: { minWaitMs: 10, logger },
+			});
+
+			climateControl.subscribe((s) => {
+				// Update the building state when
+				// the agent state changes
+				Object.assign(buildingState, s);
+			});
+
+			// This is not a great example, because if the target for both
+			// rooms is not the same, then the controller will keep iterating
+			// as temperature will never settle
+			climateControl.seek({
+				bedroom: { temperature: 20 },
+				office: { temperature: 20 },
+			});
+			await expect(climateControl.wait(300)).to.be.fulfilled;
+			expect(climateControl.state()).to.deep.equal({
+				bedroom: { temperature: 20, heaterOn: true },
+				office: { temperature: 20, heaterOn: true },
+			});
+
+			climateControl.stop();
+			await setTimeout(50);
+		});
+
+		it('should allow controlling the temperature of a new room', async () => {
+			const climateControl = Agent.from({
+				initial: INITIAL_STATE,
+				tasks: [turnOn, turnOff, wait, addRoom],
+				sensors: [roomSensor],
+				opts: { minWaitMs: 10, logger },
+			});
+
+			climateControl.subscribe((s) => {
+				// Update the building state when
+				// the agent state changes
+				Object.assign(buildingState, s);
+			});
+
+			// This is not a great example, because if the target for both
+			// rooms is not the same, then the controller will keep iterating
+			// as temperature will never settle
+			climateControl.seek({
+				studio: { temperature: 20 },
+			});
+			await expect(climateControl.wait(300)).to.be.fulfilled;
+			expect(climateControl.state().studio).to.deep.equal({
+				temperature: 20,
+				heaterOn: true,
+			});
+
+			climateControl.stop();
+			await setTimeout(50);
+		});
+
+		it('should allow removing a room and still control temperature', async () => {
+			const climateControl = Agent.from({
+				initial: INITIAL_STATE,
+				tasks: [turnOn, turnOff, wait, addRoom, removeRoom],
+				sensors: [roomSensor],
+				opts: { minWaitMs: 10, logger },
+			});
+
+			climateControl.subscribe((s) => {
+				// Update the building state when
+				// the agent state changes
+				Object.assign(buildingState, s);
+			});
+
+			// This is not a great example, because if the target for both
+			// rooms is not the same, then the controller will keep iterating
+			// as temperature will never settle
+			climateControl.seek({
+				bedroom: { temperature: 20 },
+				office: UNDEFINED,
+			});
+			await expect(climateControl.wait(300)).to.be.fulfilled;
+			expect(climateControl.state()).to.deep.equal({
+				bedroom: {
+					temperature: 20,
+					heaterOn: true,
+				},
+			});
+
+			climateControl.stop();
+			await setTimeout(50);
 		});
 	});
 });

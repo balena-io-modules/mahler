@@ -16,6 +16,9 @@ import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
 
 import * as DAG from '../dag';
+import { Path } from '../path';
+import { Lens } from '../lens';
+import { Pointer } from 'lib/pointer';
 
 class ActionError extends Error {
 	constructor(
@@ -81,7 +84,7 @@ export class Runtime<TState> {
 
 	private running = false;
 	private stopped = false;
-	private subscribed: Subscription[] = [];
+	private subscriptions: Record<Path, Subscription> = {};
 	private stateRef: Ref<TState>;
 
 	constructor(
@@ -89,27 +92,13 @@ export class Runtime<TState> {
 		state: TState,
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
-		sensors: Array<Sensor<TState>>,
+		private readonly sensors: Array<Sensor<TState, Path>>,
 		private readonly opts: AgentOpts,
 		private readonly strict: boolean,
 	) {
 		this.stateRef = Ref.of(state);
-		// add subscribers to sensors
-		this.subscribed = sensors.map((sensor) =>
-			sensor(this.stateRef).subscribe((s) => {
-				// There is no need to update the state reference as the sensor already
-				// modifies the state. We don't handle concurrency as we expect that whatever
-				// value modified by sensologrs does not conflict with the value modified by
-				// actions
-				if (opts.follow) {
-					// Trigger a re-plan to see if the state is still on target
-					this.start();
-				} else {
-					// Notify the observer of the new state
-					this.observer.next(s);
-				}
-			}),
-		);
+		// Perform actions based on the new state
+		this.onStateChange(Path.from('/'));
 	}
 
 	public get state() {
@@ -167,6 +156,51 @@ export class Runtime<TState> {
 		return result;
 	}
 
+	private onStateChange(changedPath: Path) {
+		// for every existing subscription, check if the path still
+		// exists, if it doesn't unsusbcribe
+		(Object.keys(this.subscriptions) as Path[])
+			.filter((p) => Lens.startsWith(p, changedPath))
+			.forEach((p) => {
+				const parent = Pointer.from(this.stateRef._, Path.source(p));
+				// If the parent does not exist or the key does not exist
+				// then delete the sensor
+				if (parent == null || !Object.hasOwn(parent, Path.basename(p))) {
+					this.subscriptions[p].unsubscribe();
+					delete this.subscriptions[p];
+				}
+			});
+
+		// For every sensor, find the applicable paths
+		// under the changed path
+		const sApplicablePaths = this.sensors.map((sensor) => ({
+			sensor,
+			paths: Lens.findAll(this.stateRef._, sensor.lens, changedPath),
+		}));
+
+		// for every sensor, see if there are new elements
+		// matching the sensor path, if there are, subscribe
+		for (const { sensor, paths } of sApplicablePaths) {
+			for (const p of paths) {
+				if (p in this.subscriptions) {
+					continue;
+				}
+				this.subscriptions[p] = sensor(this.stateRef, p).subscribe((s) => {
+					// There is no need to update the state reference as the sensor already
+					// modifies the state. We don't handle concurrency as we assume sensors
+					// do not conflict with each other (should we check?)
+					if (this.opts.follow) {
+						// Trigger a re-plan to see if the state is still on target
+						this.start();
+					} else {
+						// Notify the observer of the new state
+						this.observer.next(s);
+					}
+				});
+			}
+		}
+	}
+
 	private async runPlan(root: PlanNode<TState> | null) {
 		const { logger } = this.opts;
 
@@ -197,6 +231,7 @@ export class Runtime<TState> {
 					// if an error occurs
 					logger.info(`${action.description}: running ...`);
 					await observe(action, this.observer)(this.stateRef);
+					this.onStateChange(action.path); // update the state of the runtime
 					logger.info(`${action.description}: success`);
 				} catch (e) {
 					logger.error(`${action.description}: failed`, e);
@@ -342,7 +377,7 @@ export class Runtime<TState> {
 		await this.promise;
 
 		// Unsubscribe from sensors
-		this.subscribed.forEach((s) => s.unsubscribe());
+		Object.values(this.subscriptions).forEach((s) => s.unsubscribe());
 	}
 
 	async wait(timeout = 0): Promise<Result<TState>> {

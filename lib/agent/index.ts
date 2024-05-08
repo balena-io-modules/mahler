@@ -9,6 +9,7 @@ import type { Task } from '../task';
 import { Runtime } from './runtime';
 import type { AgentOpts, Result } from './types';
 import { NotStarted } from './types';
+import type { Path } from '../path';
 
 export * from './types';
 
@@ -176,13 +177,13 @@ function from<TState>(
 		| {
 				initial: TState;
 				planner?: Planner<TState>;
-				sensors?: Array<Sensor<TState>>;
+				sensors?: Array<Sensor<TState, Path>>;
 				opts?: DeepPartial<AgentOpts>;
 		  }
 		| {
 				initial: TState;
 				tasks?: Array<Task<TState, any, any>>;
-				sensors?: Array<Sensor<TState>>;
+				sensors?: Array<Sensor<TState, Path>>;
 				opts?: DeepPartial<AgentOpts>;
 		  },
 ): Agent<TState>;
@@ -199,7 +200,7 @@ function from<TState>({
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	planner?: Planner<TState>;
-	sensors?: Array<Sensor<TState>>;
+	sensors?: Array<Sensor<TState, Path>>;
 	opts?: DeepPartial<AgentOpts>;
 }): Agent<TState> {
 	const opts: AgentOpts = {
@@ -220,10 +221,12 @@ function from<TState>({
 	assert(opts.maxWaitMs > 0, 'opts.maxWaitMs must be greater than 0');
 	assert(opts.minWaitMs > 0, 'opts.minWaitMs must be greater than 0');
 
-	const subject: Subject<TState> = new Subject();
+	// Isolate the local state from the user input
+	state = structuredClone(state);
 
 	// Subscribe to runtime changes to keep
 	// the local copy of state up-to-date
+	const subject: Subject<TState> = new Subject();
 	subject.subscribe((s) => {
 		state = s;
 	});

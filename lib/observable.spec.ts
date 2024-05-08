@@ -1,21 +1,7 @@
 import { expect } from '~/test-utils';
-import { Observable } from './observable';
-import { promisify } from 'util';
+import { Observable, interval } from './observable';
 
 import { stub, useFakeTimers } from 'sinon';
-
-const interval = (period: number): Observable<number> => {
-	const sleep = promisify(setTimeout);
-	return Observable.from(
-		(async function* () {
-			let i = 0;
-			while (true) {
-				await sleep(period);
-				yield i++;
-			}
-		})(),
-	);
-};
 
 describe('Observable', () => {
 	let clock: sinon.SinonFakeTimers;

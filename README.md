@@ -1122,7 +1122,6 @@ Now, these tasks define the behaviour of our agent under certain conditions, but
 // Sensor.of<Heater>.from works here too
 const temperature = Heater.sensor({
 	// The sensor returns values to set the path given by the lens below
-	// (no lens variables supported in this case)
 	lens: '/roomTemp',
 	// The sensor is a generator function that yields values obtained from
 	// the measuring hardware
@@ -1214,7 +1213,7 @@ const agent = Agent.from({
 });
 ```
 
-Passing a `trace` function to the agent will allow to get structured feedback of the planning progress. The rest of the functions (debug, info, warn,error) are called only by the agent runtime with textual information with different levels of detail. We intend to move to an [open telemetry](https://github.com/balena-io-modules/mahler/issues/40) for standardized logging.
+Passing a `trace` function to the agent will allow to get structured feedback of the planning progress. The rest of the functions (debug, info, warn,error) are called only by the agent runtime with textual information with different levels of detail.
 
 ## Troubleshooting
 
