@@ -18,7 +18,7 @@ import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
 import * as DAG from '../dag';
 import { Path } from '../path';
 import { Lens } from '../lens';
-import { Pointer } from 'lib/pointer';
+import { Pointer } from '../pointer';
 
 class ActionError extends Error {
 	constructor(
