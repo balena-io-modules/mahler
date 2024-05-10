@@ -1,4 +1,4 @@
-import type { Operation } from 'lib/operation';
+import type { Operation } from '../operation';
 import type { Target } from '../target';
 import type { Instruction, Method } from '../task';
 
