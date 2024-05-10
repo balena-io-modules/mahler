@@ -1,4 +1,16 @@
 - commits:
+    - subject: Fix import paths using `lib/*`
+      hash: 29e6263223b1008d37b0745441184969b425ec19
+      body: |
+        These import paths will not work after building the module.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 3.5.1
+  title: ""
+  date: 2024-05-10T15:12:10.378Z
+- commits:
     - subject: Update sensor subscription at runtime init
       hash: db777322f9f75fc0e50e2c1b4439bc1e27973c2b
       body: |
