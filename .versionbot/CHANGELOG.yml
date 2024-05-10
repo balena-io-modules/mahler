@@ -1,4 +1,67 @@
 - commits:
+    - subject: Update sensor subscription at runtime init
+      hash: db777322f9f75fc0e50e2c1b4439bc1e27973c2b
+      body: |
+        With dynamic sensors, the runtime now only subscribes to sensors whose
+        lenses match an existing property in the current state. If a property
+        does not exist, the sensor is not used.
+
+        Similarly, when the state changes, the runtime now checks for
+        subscriptions that are no longer applicable, or new sensors that
+        should be subscribed to and updates its internal state of subscriptions.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add lens utilities
+      hash: 750b2a1818886aef92da90120914c13dbba6dde9
+      body: |
+        This adds lens utilities to
+
+        - Check if the starting part o a lens matches another
+        - Get all elements of an object that match a given lens
+
+        Both these utilities will be helpful when creating/destroying dynamic
+        sensors
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Allow using observables for sensors
+      hash: 7765144494622b64396e6e90d905403e03ae00d9
+      body: |
+        This is useful for creating agent sensors on some data coming from a
+        stream values
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Add `filter` operation to Observable
+      hash: e4c88f4f3f9a2c4a0dfde340464d16b18487c057
+      body: |
+        The filter operation allows to create a new stream of values by
+        filtering an existing stream over a function. This can be used by
+        sensors to create alternative sensors based on the same stream
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Allow lens variables for Sensor constructor
+      hash: 0ad37629b891c37287f3f1bf80493332d899ca77
+      body: |
+        This is a first step in allowing sensors to be created dynamically on
+        the Agent when a new matching property is created/removed. Think of the
+        case where we want a new sensor whenever a new object is created (like a
+        process) in order to track state changes of that sub-element of the
+        global state.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+  version: 3.5.0
+  title: ""
+  date: 2024-05-10T03:19:25.794Z
+- commits:
     - subject: Use parallel plan representation when debugging
       hash: 59d9fa9f35a8e617c1d7e08cdd662dbf2ee06026
       body: |
