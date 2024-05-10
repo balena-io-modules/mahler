@@ -1,52 +1,70 @@
 import { expect } from '~/test-utils';
 import { Pointer } from './pointer';
+import { Path } from './path';
 
 describe('Pointer', () => {
 	describe('of', () => {
 		it('calculates the pointer to the path', () => {
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/a'),
+				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, Path.from('/a')),
 			).to.equal(1);
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/b'),
+				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, Path.from('/b')),
 			).to.deep.equal({ c: 2, d: { e: 'hello' } });
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/b/c'),
+				Pointer.from(
+					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
+					Path.from('/b/c'),
+				),
 			).to.equal(2);
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/b/d'),
+				Pointer.from(
+					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
+					Path.from('/b/d'),
+				),
 			).to.deep.equal({ e: 'hello' });
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/b/d/e'),
+				Pointer.from(
+					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
+					Path.from('/b/d/e'),
+				),
 			).to.deep.equal('hello');
 			expect(
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/'),
+				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, Path.from('/')),
 			).to.deep.equal({ a: 1, b: { c: 2, d: { e: 'hello' } } });
 
-			expect(Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/x')).to.be
-				.undefined;
-			expect(Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/b/d/x'))
-				.to.be.undefined;
+			expect(
+				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, Path.from('/x')),
+			).to.be.undefined;
+			expect(
+				Pointer.from(
+					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
+					Path.from('/b/d/x'),
+				),
+			).to.be.undefined;
 			expect(() =>
-				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, '/a/b/x'),
+				Pointer.from(
+					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
+					Path.from('/a/b/x'),
+				),
 			).to.throw;
 		});
 
 		it('calculates the pointer to a path in an array', () => {
-			expect(Pointer.from([1, 2, 3], '')).to.deep.equal([1, 2, 3]);
-			expect(Pointer.from([1, 2, 3], '/')).to.deep.equal([1, 2, 3]);
-			expect(Pointer.from([1, 2, 3], '/0')).to.equal(1);
-			expect(Pointer.from([1, 2, 3], '/1')).to.equal(2);
-			expect(Pointer.from({ a: [1, 2, 3] }, '/a/1')).to.equal(2);
-			expect(() => Pointer.from({ a: [1, 2, 3] }, '/a/b')).to.throw;
-			expect(Pointer.from({ a: [1, 2, { b: 'hello' }] }, '/a/2')).to.deep.equal(
-				{
-					b: 'hello',
-				},
-			);
-			expect(Pointer.from({ a: [1, 2, { b: 'hello' }] }, '/a/2/b')).to.equal(
-				'hello',
-			);
+			expect(Pointer.from([1, 2, 3], Path.from(''))).to.deep.equal([1, 2, 3]);
+			expect(Pointer.from([1, 2, 3], Path.from('/'))).to.deep.equal([1, 2, 3]);
+			expect(Pointer.from([1, 2, 3], Path.from('/0'))).to.equal(1);
+			expect(Pointer.from([1, 2, 3], Path.from('/1'))).to.equal(2);
+			expect(Pointer.from({ a: [1, 2, 3] }, Path.from('/a/1'))).to.equal(2);
+			expect(() => Pointer.from({ a: [1, 2, 3] }, Path.from('/a/b'))).to.throw;
+			expect(
+				Pointer.from({ a: [1, 2, { b: 'hello' }] }, Path.from('/a/2')),
+			).to.deep.equal({
+				b: 'hello',
+			});
+			expect(
+				Pointer.from({ a: [1, 2, { b: 'hello' }] }, Path.from('/a/2/b')),
+			).to.equal('hello');
 		});
 	});
 });

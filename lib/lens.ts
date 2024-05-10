@@ -16,6 +16,14 @@ export type LensContext<TState, TPath extends PathType> = LensWithSlash<
 	object
 >;
 
+/**
+ * The arguments from the lens
+ */
+export type LensArgs<TState, TPath extends PathType> = Omit<
+	LensContext<TState, TPath>,
+	'target' | 'path'
+>;
+
 // A lens to evaluate paths starting with a slash
 type LensWithSlash<
 	TChildState,
@@ -181,7 +189,126 @@ function createLens<TState, TPath extends PathType>(
 	return Pointer.from(s, p) as Lens<TState, TPath>;
 }
 
+/**
+ * Test if a lens given as first argument starts
+ * with the path given as second argument
+ */
+function startsWith<TPath extends PathType>(
+	lens: Path<TPath>,
+	path: Path,
+): boolean {
+	const pathParts = Path.split(path);
+	const lensParts = Path.split(lens);
+
+	// There will never be a match in this case
+	// no point in searching
+	if (lensParts.length < pathParts.length) {
+		return false;
+	}
+
+	// Find the starting context comparing the
+	// initial path with the lens
+	for (const k of pathParts) {
+		// We know the key cannot be undefined because
+		// of the length comparison before
+		const key = lensParts.shift()!;
+
+		// If the keys don't match terminate the search
+		if (!key.startsWith(':') && k !== key) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+ * Find all elements of the given state object that match
+ * the lens, starting at `initialPath`
+ *
+ * This function never throws, if the lens does not
+ * start with the initial path or there are no matches
+ * the function will return an empty array
+ */
+function findAll<
+	TState,
+	TPath extends PathType,
+	TStartPath extends PathType = '/',
+>(
+	state: TState,
+	lens: Path<TPath>,
+	initialPath: Path<TStartPath> = Path.from('/') as Path<TStartPath>,
+): Path[] {
+	const initialParts = Path.split(initialPath);
+	const lensParts = Path.split(lens);
+
+	// There will never be a match in this case
+	// no point in searching
+	if (lensParts.length < initialParts.length) {
+		return [];
+	}
+
+	let initialTarget: any = state;
+	// Find the starting context comparing the
+	// initial path with the lens
+	for (const k of initialParts) {
+		// No point in continuing the search in this case
+		if (initialTarget == null || typeof initialTarget !== 'object') {
+			return [];
+		}
+
+		// We know the key cannot be undefined because
+		// of the length comparison before
+		const key = lensParts.shift()!;
+
+		// If the key starts with `:` we continue searching
+		if (!key.startsWith(':') && (k !== key || !(k in initialTarget))) {
+			// The initial path does not match the lens or
+			// the state
+			return [];
+		}
+		initialTarget = initialTarget[k];
+	}
+
+	let contextList: Array<LensContext<TState, Path>> = [
+		{ target: initialTarget, path: initialPath },
+	];
+
+	for (const key of lensParts) {
+		contextList = contextList.flatMap(({ target, path }) => {
+			// This is not a valid search path so we ignore it
+			if (target == null || typeof target !== 'object') {
+				return [];
+			}
+
+			if (key.startsWith(':')) {
+				// If the key is a varible, we need to add all sub elements
+				// of the current object
+				return Object.entries(target).map(([k, v]) => ({
+					target: v,
+					path: Path.join(path, k),
+				}));
+			} else if (key in target) {
+				// Otherwise just return the subelement of
+				// the current object
+				return [
+					{
+						target: (target as any)[key],
+						path: Path.join(path, key),
+					},
+				];
+			} else {
+				return [];
+			}
+		});
+	}
+
+	return contextList.map(({ path }) => path);
+}
+
 export const Lens = {
 	context,
+	args: params,
 	from: createLens,
+	findAll,
+	startsWith,
 };

@@ -1,21 +1,7 @@
 import { expect } from '~/test-utils';
-import { Observable } from './observable';
-import { promisify } from 'util';
+import { Observable, interval } from './observable';
 
 import { stub, useFakeTimers } from 'sinon';
-
-const interval = (period: number): Observable<number> => {
-	const sleep = promisify(setTimeout);
-	return Observable.from(
-		(async function* () {
-			let i = 0;
-			while (true) {
-				await sleep(period);
-				yield i++;
-			}
-		})(),
-	);
-};
 
 describe('Observable', () => {
 	let clock: sinon.SinonFakeTimers;
@@ -166,6 +152,24 @@ describe('Observable', () => {
 		const subscriber = o.subscribe(next);
 
 		await clock.tickAsync(30);
+
+		// Only now the sensor function should be called
+		expect(next).to.have.been.calledThrice;
+		expect(next).to.have.been.calledWith(0);
+		expect(next).to.have.been.calledWith(2);
+		expect(next).to.have.been.calledWith(4);
+
+		subscriber.unsubscribe();
+	});
+
+	it('allows filtering values', async () => {
+		const o = interval(10).filter((x) => x % 2 === 0);
+
+		// Add a subscriber
+		const next = stub();
+		const subscriber = o.subscribe(next);
+
+		await clock.tickAsync(50);
 
 		// Only now the sensor function should be called
 		expect(next).to.have.been.calledThrice;

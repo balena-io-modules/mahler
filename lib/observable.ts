@@ -1,3 +1,5 @@
+import { promisify } from 'util';
+
 export type Next<T> = (t: T) => void;
 
 export interface Observer<T> {
@@ -19,7 +21,17 @@ export interface Subscribable<T> {
 }
 
 export interface Observable<T> extends Subscribable<T> {
+	/**
+	 * Transform a stream of values passing it through
+	 * a mapping function
+	 */
 	map<U>(f: (t: T) => U): Observable<U>;
+
+	/**
+	 * Create a new stream only for values that match a
+	 * certain filtering function
+	 */
+	filter(f: (t: T) => boolean): Observable<T>;
 }
 
 /**
@@ -110,7 +122,7 @@ function isSyncIterable<T>(x: unknown): x is Iterable<T> {
 	return x != null && typeof x === 'object' && Symbol.iterator in x;
 }
 
-function iIterable<T>(x: unknown): x is AsyncIterable<T> | Iterable<T> {
+function isIterable<T>(x: unknown): x is AsyncIterable<T> | Iterable<T> {
 	return (
 		x != null &&
 		typeof x === 'object' &&
@@ -209,7 +221,7 @@ function multiplexIterable<T>(input: Iterable<T> | AsyncIterable<T>) {
 
 function from<T>(input: ObservableInput<T>): Observable<T> {
 	let items: () => AsyncIterable<T>;
-	if (iIterable(input)) {
+	if (isIterable(input)) {
 		items = multiplexIterable(input);
 	}
 	const self: Observable<T> = {
@@ -253,17 +265,34 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 		map<U>(f: (t: T) => U): Observable<U> {
 			return from(map(self, f));
 		},
+		filter(f: (t: T) => boolean): Observable<T> {
+			return from(filter(self, f));
+		},
 	};
 
 	return self;
 }
 
 function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
+	// QUESTION: should we memoize f so it's called at most once with
+	// each value? Currently, it will be N*M times where N is the number of subscriptors
+	// and M is the number of calls per subscriptor
 	return {
 		subscribe(subscriber: Observer<U>): Subscription {
 			return o.subscribe({
 				...subscriber,
 				next: (t) => subscriber.next(f(t)),
+			});
+		},
+	};
+}
+
+function filter<T>(o: Subscribable<T>, f: (t: T) => boolean): Subscribable<T> {
+	return {
+		subscribe(subscriber: Observer<T>): Subscription {
+			return o.subscribe({
+				...subscriber,
+				next: (t) => f(t) && subscriber.next(t),
 			});
 		},
 	};
@@ -277,9 +306,30 @@ function is<T>(x: unknown): x is Observable<T> {
 	return isSubscribable<T>(x) && typeof (x as any).map === 'function';
 }
 
+/**
+ * Utility function to return a value on an interval.
+ * This is a useful observable to build new observables from
+ */
+export function interval(periodMs: number): Observable<number> {
+	// We use promisify instead of `timers/promises` because it works
+	// works for testing with sinon faketimers
+	const sleep = promisify(setTimeout);
+	return Observable.from(
+		(async function* () {
+			let i = 0;
+			while (true) {
+				await sleep(periodMs);
+				yield i++;
+			}
+		})(),
+	);
+}
+
 export const Observable = {
 	of,
 	from,
 	is,
 	map,
+	filter,
+	interval,
 };

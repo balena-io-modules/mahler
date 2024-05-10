@@ -64,7 +64,41 @@ function from<const T extends string | string[]>(p: T): Path<T> {
 	return res as Path<T>;
 }
 
+function join<T extends string | string[]>(p: Path, s: T) {
+	return from(split(p).concat(s));
+}
+
+/**
+ * Return the source (parent) of the path
+ *
+ * e.g.
+ * ```
+ * Path.source(Path.from('/a/b/c')) // '/a/b'
+ * ```
+ */
+function source(p: Path) {
+	const parts = split(p);
+	parts.pop();
+	return from(parts);
+}
+
+/**
+ * Return the path base name
+ *
+ * e.g.
+ * ```
+ * Path.basename(Path.from('/a/b/c')) // 'a'
+ * ```
+ */
+function basename(p: Path) {
+	const parts = split(p);
+	return parts.pop() || '';
+}
+
 export const Path = {
 	from,
 	split,
+	join,
+	source,
+	basename,
 };
