@@ -11,6 +11,7 @@ import type { StrictTarget } from '../target';
 import { Target } from '../target';
 import type { Action } from '../task';
 import { observe } from './observe';
+import { patch } from './patch';
 
 import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
@@ -185,16 +186,18 @@ export class Runtime<TState> {
 				if (p in this.subscriptions) {
 					continue;
 				}
-				this.subscriptions[p] = sensor(this.stateRef, p).subscribe((s) => {
-					// There is no need to update the state reference as the sensor already
-					// modifies the state. We don't handle concurrency as we assume sensors
+				this.subscriptions[p] = sensor(p).subscribe((change) => {
+					// Patch the state
+					// We don't handle concurrency as we assume sensors
 					// do not conflict with each other (should we check?)
+					patch(this.stateRef, change);
 					if (this.opts.follow) {
 						// Trigger a re-plan to see if the state is still on target
 						this.start();
 					} else {
 						// Notify the observer of the new state
-						this.observer.next(s);
+						// TODO: we should notify changes instead of the full state
+						this.observer.next(structuredClone(this.stateRef._));
 					}
 				});
 			}

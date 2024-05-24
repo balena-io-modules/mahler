@@ -1,8 +1,8 @@
 import type { Ref } from '../ref';
 import type { Observer, Next } from '../observable';
 import type { Operation } from '../operation';
-import { View } from '../view';
 import { Path } from '../path';
+import { patch } from './patch';
 
 function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';
@@ -108,21 +108,6 @@ function observeObject<T, U extends object>(
 	return buildProxy(r, u, next, path);
 }
 
-function applyChanges<S>(r: Ref<S>, changes: Array<Operation<S, string>>) {
-	changes.forEach((change) => {
-		const view = View.from(r, change.path);
-		switch (change.op) {
-			case 'create':
-			case 'update':
-				view._ = change.target as any;
-				break;
-			case 'delete':
-				view.delete();
-				break;
-		}
-	});
-}
-
 /**
  * Communicates the changes performed by a function on a value
  * reference to an observer. The function is executed in a
@@ -150,7 +135,9 @@ export function observe<T, U = void>(
 		try {
 			const res = fn(
 				observeObject(r, r, (change) => {
-					applyChanges(r, [change]);
+					patch(r, change);
+
+					// TODO: return changes here instead of the full object
 					observer.next(structuredClone(r._));
 				}),
 			);
