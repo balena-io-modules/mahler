@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import type { Operation } from '../operation';
+import type { DiffOperation } from '../operation';
 import { diff } from '../distance';
 import type { Observer, Subscription } from '../observable';
 import type { PlanAction, Planner, PlanNode } from '../planner';
@@ -108,7 +108,7 @@ export class Runtime<TState> {
 	private findPlan() {
 		const { logger } = this.opts;
 
-		const toLog = (o: Operation<TState, any>) => {
+		const toLog = (o: DiffOperation<TState, any>) => {
 			if (o.op === 'create') {
 				return ['create', o.path, 'with value', o.target];
 			}

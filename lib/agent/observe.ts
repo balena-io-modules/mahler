@@ -22,7 +22,6 @@ function buildProxy<T, U extends object>(
 		set(target, prop, value) {
 			const childPath = appendToPath(prop, path);
 			const existsBefore = prop in target;
-			const valueBefore = (target as any)[prop];
 
 			let valueProxy = value;
 			if (value != null && typeof value === 'object') {
@@ -45,7 +44,6 @@ function buildProxy<T, U extends object>(
 					next({
 						op: 'update',
 						path: Path.from(childPath),
-						source: valueBefore,
 						target: value,
 					});
 				} else {

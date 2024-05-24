@@ -1,4 +1,4 @@
-import type { Operation } from './operation';
+import type { Operation, DiffOperation } from './operation';
 import { Pointer } from './pointer';
 import { Path } from './path';
 import type { Target } from './target';
@@ -44,7 +44,9 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	return t as S;
 }
 
-type TreeOperation<S, P extends Path> = Operation<S, P> & { isLeaf: boolean };
+type TreeOperation<S, P extends Path> = DiffOperation<S, P> & {
+	isLeaf: boolean;
+};
 
 /**
  * getOperations returns all the possible operations that are applicable given a
@@ -137,8 +139,10 @@ function* getOperations<S>(
 
 /**
  * Calculates the list of changes between the current state and the target
+ *
+ * Returns only the leaf operations.
  */
-export function diff<S>(s: S, t: Target<S>): Array<Operation<S, any>> {
+export function diff<S>(s: S, t: Target<S>): Array<DiffOperation<S, Path>> {
 	const ops = [...getOperations(s, t)];
 	return ops.filter(({ isLeaf }) => isLeaf).map(({ isLeaf, ...op }) => op);
 }
@@ -150,7 +154,10 @@ function from<S>(src: S, tgt: Target<S>): Distance<S> {
 		(s: S) => {
 			// NOTE: we return an array here, but we could easily
 			// return an iterator instead for better memory usage
-			return [...getOperations(s, tgt)].map(({ isLeaf, ...op }) => op);
+			return [...getOperations(s, tgt)].map(({ isLeaf, ...op }) => {
+				delete (op as any).source;
+				return op;
+			});
 		},
 		{
 			get target() {
