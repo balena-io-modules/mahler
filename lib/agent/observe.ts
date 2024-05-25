@@ -2,7 +2,7 @@ import type { Ref } from '../ref';
 import type { Observer, Next } from '../observable';
 import type { Operation } from '../operation';
 import { Path } from '../path';
-import { patch } from './patch';
+import { applyPatch } from './patch';
 
 function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';
@@ -24,7 +24,7 @@ function buildProxy<T, U extends object>(
 			const existsBefore = prop in target;
 
 			let valueProxy = value;
-			if (value != null && typeof value === 'object') {
+			if (isObject(value)) {
 				// If we are re-assigning a key with a new object we need to
 				// observe that object too. We pass an empty array to changes as we don't want
 				// to reverse those changes
@@ -118,27 +118,32 @@ function observeObject<T, U extends object>(
  * @param observer The observer to notify of changes
  * @returns an intrumented function
  */
-export function observe<T, U = void>(
-	fn: (r: Ref<T>) => U,
-	observer: Observer<T>,
-): (r: Ref<T>) => U {
-	return function (r: Ref<T>) {
-		const orig = structuredClone(r._);
+export function observe<S, U = void>(
+	fn: (r: Ref<S>) => U,
+	observer: Observer<Operation<S>>,
+): (r: Ref<S>) => U {
+	return function (ref: Ref<S>) {
+		const orig = structuredClone(ref._);
 		function rollback() {
 			// Restore the original value
-			r._ = orig;
+			// TODO: this is a problem when working with parallel
+			// changes to an object, as one branch may fail while the other one
+			// succeed and this will revert the full state to before the
+			// execution of both branches
+			// we need to keep track of changes and apply them in reverse order
+			// for reporting we need to flatten the reverse changes
+			ref._ = orig;
 
 			// We need to notify the observer of the last state
-			observer.next(orig);
+			observer.next({ op: 'update', path: Path.from('/'), target: orig });
 		}
 
 		try {
 			const res = fn(
-				observeObject(r, r, (change) => {
-					patch(r, change);
+				observeObject(ref, ref, (change) => {
+					applyPatch(ref, change);
 
-					// TODO: return changes here instead of the full object
-					observer.next(structuredClone(r._));
+					observer.next(change);
 				}),
 			);
 

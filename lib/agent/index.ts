@@ -1,7 +1,7 @@
 import assert from '../assert';
 import { NullLogger } from '../logger';
 import type { Subscribable } from '../observable';
-import { Subject } from '../observable';
+import { Subject, Observable } from '../observable';
 import { Planner } from '../planner';
 import type { Sensor } from '../sensor';
 import type { Target, StrictTarget } from '../target';
@@ -10,6 +10,8 @@ import { Runtime } from './runtime';
 import type { AgentOpts, Result } from './types';
 import { NotStarted } from './types';
 import type { Path } from '../path';
+import { patch } from './patch';
+import type { Operation } from '../operation';
 
 export * from './types';
 
@@ -226,10 +228,12 @@ function from<TState>({
 
 	// Subscribe to runtime changes to keep
 	// the local copy of state up-to-date
-	const subject: Subject<TState> = new Subject();
-	subject.subscribe((s) => {
-		state = s;
+	const subject: Subject<Operation<TState>> = new Subject<Operation<TState>>();
+	subject.subscribe((changes) => {
+		state = patch(state, changes);
 	});
+
+	const observable = Observable.from(subject).map(() => state);
 
 	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
 
@@ -304,7 +308,7 @@ function from<TState>({
 			return state;
 		},
 		subscribe(next) {
-			return subject.subscribe(next);
+			return observable.subscribe(next);
 		},
 	};
 }

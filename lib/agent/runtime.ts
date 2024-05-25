@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import type { DiffOperation } from '../operation';
+import type { DiffOperation, Operation } from '../operation';
 import { diff } from '../distance';
 import type { Observer, Subscription } from '../observable';
 import type { PlanAction, Planner, PlanNode } from '../planner';
@@ -11,7 +11,7 @@ import type { StrictTarget } from '../target';
 import { Target } from '../target';
 import type { Action } from '../task';
 import { observe } from './observe';
-import { patch } from './patch';
+import { applyPatch } from './patch';
 
 import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
@@ -89,7 +89,7 @@ export class Runtime<TState> {
 	private stateRef: Ref<TState>;
 
 	constructor(
-		private readonly observer: Observer<TState>,
+		private readonly observer: Observer<Operation<TState, Path>>,
 		state: TState,
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
@@ -138,7 +138,9 @@ export class Runtime<TState> {
 				changes.length > 0 ? '' : ' none'
 			}`,
 		);
-		changes.map(toLog).forEach((log) => logger.debug('-', ...log));
+		changes.map(toLog).forEach((log) => {
+			logger.debug('-', ...log);
+		});
 
 		// Trigger a plan search
 		// console.log('FIND PLAN', { current: this.stateRef._, target: this.target });
@@ -190,14 +192,14 @@ export class Runtime<TState> {
 					// Patch the state
 					// We don't handle concurrency as we assume sensors
 					// do not conflict with each other (should we check?)
-					patch(this.stateRef, change);
+					applyPatch(this.stateRef, change);
+
+					// Notify the observer of changes in the state
+					this.observer.next(change);
+
 					if (this.opts.follow) {
 						// Trigger a re-plan to see if the state is still on target
 						this.start();
-					} else {
-						// Notify the observer of the new state
-						// TODO: we should notify changes instead of the full state
-						this.observer.next(structuredClone(this.stateRef._));
 					}
 				});
 			}
@@ -207,7 +209,7 @@ export class Runtime<TState> {
 	private async runPlan(root: PlanNode<TState> | null) {
 		const { logger } = this.opts;
 
-		return await DAG.mapReduce(
+		await DAG.mapReduce(
 			root,
 			Promise.resolve(),
 			async (node: PlanAction<TState>, prev) => {
@@ -284,8 +286,6 @@ export class Runtime<TState> {
 			let tries = 0;
 			let found = false;
 
-			// Send the initial state to the observer
-			this.observer.next(structuredClone(this.stateRef._));
 			logger.info('applying new target state');
 			while (!this.stopped) {
 				try {
@@ -304,7 +304,9 @@ export class Runtime<TState> {
 					logger.debug('plan found, will execute the following actions:');
 					DAG.toString(start, (a: PlanAction<TState>) => a.action.description)
 						.split('\n')
-						.map((action) => logger.debug(action));
+						.map((action) => {
+							logger.debug(action);
+						});
 
 					// Execute the plan
 					await this.runPlan(start);
@@ -380,7 +382,9 @@ export class Runtime<TState> {
 		await this.promise;
 
 		// Unsubscribe from sensors
-		Object.values(this.subscriptions).forEach((s) => s.unsubscribe());
+		Object.values(this.subscriptions).forEach((s) => {
+			s.unsubscribe();
+		});
 	}
 
 	async wait(timeout = 0): Promise<Result<TState>> {

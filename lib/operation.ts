@@ -1,4 +1,4 @@
-import type { Path, PathType, Root } from './path';
+import type { Path, PathType } from './path';
 import type { Pointer } from './pointer';
 
 export type Create = 'create';
@@ -29,12 +29,12 @@ interface DiffUpdateOperation<T, P extends PathType> {
 	target: Pointer<T, P>;
 }
 
-export type Operation<T = unknown, P extends PathType = Root> =
+export type Operation<T = unknown, P extends PathType = PathType> =
 	| CreateOperation<T, P>
 	| DeleteOperation<P>
 	| UpdateOperation<T, P>;
 
-export type DiffOperation<T = unknown, P extends PathType = Root> =
+export type DiffOperation<T = unknown, P extends PathType = PathType> =
 	| CreateOperation<T, P>
 	| DeleteOperation<P>
 	| DiffUpdateOperation<T, P>;
