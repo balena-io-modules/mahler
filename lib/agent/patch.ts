@@ -1,11 +1,10 @@
 import { Ref } from '../ref';
 import type { Operation } from '../operation';
 import { View } from '../view';
-import type { Path } from '../path';
 
-export function patch<S>(
+export function applyPatch<S>(
 	r: Ref<S>,
-	changes: Operation<S, Path> | Array<Operation<S, Path>>,
+	changes: Operation<S> | Array<Operation<S>>,
 ) {
 	changes = Array.isArray(changes) ? changes : [changes];
 	changes.forEach((change) => {
@@ -22,12 +21,8 @@ export function patch<S>(
 	});
 }
 
-export type Patcher<S> = (
-	changes: Operation<S, Path> | Array<Operation<S, Path>>,
-) => void;
-
-export function Patcher<S>(s: S): Patcher<S> {
-	const r = Ref.of(s);
-	return (changes: Operation<S, Path> | Array<Operation<S, Path>>) =>
-		patch(r, changes);
+export function patch<S>(s: S, changes: Operation<S> | Array<Operation<S>>) {
+	const r = Ref.of(structuredClone(s));
+	applyPatch(r, changes);
+	return r._;
 }
