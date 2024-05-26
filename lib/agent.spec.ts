@@ -208,11 +208,12 @@ describe('Agent', () => {
 				state.a < target.a || state.b < target.b,
 			method: (state, { target }) => {
 				const tasks = [];
-				if (state.a < target.a) {
-					tasks.push(aPlusOne({ target: target.a }));
-				}
+
 				if (state.b < target.b) {
 					tasks.push(bPlusOne({ target: target.b }));
+				}
+				if (state.a < target.a) {
+					tasks.push(aPlusOne({ target: target.a }));
 				}
 				return tasks;
 			},
@@ -224,7 +225,6 @@ describe('Agent', () => {
 			tasks: [plusOne],
 		});
 
-		agent.subscribe(console.log);
 		agent.seek({ a: 1, b: 1 });
 
 		const res = await agent.wait();

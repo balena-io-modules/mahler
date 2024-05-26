@@ -20,6 +20,7 @@ import * as DAG from '../dag';
 import { Path } from '../path';
 import { Lens } from '../lens';
 import { Pointer } from '../pointer';
+import { View } from '../view';
 
 class ActionError extends Error {
 	constructor(
@@ -99,7 +100,7 @@ export class Runtime<TState> {
 	) {
 		this.stateRef = Ref.of(state);
 		// Perform actions based on the new state
-		this.onStateChange(Path.from('/'));
+		this.updateSensors(Path.from('/'));
 	}
 
 	public get state() {
@@ -159,7 +160,7 @@ export class Runtime<TState> {
 		return result;
 	}
 
-	private onStateChange(changedPath: Path) {
+	private updateSensors(changedPath: Path) {
 		// for every existing subscription, check if the path still
 		// exists, if it doesn't unsusbcribe
 		(Object.keys(this.subscriptions) as Path[])
@@ -206,6 +207,45 @@ export class Runtime<TState> {
 		}
 	}
 
+	private async runAction(id: string, action: Action<TState>) {
+		const { logger } = this.opts;
+
+		// Make a copy of the path modified by the action before the change
+		const before = structuredClone(Pointer.from(this.stateRef._, action.path));
+		// TODO: if a sensor makes a change to the path pointed by this action between
+		// here and the rollback those changes will be lost. We might need to queue those
+		// changes to re-apply them.
+		const parent = Pointer.from(this.stateRef._, Path.source(action.path));
+		const existsBefore =
+			before !== undefined ||
+			// If the pointer returns undefined, we check if the child exists under the parent
+			// path, as it is possible the value exists with the undefined value
+			(parent != null &&
+				typeof parent === 'object' &&
+				Object.hasOwn(parent, Path.basename(action.path)));
+		try {
+			logger.info(`${action.description}: running ...`);
+
+			// The observe() wrapper allows to notify the observer of every
+			// change to some part of the state
+			await observe(action, this.observer)(this.stateRef);
+			logger.info(`${action.description}: success`);
+		} catch (e) {
+			// If an error occured, we revert the change
+			const after = View.from(this.stateRef, action.path);
+			if (!existsBefore) {
+				after.delete();
+				this.observer.next({ op: 'delete', path: action.path });
+			} else {
+				after._ = before as any;
+				this.observer.next({ op: 'update', path: action.path, target: before });
+			}
+
+			logger.error(`${action.description}: failed`, e);
+			throw new ActionRunFailed(id, action, e);
+		}
+	}
+
 	private async runPlan(root: PlanNode<TState> | null) {
 		const { logger } = this.opts;
 
@@ -228,20 +268,8 @@ export class Runtime<TState> {
 					throw new ActionConditionFailed(id, action);
 				}
 
-				try {
-					// Running the action should perform the changes in the
-					// local state without the need of comparisons later.
-					// The observe() wrapper allows to notify the observer from every
-					// change to some part of the state, it also reverts any changes
-					// if an error occurs
-					logger.info(`${action.description}: running ...`);
-					await observe(action, this.observer)(this.stateRef);
-					this.onStateChange(action.path); // update the state of the runtime
-					logger.info(`${action.description}: success`);
-				} catch (e) {
-					logger.error(`${action.description}: failed`, e);
-					throw new ActionRunFailed(id, action, e);
-				}
+				await this.runAction(id, action);
+				this.updateSensors(action.path);
 			},
 			async (actions) => {
 				// Wait for all promises to be settled to prevent moving
