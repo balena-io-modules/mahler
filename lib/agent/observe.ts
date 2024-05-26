@@ -109,10 +109,8 @@ function observeObject<T, U extends object>(
 }
 
 /**
- * Communicates the changes performed by a function on a value
- * reference to an observer. The function is executed in a
- * transactional context, meaning that if it throws an error
- * or returns a rejected promise, the changes will be rolled back.
+ * Communicates the changes performed by a function on an object
+ * reference to an observer.
  *
  * @param fn The function to execute
  * @param observer The observer to notify of changes
@@ -123,43 +121,12 @@ export function observe<S, U = void>(
 	observer: Observer<Operation<S>>,
 ): (r: Ref<S>) => U {
 	return function (ref: Ref<S>) {
-		const orig = structuredClone(ref._);
-		function rollback() {
-			// Restore the original value
-			// TODO: this is a problem when working with parallel
-			// changes to an object, as one branch may fail while the other one
-			// succeed and this will revert the full state to before the
-			// execution of both branches
-			// we need to keep track of changes and apply them in reverse order
-			// for reporting we need to flatten the reverse changes
-			ref._ = orig;
+		return fn(
+			observeObject(ref, ref, (change) => {
+				applyPatch(ref, change);
 
-			// We need to notify the observer of the last state
-			observer.next({ op: 'update', path: Path.from('/'), target: orig });
-		}
-
-		try {
-			const res = fn(
-				observeObject(ref, ref, (change) => {
-					applyPatch(ref, change);
-
-					observer.next(change);
-				}),
-			);
-
-			// Catch error in async function calls
-			if (res instanceof Promise) {
-				return res.catch((e) => {
-					rollback();
-					throw e;
-				}) as U;
-			}
-
-			return res;
-		} catch (e) {
-			// Catch errors in sync function calls
-			rollback();
-			throw e;
-		}
+				observer.next(change);
+			}),
+		);
 	};
 }
