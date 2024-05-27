@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import type { Operation } from '../operation';
+import type { DiffOperation, Operation } from '../operation';
 import { diff } from '../distance';
 import type { Observer, Subscription } from '../observable';
 import type { PlanAction, Planner, PlanNode } from '../planner';
@@ -11,6 +11,7 @@ import type { StrictTarget } from '../target';
 import { Target } from '../target';
 import type { Action } from '../task';
 import { observe } from './observe';
+import { applyPatch } from './patch';
 
 import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
@@ -19,6 +20,7 @@ import * as DAG from '../dag';
 import { Path } from '../path';
 import { Lens } from '../lens';
 import { Pointer } from '../pointer';
+import { View } from '../view';
 
 class ActionError extends Error {
 	constructor(
@@ -88,7 +90,7 @@ export class Runtime<TState> {
 	private stateRef: Ref<TState>;
 
 	constructor(
-		private readonly observer: Observer<TState>,
+		private readonly observer: Observer<Operation<TState, Path>>,
 		state: TState,
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
@@ -98,7 +100,7 @@ export class Runtime<TState> {
 	) {
 		this.stateRef = Ref.of(state);
 		// Perform actions based on the new state
-		this.onStateChange(Path.from('/'));
+		this.updateSensors(Path.from('/'));
 	}
 
 	public get state() {
@@ -108,7 +110,7 @@ export class Runtime<TState> {
 	private findPlan() {
 		const { logger } = this.opts;
 
-		const toLog = (o: Operation<TState, any>) => {
+		const toLog = (o: DiffOperation<TState, any>) => {
 			if (o.op === 'create') {
 				return ['create', o.path, 'with value', o.target];
 			}
@@ -156,7 +158,7 @@ export class Runtime<TState> {
 		return result;
 	}
 
-	private onStateChange(changedPath: Path) {
+	private updateSensors(changedPath: Path) {
 		// for every existing subscription, check if the path still
 		// exists, if it doesn't unsusbcribe
 		(Object.keys(this.subscriptions) as Path[])
@@ -185,19 +187,56 @@ export class Runtime<TState> {
 				if (p in this.subscriptions) {
 					continue;
 				}
-				this.subscriptions[p] = sensor(this.stateRef, p).subscribe((s) => {
-					// There is no need to update the state reference as the sensor already
-					// modifies the state. We don't handle concurrency as we assume sensors
+				this.subscriptions[p] = sensor(p).subscribe((change) => {
+					// Patch the state
+					// We don't handle concurrency as we assume sensors
 					// do not conflict with each other (should we check?)
+					applyPatch(this.stateRef, change);
 					if (this.opts.follow) {
 						// Trigger a re-plan to see if the state is still on target
 						this.start();
 					} else {
-						// Notify the observer of the new state
-						this.observer.next(s);
+						// Notify the observer of changes in the state
+						this.observer.next(change);
 					}
 				});
 			}
+		}
+	}
+
+	private async runAction(id: string, action: Action<TState>) {
+		const { logger } = this.opts;
+
+		// Make a copy of the path modified by the action before the change
+		const before = structuredClone(Pointer.from(this.stateRef._, action.path));
+		const parent = Pointer.from(this.stateRef._, Path.source(action.path));
+		const existsBefore =
+			before !== undefined ||
+			// If the pointer returns undefined, we check if the child exists under the parent
+			// path, as it is possible the value exists with the undefined value
+			(parent != null &&
+				typeof parent === 'object' &&
+				Object.hasOwn(parent, Path.basename(action.path)));
+		try {
+			logger.info(`${action.description}: running ...`);
+
+			// The observe() wrapper allows to notify the observer of every
+			// change to some part of the state
+			await observe(action, this.observer)(this.stateRef);
+			logger.info(`${action.description}: success`);
+		} catch (e) {
+			// If an error occured, we revert the change
+			const after = View.from(this.stateRef, action.path);
+			if (!existsBefore) {
+				after.delete();
+				this.observer.next({ op: 'delete', path: action.path });
+			} else {
+				after._ = before as any;
+				this.observer.next({ op: 'update', path: action.path, target: before });
+			}
+
+			logger.error(`${action.description}: failed`, e);
+			throw new ActionRunFailed(id, action, e);
 		}
 	}
 
@@ -223,20 +262,8 @@ export class Runtime<TState> {
 					throw new ActionConditionFailed(id, action);
 				}
 
-				try {
-					// Running the action should perform the changes in the
-					// local state without the need of comparisons later.
-					// The observe() wrapper allows to notify the observer from every
-					// change to some part of the state, it also reverts any changes
-					// if an error occurs
-					logger.info(`${action.description}: running ...`);
-					await observe(action, this.observer)(this.stateRef);
-					this.onStateChange(action.path); // update the state of the runtime
-					logger.info(`${action.description}: success`);
-				} catch (e) {
-					logger.error(`${action.description}: failed`, e);
-					throw new ActionRunFailed(id, action, e);
-				}
+				await this.runAction(id, action);
+				this.updateSensors(action.path);
 			},
 			async (actions) => {
 				// Wait for all promises to be settled to prevent moving
@@ -281,8 +308,6 @@ export class Runtime<TState> {
 			let tries = 0;
 			let found = false;
 
-			// Send the initial state to the observer
-			this.observer.next(structuredClone(this.stateRef._));
 			logger.info('applying new target state');
 			while (!this.stopped) {
 				try {

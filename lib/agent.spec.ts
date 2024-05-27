@@ -66,7 +66,7 @@ describe('Agent', () => {
 			});
 
 			// Intermediate states returned by the observable should be emitted by the agent
-			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			expect(count).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 			agent.stop();
 		});
 
@@ -102,7 +102,7 @@ describe('Agent', () => {
 			});
 
 			// Intermediate states returned by the observable should be emitted by the agent
-			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			expect(count).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 			agent.stop();
 		});
 
@@ -208,11 +208,12 @@ describe('Agent', () => {
 				state.a < target.a || state.b < target.b,
 			method: (state, { target }) => {
 				const tasks = [];
-				if (state.a < target.a) {
-					tasks.push(aPlusOne({ target: target.a }));
-				}
+
 				if (state.b < target.b) {
 					tasks.push(bPlusOne({ target: target.b }));
+				}
+				if (state.a < target.a) {
+					tasks.push(aPlusOne({ target: target.a }));
 				}
 				return tasks;
 			},
@@ -379,7 +380,6 @@ describe('Agent', () => {
 
 			// The observable should return all the state changes
 			expect(states).to.deep.equal([
-				{ roomTemp: 18, resistorOn: false },
 				{ roomTemp: 18, resistorOn: true },
 				// Because the termometer is started with the agent, the temperature
 				// drops a degree before it can be increased by turning the resistor on

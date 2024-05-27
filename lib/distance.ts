@@ -1,5 +1,6 @@
-import type { Operation } from './operation';
+import type { Operation, DiffOperation } from './operation';
 import { Pointer } from './pointer';
+import type { PathType } from './path';
 import { Path } from './path';
 import type { Target } from './target';
 import { UNDEFINED } from './target';
@@ -17,7 +18,7 @@ export interface Distance<S> {
 	 * If the array is empty, that means the object meets the target and no more
 	 * changes are necessary.
 	 */
-	(s: S): Array<Operation<S, Path>>;
+	(s: S): Array<Operation<S>>;
 
 	/**
 	 * Get the target of this diff. Note that because of how targets are defined,
@@ -44,7 +45,9 @@ function applyPatch<S>(s: S, t: Target<S>): S {
 	return t as S;
 }
 
-type TreeOperation<S, P extends Path> = Operation<S, P> & { isLeaf: boolean };
+type TreeOperation<S, P extends PathType = PathType> = DiffOperation<S, P> & {
+	isLeaf: boolean;
+};
 
 /**
  * getOperations returns all the possible operations that are applicable given a
@@ -52,10 +55,7 @@ type TreeOperation<S, P extends Path> = Operation<S, P> & { isLeaf: boolean };
  * value under /a/b/c, this function must report a 'create' operation on that path, but also
  * 'update' operations on '/a/b', '/a', and '/' as any of those can result in same outcome
  */
-function* getOperations<S>(
-	s: S,
-	t: Target<S>,
-): Iterable<TreeOperation<S, Path>> {
+function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
 	// We store target, path pair in a quee so we can visit the full target
 	// object, ordered by level, without recursion
 	const queue: Array<{ tgt: Target<any>; ref: string[]; isLeaf?: false }> = [
@@ -137,8 +137,10 @@ function* getOperations<S>(
 
 /**
  * Calculates the list of changes between the current state and the target
+ *
+ * Returns only the leaf operations.
  */
-export function diff<S>(s: S, t: Target<S>): Array<Operation<S, any>> {
+export function diff<S>(s: S, t: Target<S>): Array<DiffOperation<S>> {
 	const ops = [...getOperations(s, t)];
 	return ops.filter(({ isLeaf }) => isLeaf).map(({ isLeaf, ...op }) => op);
 }
@@ -150,7 +152,10 @@ function from<S>(src: S, tgt: Target<S>): Distance<S> {
 		(s: S) => {
 			// NOTE: we return an array here, but we could easily
 			// return an iterator instead for better memory usage
-			return [...getOperations(s, tgt)].map(({ isLeaf, ...op }) => op);
+			return [...getOperations(s, tgt)].map(({ isLeaf, ...op }) => {
+				delete (op as any).source;
+				return op;
+			});
 		},
 		{
 			get target() {

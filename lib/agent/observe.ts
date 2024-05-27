@@ -1,8 +1,8 @@
 import type { Ref } from '../ref';
 import type { Observer, Next } from '../observable';
 import type { Operation } from '../operation';
-import { View } from '../view';
 import { Path } from '../path';
+import { applyPatch } from './patch';
 
 function isObject(value: unknown): value is object {
 	return value !== null && typeof value === 'object';
@@ -22,10 +22,9 @@ function buildProxy<T, U extends object>(
 		set(target, prop, value) {
 			const childPath = appendToPath(prop, path);
 			const existsBefore = prop in target;
-			const valueBefore = (target as any)[prop];
 
 			let valueProxy = value;
-			if (value != null && typeof value === 'object') {
+			if (isObject(value)) {
 				// If we are re-assigning a key with a new object we need to
 				// observe that object too. We pass an empty array to changes as we don't want
 				// to reverse those changes
@@ -45,7 +44,6 @@ function buildProxy<T, U extends object>(
 					next({
 						op: 'update',
 						path: Path.from(childPath),
-						source: valueBefore,
 						target: value,
 					});
 				} else {
@@ -110,66 +108,25 @@ function observeObject<T, U extends object>(
 	return buildProxy(r, u, next, path);
 }
 
-function applyChanges<S>(r: Ref<S>, changes: Array<Operation<S, string>>) {
-	changes.forEach((change) => {
-		const view = View.from(r, change.path);
-		switch (change.op) {
-			case 'create':
-			case 'update':
-				view._ = change.target as any;
-				break;
-			case 'delete':
-				view.delete();
-				break;
-		}
-	});
-}
-
 /**
- * Communicates the changes performed by a function on a value
- * reference to an observer. The function is executed in a
- * transactional context, meaning that if it throws an error
- * or returns a rejected promise, the changes will be rolled back.
+ * Communicates the changes performed by a function on an object
+ * reference to an observer.
  *
  * @param fn The function to execute
  * @param observer The observer to notify of changes
  * @returns an intrumented function
  */
-export function observe<T, U = void>(
-	fn: (r: Ref<T>) => U,
-	observer: Observer<T>,
-): (r: Ref<T>) => U {
-	return function (r: Ref<T>) {
-		const orig = structuredClone(r._);
-		function rollback() {
-			// Restore the original value
-			r._ = orig;
+export function observe<S, U = void>(
+	fn: (r: Ref<S>) => U,
+	observer: Observer<Operation<S>>,
+): (r: Ref<S>) => U {
+	return function (ref: Ref<S>) {
+		return fn(
+			observeObject(ref, ref, (change) => {
+				applyPatch(ref, change);
 
-			// We need to notify the observer of the last state
-			observer.next(orig);
-		}
-
-		try {
-			const res = fn(
-				observeObject(r, r, (change) => {
-					applyChanges(r, [change]);
-					observer.next(structuredClone(r._));
-				}),
-			);
-
-			// Catch error in async function calls
-			if (res instanceof Promise) {
-				return res.catch((e) => {
-					rollback();
-					throw e;
-				}) as U;
-			}
-
-			return res;
-		} catch (e) {
-			// Catch errors in sync function calls
-			rollback();
-			throw e;
-		}
+				observer.next(change);
+			}),
+		);
 	};
 }
