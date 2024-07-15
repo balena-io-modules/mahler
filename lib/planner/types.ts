@@ -148,12 +148,14 @@ export class Aborted extends PlanningError {
 	}
 }
 
+export type Trace<TState> = (e: PlanningEvent<TState> | PlanningError) => void;
+
 export interface PlannerConfig<TState> {
 	/**
 	 * A function used by the planner to debug the search
 	 * for a plan. It defaults to a noop.
 	 */
-	trace: (e: PlanningEvent<TState> | PlanningError) => void;
+	trace: Trace<TState>;
 
 	/**
 	 * Max search depth before giving up. Defaults to 1000.

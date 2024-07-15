@@ -5,6 +5,7 @@ import { Path } from './path';
 import type { Target } from './target';
 import { UNDEFINED } from './target';
 import { deepEqual } from './utils';
+import type { ReadOnly } from './readonly';
 
 /**
  * A diff is a function that allows to find a list of pending operations to a
@@ -89,7 +90,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
 				yield {
 					op: 'update',
 					path,
-					source: sValue!,
+					source: sValue,
 					target: tValue!,
 					isLeaf:
 						// If the source or target are not objects, or they are arrays, then
@@ -140,8 +141,8 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
  *
  * Returns only the leaf operations.
  */
-export function diff<S>(s: S, t: Target<S>): Array<DiffOperation<S>> {
-	const ops = [...getOperations(s, t)];
+export function diff<S>(s: ReadOnly<S>, t: Target<S>): Array<DiffOperation<S>> {
+	const ops = [...getOperations(s, t as Target<ReadOnly<S>>)];
 	return ops.filter(({ isLeaf }) => isLeaf).map(({ isLeaf, ...op }) => op);
 }
 

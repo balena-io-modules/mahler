@@ -1,4 +1,4 @@
-import { expect, logger } from '~/test-utils';
+import { expect, trace } from '~/test-utils';
 import { Agent } from './agent';
 import { NoAction, Task } from './task';
 import { Sensor } from './sensor';
@@ -13,7 +13,7 @@ import { UNDEFINED } from './target';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.from({ initial: 0, opts: { logger } });
+			const agent = Agent.from({ initial: 0, opts: { trace } });
 			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
@@ -25,7 +25,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
@@ -35,7 +35,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, maxRetries: 2, logger },
+				opts: { minWaitMs: 10, maxRetries: 2, trace },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
@@ -50,7 +50,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger, minWaitMs: 10 },
+				opts: { trace, minWaitMs: 10 },
 				tasks: [inc],
 			});
 
@@ -86,7 +86,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger },
+				opts: { trace },
 				tasks: [counter],
 			});
 
@@ -139,7 +139,7 @@ describe('Agent', () => {
 
 			const agent = Agent.from({
 				initial: { a: 0, b: 0 },
-				opts: { logger, minWaitMs: 1 * 1000 },
+				opts: { trace, minWaitMs: 1 * 1000 },
 				tasks: [multiIncrement, byTwo, byOne],
 			});
 
@@ -169,7 +169,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger, maxRetries: 0 },
+				opts: { trace, maxRetries: 0 },
 				tasks: [plusOne],
 			});
 
@@ -221,7 +221,7 @@ describe('Agent', () => {
 		});
 		const agent = Agent.from({
 			initial: { a: 0, b: 0 },
-			opts: { logger, maxRetries: 0 },
+			opts: { trace, maxRetries: 0 },
 			tasks: [plusOne],
 		});
 
@@ -317,7 +317,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -334,7 +334,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -351,7 +351,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seekStrict({ roomTemp: 20, resistorOn: false });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
@@ -368,7 +368,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			const states: Heater[] = [];
@@ -503,7 +503,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -528,7 +528,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -559,7 +559,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -589,7 +589,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom, removeRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {

@@ -1,5 +1,4 @@
 import assert from '../assert';
-import { NullLogger } from '../logger';
 import type { Subscribable } from '../observable';
 import { Subject, Observable } from '../observable';
 import { Planner } from '../planner';
@@ -14,6 +13,7 @@ import { patch } from './patch';
 import type { Operation } from '../operation';
 
 export * from './types';
+export * from './events';
 
 /**
  * An agent is an autonomous entity that can plan and execute
@@ -180,13 +180,13 @@ function from<TState>(
 				initial: TState;
 				planner?: Planner<TState>;
 				sensors?: Array<Sensor<TState, Path>>;
-				opts?: DeepPartial<AgentOpts>;
+				opts?: DeepPartial<AgentOpts<TState>>;
 		  }
 		| {
 				initial: TState;
 				tasks?: Array<Task<TState, any, any>>;
 				sensors?: Array<Sensor<TState, Path>>;
-				opts?: DeepPartial<AgentOpts>;
+				opts?: DeepPartial<AgentOpts<TState>>;
 		  },
 ): Agent<TState>;
 function from<TState>({
@@ -196,16 +196,15 @@ function from<TState>({
 	opts: userOpts = {},
 	planner = Planner.from({
 		tasks,
-		config: { trace: userOpts.logger?.trace ?? NullLogger.trace },
 	}),
 }: {
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	planner?: Planner<TState>;
 	sensors?: Array<Sensor<TState, Path>>;
-	opts?: DeepPartial<AgentOpts>;
+	opts?: DeepPartial<AgentOpts<TState>>;
 }): Agent<TState> {
-	const opts: AgentOpts = {
+	const opts: AgentOpts<TState> = {
 		maxRetries: Infinity,
 		follow: false,
 		maxWaitMs: 5 * 60 * 1000,
@@ -213,7 +212,7 @@ function from<TState>({
 		backoffMs: (failures) => 2 ** failures * opts.minWaitMs,
 		strictIgnore: [],
 		...userOpts,
-		logger: { ...NullLogger, ...userOpts.logger },
+		trace: userOpts.trace ?? (() => void 0),
 	};
 
 	assert(
@@ -295,7 +294,7 @@ function from<TState>({
 				});
 			});
 		},
-		async wait(timeout: number = 0) {
+		async wait(timeout = 0) {
 			assert(timeout >= 0);
 			const runtime = await setupRuntime;
 			if (runtime == null) {

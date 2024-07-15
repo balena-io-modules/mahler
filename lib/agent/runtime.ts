@@ -1,10 +1,9 @@
 import { setTimeout as delay } from 'timers/promises';
 
-import type { DiffOperation, Operation } from '../operation';
-import { diff } from '../distance';
+import type { Operation } from '../operation';
+import type { ReadOnly } from '../readonly';
 import type { Observer, Subscription } from '../observable';
 import type { PlanAction, Planner, PlanNode } from '../planner';
-import { SearchFailed } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
 import type { StrictTarget } from '../target';
@@ -95,7 +94,7 @@ export class Runtime<TState> {
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
 		private readonly sensors: Array<Sensor<TState, Path>>,
-		private readonly opts: AgentOpts,
+		private readonly opts: AgentOpts<TState>,
 		private readonly strict: boolean,
 	) {
 		this.stateRef = Ref.of(state);
@@ -108,19 +107,7 @@ export class Runtime<TState> {
 	}
 
 	private findPlan() {
-		const { logger } = this.opts;
-
-		const toLog = (o: DiffOperation<TState, any>) => {
-			if (o.op === 'create') {
-				return ['create', o.path, 'with value', o.target];
-			}
-
-			if (o.op === 'update') {
-				return ['update', o.path, 'from', o.source, 'to', o.target];
-			}
-
-			return ['delete', o.path];
-		};
+		const { trace } = this.opts;
 
 		let target: Target<TState>;
 		if (this.strict) {
@@ -133,30 +120,26 @@ export class Runtime<TState> {
 			target = this.target;
 		}
 
-		const changes = diff(this.stateRef._, target);
-		logger.debug(
-			`looking for a plan, pending changes:${
-				changes.length > 0 ? '' : ' none'
-			}`,
-		);
-		changes.map(toLog).forEach((log) => {
-			logger.debug('-', ...log);
+		trace({
+			event: 'find-plan',
+			state: this.stateRef._ as ReadOnly<TState>,
+			target,
 		});
 
 		// Trigger a plan search
-		// console.log('FIND PLAN', { current: this.stateRef._, target: this.target });
 		const result = this.planner.findPlan(this.stateRef._, this.target);
-		logger.debug(
-			`search finished after ${
-				result.stats.iterations
-			} iterations in ${result.stats.time.toFixed(1)}ms`,
-		);
 
 		if (!result.success) {
-			// Jump to the catch below
+			trace({
+				event: 'plan-not-found',
+				stats: result.stats,
+				cause: result.error,
+			});
 			throw new PlanNotFound(result.error);
 		}
 
+		// trace event: plan found
+		// data, iterations, time, plan
 		return result;
 	}
 
@@ -208,7 +191,7 @@ export class Runtime<TState> {
 	}
 
 	private async runAction(id: string, action: Action<TState>) {
-		const { logger } = this.opts;
+		const { trace } = this.opts;
 
 		// Make a copy of the path modified by the action before the change
 		const before = structuredClone(Pointer.from(this.stateRef._, action.path));
@@ -219,17 +202,17 @@ export class Runtime<TState> {
 		const existsBefore =
 			before !== undefined ||
 			// If the pointer returns undefined, we check if the child exists under the parent
-			// path, as it is possible the value exists with the undefined value
+			// path, as it is possible the value exists and is set to `undefined`
 			(parent != null &&
 				typeof parent === 'object' &&
 				Object.hasOwn(parent, Path.basename(action.path)));
 		try {
-			logger.info(`${action.description}: running ...`);
+			trace({ event: 'action-start', action });
 
 			// The observe() wrapper allows to notify the observer of every
 			// change to some part of the state
 			await observe(action, this.observer)(this.stateRef);
-			logger.info(`${action.description}: success`);
+			trace({ event: 'action-success', action });
 		} catch (e) {
 			// If an error occured, we revert the change
 			const after = View.from(this.stateRef, action.path);
@@ -241,13 +224,13 @@ export class Runtime<TState> {
 				this.observer.next({ op: 'update', path: action.path, target: before });
 			}
 
-			logger.error(`${action.description}: failed`, e);
+			trace({ event: 'action-failure', action, cause: e });
 			throw new ActionRunFailed(id, action, e);
 		}
 	}
 
 	private async runPlan(root: PlanNode<TState> | null) {
-		const { logger } = this.opts;
+		const { trace } = this.opts;
 
 		await DAG.mapReduce(
 			root,
@@ -263,8 +246,10 @@ export class Runtime<TState> {
 					throw new Cancelled();
 				}
 
+				trace({ event: 'action-next', action });
+
 				if (!action.condition(this.stateRef._)) {
-					logger.warn(`${action.description}: condition failed`);
+					trace({ event: 'action-condition-failed', action });
 					throw new ActionConditionFailed(id, action);
 				}
 
@@ -306,7 +291,7 @@ export class Runtime<TState> {
 			return;
 		}
 
-		const { logger } = this.opts;
+		const { trace } = this.opts;
 
 		this.promise = (async () => {
 			this.running = true;
@@ -314,7 +299,7 @@ export class Runtime<TState> {
 			let tries = 0;
 			let found = false;
 
-			logger.info('applying new target state');
+			trace({ event: 'start', target: this.target });
 			while (!this.stopped) {
 				try {
 					const result = this.findPlan();
@@ -322,19 +307,14 @@ export class Runtime<TState> {
 
 					// The plan is empty, we have reached the goal
 					if (start == null) {
-						logger.info('nothing else to do: target state reached');
+						trace({ event: 'success' });
 						return {
 							success: true as const,
 							state: structuredClone(this.stateRef._),
 						};
 					}
 
-					logger.debug('plan found, will execute the following actions:');
-					DAG.toString(start, (a: PlanAction<TState>) => a.action.description)
-						.split('\n')
-						.map((action) => {
-							logger.debug(action);
-						});
+					trace({ event: 'plan-found', start, stats: result.stats });
 
 					// Execute the plan
 					await this.runPlan(start);
@@ -347,27 +327,19 @@ export class Runtime<TState> {
 					// we don't exit immediately since the goal may
 					// not have been reached yet. We will exit when there are no
 					// more steps in a next re-plan
-					logger.info('plan executed successfully');
+					trace({ event: 'plan-executed' });
 				} catch (e) {
 					found = false;
 					if (e instanceof PlanNotFound) {
-						if (e.cause !== SearchFailed) {
-							logger.error(
-								'no plan found, reason:',
-								(e.cause as Error).message ?? e.cause,
-							);
-						} else {
-							logger.warn('no plan found');
-						}
+						// nothing to do
 					} else if (e instanceof ActionError || e instanceof PlanRunFailed) {
-						logger.warn('plan execution interrupted due to errors');
+						// nothing to do
 					} else if (e instanceof Cancelled) {
-						logger.warn('plan execution cancelled');
 						// exit the loop
 						break;
 					} else {
 						/* Something else happened, better exit immediately */
-						logger.error('unknown error while looking for plan:', e);
+						trace({ event: 'failure', cause: e });
 						return {
 							success: false as const,
 							error: new UnknownError(e),
@@ -377,6 +349,7 @@ export class Runtime<TState> {
 
 				if (!found) {
 					if (tries >= this.opts.maxRetries) {
+						trace({ event: 'failure', cause: new Failure(tries) });
 						return {
 							success: false as const,
 							error: new Failure(tries),
@@ -384,7 +357,7 @@ export class Runtime<TState> {
 					}
 				}
 				const wait = Math.min(this.opts.backoffMs(tries), this.opts.maxWaitMs);
-				logger.debug(`waiting ${wait / 1000}s before re - planning`);
+				trace({ event: 'backoff', tries, delayMs: wait });
 				await delay(wait);
 
 				// Only backof if we haven't been able to reach the target
@@ -392,6 +365,7 @@ export class Runtime<TState> {
 			}
 
 			// The only way to get here is if the runtime was stopped
+			trace({ event: 'failure', cause: new Stopped() });
 			return { success: false as const, error: new Stopped() };
 		})()
 			// QUESTION: if we get here this is pretty bad, should we notify

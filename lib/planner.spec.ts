@@ -1,4 +1,4 @@
-import { expect, logger } from '~/test-utils';
+import { expect, log } from '~/test-utils';
 import { Planner } from './planner';
 import type { Instruction } from './task';
 import { Task } from './task';
@@ -109,7 +109,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [take, put, move],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan(
@@ -299,7 +299,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from<State>({
 				tasks: [pickup, unstack, putdown, stack, take, put, move],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan(
@@ -344,7 +344,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -386,7 +386,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -429,7 +429,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [multiIncrement, byTwo, byOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });
@@ -499,7 +499,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [chunker, multiIncrement, byTwo, byOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 			const result = planner.findPlan(
 				{ a: 0, b: 0, c: 0, d: 0 },
@@ -545,7 +545,7 @@ describe('Planner', () => {
 
 			const planner = Planner.from({
 				tasks: [conflictingIncrement, byOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			const result = planner.findPlan({ a: 0, b: 0 }, { a: 3, b: 2 });

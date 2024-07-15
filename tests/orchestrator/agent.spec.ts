@@ -1,5 +1,5 @@
 import * as Docker from 'dockerode';
-import { logger, expect } from '~/test-utils';
+import { trace, logger, expect } from '~/test-utils';
 
 import { Agent, UNDEFINED } from 'mahler';
 import { planner } from './planner';
@@ -41,7 +41,7 @@ describe('orchestrator/agent', () => {
 				images: {},
 			},
 			planner,
-			opts: { minWaitMs: 1000, logger },
+			opts: { minWaitMs: 1000, trace },
 		});
 
 		agent.seek({
