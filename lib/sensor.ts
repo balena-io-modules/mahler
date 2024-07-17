@@ -11,14 +11,14 @@ import { Observable } from './observable';
  * A Sensor function for type T is a function that returns a generator
  * that yields values of type T
  */
-type SensorFn<T, P extends PathType = '/'> = (
+type SensorFn<T, P extends PathType = PathType> = (
 	args: LensArgs<T, P>,
 ) =>
 	| AsyncGenerator<Lens<T, P>, void, void>
 	| Generator<Lens<T, P>, void, void>
 	| Subscribable<Lens<T, P>>;
 
-type SensorOutput<T, P extends PathType = '/'> = Subscribable<
+type SensorOutput<T, P extends PathType = PathType> = Subscribable<
 	UpdateOperation<T, P>
 >;
 
@@ -27,7 +27,7 @@ type SensorOutput<T, P extends PathType = '/'> = Subscribable<
  * returns a subscribable that allows to observe changes
  * to the state returned by the sensor operation.
  */
-export type Sensor<T, P extends PathType = '/'> =
+export type Sensor<T, P extends PathType = PathType> =
 	unknown extends Lens<T, P>
 		? // Default to the version with path if the lens cannot be resolved
 			{ (path: PathType): SensorOutput<T, P>; lens: Path<P> }

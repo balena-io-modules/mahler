@@ -395,11 +395,11 @@ export function findPlan<TState = any>({
 			// we get the target value for the context from the pointer
 			// if the operation is delete, the pointer will be undefined
 			// which is the right value for that operation
-			const ctx = Lens.context<TState, string>(
-				task.lens,
-				path,
-				Pointer.from<TState, string>(distance.target, path),
-			);
+			const tgt =
+				operation.op === 'delete'
+					? undefined
+					: Pointer.from<TState, string>(distance.target, path);
+			const ctx = Lens.context<TState, string>(task.lens, path, tgt);
 
 			const taskPlan = tryInstruction(task(ctx), {
 				depth,

@@ -89,7 +89,7 @@ export class Runtime<TState> {
 	private stateRef: Ref<TState>;
 
 	constructor(
-		private readonly observer: Observer<Operation<TState, Path>>,
+		private readonly observer: Observer<Operation<TState>>,
 		state: TState,
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,

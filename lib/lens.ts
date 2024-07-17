@@ -3,7 +3,7 @@ import type { Identity } from './identity';
 import { isArrayIndex } from './is-array-index';
 import type { PathType } from './path';
 import { Path } from './path';
-import { Pointer } from './pointer';
+import { InvalidPointer, Pointer } from './pointer';
 
 export type Lens<TState, TPath extends PathType> = LensContext<
 	TState,
@@ -185,8 +185,17 @@ function context<TState, TPath extends PathType>(
 function createLens<TState, TPath extends PathType>(
 	s: TState,
 	p: Path<TPath>,
-): Lens<TState, TPath> {
-	return Pointer.from(s, p) as Lens<TState, TPath>;
+): Lens<TState, TPath> | undefined {
+	try {
+		return Pointer.from(s, p) as Lens<TState, TPath>;
+	} catch (e) {
+		// The lens is a bit more permissive than pointer as a task
+		// may be relevant to a path on the state that is yet to be created
+		if (e instanceof InvalidPointer) {
+			return undefined;
+		}
+		throw e;
+	}
 }
 
 /**

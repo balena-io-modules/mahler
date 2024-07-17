@@ -8,7 +8,6 @@ import type { Task } from '../task';
 import { Runtime } from './runtime';
 import type { AgentOpts, Result } from './types';
 import { NotStarted } from './types';
-import type { Path } from '../path';
 import { patch } from './patch';
 import type { Operation } from '../operation';
 
@@ -179,13 +178,13 @@ function from<TState>(
 		| {
 				initial: TState;
 				planner?: Planner<TState>;
-				sensors?: Array<Sensor<TState, Path>>;
+				sensors?: Array<Sensor<TState>>;
 				opts?: DeepPartial<AgentOpts<TState>>;
 		  }
 		| {
 				initial: TState;
 				tasks?: Array<Task<TState, any, any>>;
-				sensors?: Array<Sensor<TState, Path>>;
+				sensors?: Array<Sensor<TState>>;
 				opts?: DeepPartial<AgentOpts<TState>>;
 		  },
 ): Agent<TState>;
@@ -201,7 +200,7 @@ function from<TState>({
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	planner?: Planner<TState>;
-	sensors?: Array<Sensor<TState, Path>>;
+	sensors?: Array<Sensor<TState>>;
 	opts?: DeepPartial<AgentOpts<TState>>;
 }): Agent<TState> {
 	const opts: AgentOpts<TState> = {

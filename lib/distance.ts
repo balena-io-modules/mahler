@@ -72,7 +72,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
 
 		const path = Path.from(ref);
 		const sValue = Pointer.from(s, path);
-		const tValue = Pointer.from(patched, path);
+		const tValue = tgt !== UNDEFINED ? Pointer.from(patched, path) : undefined;
 
 		// If the target is DELETED, and the source value still
 		// exists we need to add a delete operation
