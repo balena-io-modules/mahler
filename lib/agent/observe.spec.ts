@@ -3,6 +3,7 @@ import type { Observer } from '../observable';
 import { Ref } from '../ref';
 import { observe } from './observe';
 import type { Operation } from '../operation';
+import { setImmediate } from 'timers/promises';
 
 import { stub } from 'sinon';
 
@@ -135,7 +136,7 @@ describe('observe', () => {
 			r._.bar!.bar = { foo: 'goodbye' };
 			r._.bar!.bar.foo = 'goodbye world';
 			r._.bar = { foo: 'hello again' };
-			r._.bar!.foo = 'goodbye again';
+			r._.bar.foo = 'goodbye again';
 		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
@@ -298,6 +299,7 @@ describe('observe', () => {
 		const next = (o: Operation<S>) => values.push(structuredClone(o));
 
 		await observe(async (r: Ref<S>) => {
+			await setImmediate();
 			r._.a++;
 			r._.b.c += ' world';
 			r._.b.d.e = false;

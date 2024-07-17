@@ -595,7 +595,7 @@ describe('Planner', () => {
 			expect(result.stats.maxDepth).to.equal(2);
 		});
 
-		it.skip('simple travel problem', async () => {
+		it.skip('simple travel problem', () => {
 			// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 			// the available cash, some actions may be possible
 			expect(false);
@@ -622,8 +622,8 @@ describe('Planner', () => {
 		expect(result.stats.maxDepth).to.equal(0);
 	});
 
-	it.skip('simple travel problem', async () => {
-		// Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
+	it.skip('simple travel problem', () => {
+		// TODO: Alice needs to go to the park and may walk or take a taxi. Depending on the distance to the park and
 		// the available cash, some actions may be possible
 		expect(false);
 	});

@@ -82,7 +82,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
 			// If the source value does not exist, then we add a `create`
 			// operation
 			if (sValue == null) {
-				yield { op: 'create', path, target: tValue!, isLeaf: true };
+				yield { op: 'create', path, target: tValue, isLeaf: true };
 			}
 			// If the source value does exist, we do a deep comparison compare the source to the patched
 			// version and if they don't match, we add an `update` operation
@@ -91,7 +91,7 @@ function* getOperations<S>(s: S, t: Target<S>): Iterable<TreeOperation<S>> {
 					op: 'update',
 					path,
 					source: sValue,
-					target: tValue!,
+					target: tValue,
 					isLeaf:
 						// If the source or target are not objects, or they are arrays, then
 						// we wont continue recursing so the object is a leaf

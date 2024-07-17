@@ -90,6 +90,6 @@ export class Timeout extends Error {
  */
 export class UnknownError extends Error {
 	constructor(cause: unknown) {
-		super('Agent stopped due to unknown error: ' + cause, { cause });
+		super('Agent panicked due to unknown error', { cause });
 	}
 }

@@ -49,7 +49,7 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "@balena/lint": "^8.0.0",
+    "@balena/lint": "^8.2.6",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
     "@types/debug": "^4.1.7",
@@ -75,7 +75,7 @@
     "tar-stream": "3.0.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.5.2"
   },
   "dependencies": {
     "mahler-wasm": "^0.1.0"

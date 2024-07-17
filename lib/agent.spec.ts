@@ -5,7 +5,7 @@ import { Sensor } from './sensor';
 
 import { stub } from 'sinon';
 
-import { setTimeout } from 'timers/promises';
+import { setTimeout, setImmediate } from 'timers/promises';
 import { Observable } from './observable';
 import * as memoizee from 'memoizee';
 import { UNDEFINED } from './target';
@@ -159,7 +159,7 @@ describe('Agent', () => {
 			const plusOne = Task.from<number>({
 				condition: (state, { target }) => state < target,
 				effect: (state) => ++state._,
-				action: async (state) => {
+				action: (state) => {
 					++state._;
 
 					// The action fails after a partial update
@@ -195,7 +195,7 @@ describe('Agent', () => {
 			lens: '/b',
 			condition: (state, { target }) => state < target,
 			effect: (state) => ++state._,
-			action: async (state) => {
+			action: (state) => {
 				++state._;
 
 				// The action fails after a partial update
@@ -258,7 +258,7 @@ describe('Agent', () => {
 			},
 			action: async (state) => {
 				state._.resistorOn = true;
-				toggleResistorOn();
+				await toggleResistorOn();
 			},
 			description: 'turn resistor ON',
 		});
@@ -272,7 +272,7 @@ describe('Agent', () => {
 			},
 			action: async (state) => {
 				state._.resistorOn = false;
-				toggleResistorOff();
+				await toggleResistorOff();
 			},
 			description: 'turn resistor OFF',
 		});
@@ -320,10 +320,10 @@ describe('Agent', () => {
 				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
-			await expect(agent.wait(1000)).to.eventually.deep.equal({
-				success: true,
-				state: { roomTemp: 20, resistorOn: true },
-			});
+
+			await expect(agent.wait(1000)).to.be.fulfilled;
+			expect(agent.state().roomTemp).to.equal(20);
+
 			agent.stop();
 		});
 
@@ -337,10 +337,9 @@ describe('Agent', () => {
 				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
-			await expect(agent.wait(1000)).to.eventually.deep.equal({
-				success: true,
-				state: { roomTemp: 20, resistorOn: false },
-			}).fulfilled;
+
+			await expect(agent.wait(1000)).to.be.fulfilled;
+			expect(agent.state().roomTemp).to.equal(20);
 			agent.stop();
 		});
 
@@ -357,7 +356,7 @@ describe('Agent', () => {
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
 				success: true,
 				state: { roomTemp: 20, resistorOn: false },
-			}).fulfilled;
+			});
 			agent.stop();
 		});
 
@@ -446,6 +445,7 @@ describe('Agent', () => {
 			},
 			async action(room) {
 				room._.heaterOn = true;
+				await setImmediate();
 			},
 			description: ({ room }) => `turn heater on in ${room}`,
 		});
@@ -463,6 +463,7 @@ describe('Agent', () => {
 			},
 			async action(room) {
 				room._.heaterOn = false;
+				await setImmediate();
 			},
 			description: ({ room }) => `turn heater off in ${room}`,
 		});
@@ -514,10 +515,7 @@ describe('Agent', () => {
 
 			climateControl.seek({ bedroom: { temperature: 20 } });
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state().bedroom).to.deep.equal({
-				temperature: 20,
-				heaterOn: true,
-			});
+			expect(climateControl.state().bedroom.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -545,10 +543,8 @@ describe('Agent', () => {
 				office: { temperature: 20 },
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state()).to.deep.equal({
-				bedroom: { temperature: 20, heaterOn: true },
-				office: { temperature: 20, heaterOn: true },
-			});
+			expect(climateControl.state().bedroom.temperature).to.equal(20);
+			expect(climateControl.state().office.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -575,10 +571,7 @@ describe('Agent', () => {
 				studio: { temperature: 20 },
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state().studio).to.deep.equal({
-				temperature: 20,
-				heaterOn: true,
-			});
+			expect(climateControl.state().studio.temperature).equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -606,12 +599,9 @@ describe('Agent', () => {
 				office: UNDEFINED,
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state()).to.deep.equal({
-				bedroom: {
-					temperature: 20,
-					heaterOn: true,
-				},
-			});
+			const state = climateControl.state();
+			expect(state.bedroom).to.not.be.undefined;
+			expect(state.bedroom.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);

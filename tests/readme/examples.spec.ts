@@ -215,7 +215,7 @@ describe('README examples', () => {
 			description: '+1',
 		});
 
-		it('with needsWrite as target', async () => {
+		it('with needsWrite as target', () => {
 			const planner = Planner.from({
 				tasks: [plusOne, read, store],
 				config: { trace: log },
@@ -231,7 +231,7 @@ describe('README examples', () => {
 			);
 		});
 
-		it('without needsWrite as target', async () => {
+		it('without needsWrite as target', () => {
 			const planner = Planner.from({
 				tasks: [plusOne, read, store],
 				config: { trace: log },

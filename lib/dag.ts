@@ -282,7 +282,7 @@ export function reverse<N extends Node>(root: N | null): N | null {
 			}
 			return Node.join(prev) as N;
 		},
-		(nodes) => Node.fork(nodes.filter((n) => n != null) as N[]) as N,
+		(nodes) => Node.fork(nodes.filter((n) => n != null)) as N,
 	);
 }
 

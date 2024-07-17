@@ -39,7 +39,7 @@ export class InvalidPointer extends Error {
 function from<O = any, P extends PathType = Root>(
 	obj: O,
 	path: Path<P>,
-): Pointer<O, P> | undefined {
+): Pointer<O, P> {
 	const parts = Path.split(path);
 
 	let o = obj as any;
@@ -52,10 +52,12 @@ function from<O = any, P extends PathType = Root>(
 			throw new InvalidPointer(path, obj);
 		}
 
+		// TODO: should we make this more restrictive? Perhaps throw unless the parent
+		// exists like in view?
 		// Pointer is permissive, if the object does not exist in the type,
 		// it doesn't mean it cannot exist so we return undefined
 		if (!(p in o)) {
-			return undefined;
+			return undefined as Pointer<O, P>;
 		}
 		o = o[p];
 	}

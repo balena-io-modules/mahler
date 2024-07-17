@@ -2,7 +2,7 @@ import { Ref } from '../ref';
 import type { Action } from '../task';
 import { Method } from '../task';
 
-function expand<T>(s: T, method: Method<T>): Array<Action<T, any, any>> {
+function expand<T>(s: T, method: Method<T>): Array<Action<T>> {
 	if (!method.condition(s)) {
 		throw new Error(
 			`${method.description}: condition not met for expanding method`,
@@ -22,11 +22,9 @@ function expand<T>(s: T, method: Method<T>): Array<Action<T, any, any>> {
  * being executed. If a condition in the action sequence fails, no changes will be performed
  * to the state.
  */
-export function zip<T>(
-	ins: Method<T, any, any> | Action<T, any, any>,
-): (t: T) => Promise<T> {
+export function zip<T>(ins: Method<T> | Action<T>): (t: T) => Promise<T> {
 	return async function (s) {
-		let actions: Array<Action<T, any, any>>;
+		let actions: Array<Action<T>>;
 		if (Method.is(ins)) {
 			actions = expand(s, ins);
 		} else {

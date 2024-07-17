@@ -285,7 +285,7 @@ function tryParallel<TState = any>(
 }
 
 function tryInstruction<TState = any>(
-	instruction: Instruction<TState, any, any>,
+	instruction: Instruction<TState>,
 	{ trace, initialPlan, callStack = [], ...state }: PlanningState<TState>,
 ): Plan<TState> {
 	assert(initialPlan.success);

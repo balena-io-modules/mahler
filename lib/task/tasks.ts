@@ -274,8 +274,9 @@ function ground<
 
 	if (isActionTask(task)) {
 		const { effect: taskEffect, action: taskAction } = task;
-		const effect = (s: Ref<TState>) =>
+		const effect = (s: Ref<TState>) => {
 			taskEffect(View.from(s, path), { ...context, system: s._ });
+		};
 		const action = async (s: Ref<TState>) =>
 			taskAction(View.from(s, path), { ...context, system: s._ });
 		return Object.assign(action, {
@@ -399,7 +400,7 @@ function from<
 	const { op = 'update', condition: taskCondition = () => true } = taskProps;
 
 	// Check that the path is valid
-	const lens = Path.from(taskProps.lens || ('/' as TPath));
+	const lens = Path.from(taskProps.lens ?? ('/' as TPath));
 
 	const opLabel = op === '*' ? 'modify' : op;
 
@@ -427,7 +428,9 @@ function from<
 		if (isActionProps(taskProps)) {
 			const {
 				effect: taskEffect = () => void 0,
-				action: taskAction = async (v, c) => taskEffect(v, c),
+				action: taskAction = (v, c) => {
+					taskEffect(v, c);
+				},
 			} = taskProps;
 
 			let effect = taskEffect;
@@ -436,15 +439,13 @@ function from<
 				// If the task defines a delete operation for the value pointed by
 				// the lens, then we need to delete the property after the action succeeds
 				effect = (v, c) => {
-					const res = taskEffect(v, c);
+					taskEffect(v, c);
 					v.delete();
-					return res;
 				};
 
-				action = async (v, c) => {
-					const res = await taskAction(v, c);
+				action = (v, c) => {
+					taskAction(v, c);
 					v.delete();
-					return res;
 				};
 			}
 

@@ -36,7 +36,7 @@ describe('Sensor', () => {
 		type Heater = { temperature: number; on: boolean };
 		const sensor = Sensor.of<Heater>().from({
 			lens: '/temperature',
-			sensor: async function* () {
+			sensor: function* () {
 				yield 20;
 				yield 23;
 			},

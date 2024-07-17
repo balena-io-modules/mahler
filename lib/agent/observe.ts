@@ -15,8 +15,8 @@ function appendToPath(key: string | number | symbol, path: string[]) {
 function buildProxy<T, U extends object>(
 	r: Ref<T>,
 	u: U,
-	next: Next<Operation<T, string>>,
-	path = [] as string[],
+	next: Next<Operation<T>>,
+	path: string[] = [],
 ): U {
 	return new Proxy(u, {
 		set(target, prop, value) {
@@ -70,8 +70,8 @@ function buildProxy<T, U extends object>(
 function observeArray<T, U extends any[]>(
 	r: Ref<T>,
 	u: U,
-	next: Next<Operation<T, string>>,
-	path = [] as string[],
+	next: Next<Operation<T>>,
+	path: string[] = [],
 ): U {
 	u = u.map((v, i) => {
 		if (isObject(v)) {
@@ -87,23 +87,23 @@ function observeArray<T, U extends any[]>(
 function observeObject<T, U extends object>(
 	r: Ref<T>,
 	u: U,
-	next: Next<Operation<T, string>>,
-	path = [] as string[],
+	next: Next<Operation<T>>,
+	path: string[] = [],
 ): U {
 	if (Array.isArray(u)) {
 		return observeArray(r, u, next, path);
 	}
+
 	// Recursively observe existing properties of the object
-	u = (Object.getOwnPropertyNames(u) as Array<keyof U>).reduce((acc, key) => {
-		const v = u[key];
-		if (isObject(v)) {
-			return {
-				...acc,
-				[key]: observeObject(r, v, next, appendToPath(key, path)),
-			};
-		}
-		return { ...acc, [key]: v };
-	}, {} as U);
+	u = Object.fromEntries(
+		(Object.getOwnPropertyNames(u) as Array<keyof U>).map((key) => {
+			const v = u[key];
+			if (isObject(v)) {
+				return [key, observeObject(r, v, next, appendToPath(key, path))];
+			}
+			return [key, v];
+		}),
+	) as U;
 
 	return buildProxy(r, u, next, path);
 }

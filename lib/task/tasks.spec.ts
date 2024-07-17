@@ -11,7 +11,7 @@ describe('Tasks', () => {
 			description: '+1',
 		});
 		expect(inc.id).to.equal(
-			'cbc6726f9c9afc51b7ef2356bc640663e77fbee26a50808cb3fd0355ab7dd043',
+			'79fae6f74c3f2816281e0a7e3f6f4a33376aee1428ffd036e9a91aece14da1ef',
 		);
 
 		const inc2 = Task.from<number>({
@@ -53,7 +53,7 @@ describe('Tasks', () => {
 		expect(byTwo.id).to.equal(byTwo2.id);
 	});
 
-	it('create tasks should automatically check that the property does not exist beforehand', async function () {
+	it('create tasks should automatically check that the property does not exist beforehand', function () {
 		type S = { props: { [k: string]: string } };
 		const effectFn = stub();
 		const task = Task.of<S>().from({
@@ -82,7 +82,7 @@ describe('Tasks', () => {
 		expect(ref._.props).to.deep.equal({ a: 'hello' });
 	});
 
-	it('delete tasks should automatically check that the property exists', async function () {
+	it('delete tasks should automatically check that the property exists', function () {
 		type S = { props: { [k: string]: string } };
 		const effectFn = stub();
 		const task = Task.of<S>().from({

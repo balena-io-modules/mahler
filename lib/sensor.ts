@@ -14,8 +14,8 @@ import { Observable } from './observable';
 type SensorFn<T, P extends PathType = '/'> = (
 	args: LensArgs<T, P>,
 ) =>
-	| AsyncGenerator<Lens<T, P>, never | void | Lens<T, P>, void>
-	| Generator<Lens<T, P>, never | void, void | undefined>
+	| AsyncGenerator<Lens<T, P>, void, void>
+	| Generator<Lens<T, P>, void, void>
 	| Subscribable<Lens<T, P>>;
 
 type SensorOutput<T, P extends PathType = '/'> = Subscribable<

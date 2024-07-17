@@ -68,7 +68,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The caller instruction
 			 */
-			parent: Method<TState, any, any> | undefined;
+			parent: Method<TState> | undefined;
 
 			/**
 			 * The previous node in the plan
@@ -78,7 +78,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The instruction chosen
 			 */
-			instruction: Instruction<TState, any, any>;
+			instruction: Instruction<TState>;
 
 			/**
 			 * What is the operation for which the instruction
