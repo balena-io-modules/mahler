@@ -94,6 +94,12 @@ export function readableTrace<S = any>(logger: Partial<Logger>): Trace<S> {
 				}
 				break;
 
+			case 'plan-timeout':
+				log.error(
+					`planning timed-out after ${e.timeout}(ms), this might be a bug`,
+				);
+				return;
+
 			case 'plan-executed': {
 				log.info('plan executed successfully');
 				return;

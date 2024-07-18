@@ -206,6 +206,7 @@ function from<TState>({
 	const opts: AgentOpts<TState> = {
 		maxRetries: Infinity,
 		follow: false,
+		plannerMaxWaitMs: 60 * 1000,
 		maxWaitMs: 5 * 60 * 1000,
 		minWaitMs: 1 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.minWaitMs,

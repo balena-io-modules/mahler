@@ -3,7 +3,7 @@ import { setTimeout as delay } from 'timers/promises';
 import type { Operation } from '../operation';
 import type { ReadOnly } from '../readonly';
 import type { Observer, Subscription } from '../observable';
-import type { PlanAction, Planner, PlanNode } from '../planner';
+import type { Plan, PlanAction, Planner, PlanNode } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
 import type { StrictTarget } from '../target';
@@ -77,6 +77,12 @@ class PlanNotFound extends Error {
 	}
 }
 
+class PlanningTimeout extends Error {
+	constructor(public timeout: number) {
+		super(`Planning aborted after ${timeout}(ms)`);
+	}
+}
+
 export class Runtime<TState> {
 	private promise: Promise<Result<TState>> = Promise.resolve({
 		success: false,
@@ -106,8 +112,8 @@ export class Runtime<TState> {
 		return this.stateRef._;
 	}
 
-	private findPlan() {
-		const { trace } = this.opts;
+	private findPlan(): Promise<Plan<TState> & { success: true }> {
+		const { trace, plannerMaxWaitMs } = this.opts;
 
 		let target: Target<TState>;
 		if (this.strict) {
@@ -127,20 +133,28 @@ export class Runtime<TState> {
 		});
 
 		// Trigger a plan search
-		const result = this.planner.findPlan(this.stateRef._, this.target);
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				reject(new PlanningTimeout(plannerMaxWaitMs));
+			}, plannerMaxWaitMs);
 
-		if (!result.success) {
-			trace({
-				event: 'plan-not-found',
-				stats: result.stats,
-				cause: result.error,
-			});
-			throw new PlanNotFound(result.error);
-		}
+			const result = this.planner.findPlan(this.stateRef._, this.target);
+			clearTimeout(timer);
 
-		// trace event: plan found
-		// data, iterations, time, plan
-		return result;
+			if (!result.success) {
+				trace({
+					event: 'plan-not-found',
+					stats: result.stats,
+					cause: result.error,
+				});
+				reject(new PlanNotFound(result.error));
+				return;
+			}
+
+			// trace event: plan found
+			// data, iterations, time, plan
+			resolve(result);
+		});
 	}
 
 	private updateSensors(changedPath: Path) {
@@ -302,7 +316,7 @@ export class Runtime<TState> {
 			trace({ event: 'start', target: this.target });
 			while (!this.stopped) {
 				try {
-					const result = this.findPlan();
+					const result = await this.findPlan();
 					const { start } = result;
 
 					// The plan is empty, we have reached the goal
@@ -332,6 +346,10 @@ export class Runtime<TState> {
 					found = false;
 					if (e instanceof PlanNotFound) {
 						// nothing to do
+					} else if (e instanceof PlanningTimeout) {
+						// planning timed-out but we can keep searching as the
+						// state could be updated by a sensor
+						trace({ event: 'plan-timeout', timeout: e.timeout });
 					} else if (e instanceof ActionError || e instanceof PlanRunFailed) {
 						// nothing to do
 					} else if (e instanceof Cancelled) {
@@ -360,7 +378,7 @@ export class Runtime<TState> {
 				trace({ event: 'backoff', tries, delayMs: wait });
 				await delay(wait);
 
-				// Only backof if we haven't been able to reach the target
+				// Only backoff if we haven't been able to reach the target
 				tries += +!found;
 			}
 

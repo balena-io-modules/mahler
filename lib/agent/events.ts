@@ -15,6 +15,7 @@ export type AgentRuntimeEvent<TState = unknown> =
 	  }
 	| { event: 'plan-found'; start: PlanNode<TState>; stats: PlanningStats }
 	| { event: 'plan-not-found'; cause: unknown; stats: PlanningStats }
+	| { event: 'plan-timeout'; timeout: number }
 	| { event: 'backoff'; tries: number; delayMs: number }
 	| { event: 'success' }
 	| { event: 'failure'; cause: unknown }

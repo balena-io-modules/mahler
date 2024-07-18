@@ -11,6 +11,12 @@ export interface AgentOpts<TState> {
 	follow: boolean;
 
 	/**
+	 * Abort search if a planning solution has not been found in this time
+	 * Default is 60 seconds.
+	 */
+	plannerMaxWaitMs: number;
+
+	/**
 	 * The maximum number of attempts for reaching the target before giving up. Defaults to
 	 * infinite tries.
 	 */
