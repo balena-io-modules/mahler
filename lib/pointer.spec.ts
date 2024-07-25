@@ -34,9 +34,11 @@ describe('Pointer', () => {
 			).to.deep.equal({ a: 1, b: { c: 2, d: { e: 'hello' } } });
 
 			expect(
+				// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 				Pointer.from({ a: 1, b: { c: 2, d: { e: 'hello' } } }, Path.from('/x')),
 			).to.be.undefined;
 			expect(
+				// eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
 				Pointer.from(
 					{ a: 1, b: { c: 2, d: { e: 'hello' } } },
 					Path.from('/b/d/x'),

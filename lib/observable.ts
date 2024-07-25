@@ -1,5 +1,11 @@
 import { promisify } from 'util';
 
+export class UnhandledObservableError extends Error {
+	constructor(cause?: unknown) {
+		super('An error in an observable was uncaught by observer', { cause });
+	}
+}
+
 export type Next<T> = (t: T) => void;
 
 export interface Observer<T> {
@@ -52,11 +58,15 @@ export class Subject<T> implements Observer<T>, Subscribable<T> {
 	}
 
 	next(t: T) {
-		this.subscribers.forEach((s) => s.next(t));
+		this.subscribers.forEach((s) => {
+			s.next(t);
+		});
 	}
 
 	error(e: Error) {
-		this.subscribers.forEach((s) => s.error(e));
+		this.subscribers.forEach((s) => {
+			s.error(e);
+		});
 
 		// We assume the observable operation terminates
 		// after an error
@@ -64,7 +74,9 @@ export class Subject<T> implements Observer<T>, Subscribable<T> {
 	}
 
 	complete() {
-		this.subscribers.forEach((s) => s.complete());
+		this.subscribers.forEach((s) => {
+			s.complete();
+		});
 
 		// We assume the observable operation terminates
 		// after complete is called
@@ -193,7 +205,9 @@ function multiplexIterable<T>(input: Iterable<T> | AsyncIterable<T>) {
 			// Once all consumers have been served we will only get the next result
 			// once next() has been called in one of the output iterators
 		} catch (e) {
-			consumers.forEach((c) => c.reject(e));
+			consumers.forEach((c) => {
+				c.reject(e);
+			});
 			consumers.length = 0;
 		} finally {
 			running = false;
@@ -235,8 +249,9 @@ function from<T>(input: ObservableInput<T>): Observable<T> {
 					// those errors can be detected through the node `unhandledRejection`
 					// event https://nodejs.org/api/process.html#event-unhandledrejection
 					// when in doubt, users should pass an error handler
+					// QUESTION: should we panic here?
 					error: (e) => {
-						throw e;
+						throw new UnhandledObservableError(e);
 					},
 					complete: () => void 0,
 					closed: false,
@@ -281,7 +296,9 @@ function map<T, U>(o: Subscribable<T>, f: (t: T) => U): Subscribable<U> {
 		subscribe(subscriber: Observer<U>): Subscription {
 			return o.subscribe({
 				...subscriber,
-				next: (t) => subscriber.next(f(t)),
+				next: (t) => {
+					subscriber.next(f(t));
+				},
 			});
 		},
 	};
@@ -292,7 +309,11 @@ function filter<T>(o: Subscribable<T>, f: (t: T) => boolean): Subscribable<T> {
 		subscribe(subscriber: Observer<T>): Subscription {
 			return o.subscribe({
 				...subscriber,
-				next: (t) => f(t) && subscriber.next(t),
+				next: (t) => {
+					if (f(t)) {
+						subscriber.next(t);
+					}
+				},
 			});
 		},
 	};

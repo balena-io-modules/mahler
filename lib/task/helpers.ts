@@ -2,7 +2,11 @@ import type { Context, TaskOp } from './context';
 import type { PathType, Root } from '../path';
 import type { Action } from './instructions';
 
-export const NoAction = async () => void 0;
+import { setImmediate } from 'timers/promises';
+
+export const NoAction = async () => {
+	await setImmediate();
+};
 export const NoEffect = () => void 0;
 
 /**

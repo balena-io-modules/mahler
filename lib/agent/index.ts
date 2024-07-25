@@ -1,7 +1,6 @@
 import assert from '../assert';
-import { NullLogger } from '../logger';
 import type { Subscribable } from '../observable';
-import { Subject } from '../observable';
+import { Subject, Observable } from '../observable';
 import { Planner } from '../planner';
 import type { Sensor } from '../sensor';
 import type { Target, StrictTarget } from '../target';
@@ -9,9 +8,11 @@ import type { Task } from '../task';
 import { Runtime } from './runtime';
 import type { AgentOpts, Result } from './types';
 import { NotStarted } from './types';
-import type { Path } from '../path';
+import { patch } from './patch';
+import type { Operation } from '../operation';
 
 export * from './types';
+export * from './events';
 
 /**
  * An agent is an autonomous entity that can plan and execute
@@ -177,14 +178,14 @@ function from<TState>(
 		| {
 				initial: TState;
 				planner?: Planner<TState>;
-				sensors?: Array<Sensor<TState, Path>>;
-				opts?: DeepPartial<AgentOpts>;
+				sensors?: Array<Sensor<TState>>;
+				opts?: DeepPartial<AgentOpts<TState>>;
 		  }
 		| {
 				initial: TState;
 				tasks?: Array<Task<TState, any, any>>;
-				sensors?: Array<Sensor<TState, Path>>;
-				opts?: DeepPartial<AgentOpts>;
+				sensors?: Array<Sensor<TState>>;
+				opts?: DeepPartial<AgentOpts<TState>>;
 		  },
 ): Agent<TState>;
 function from<TState>({
@@ -194,24 +195,24 @@ function from<TState>({
 	opts: userOpts = {},
 	planner = Planner.from({
 		tasks,
-		config: { trace: userOpts.logger?.trace ?? NullLogger.trace },
 	}),
 }: {
 	initial: TState;
 	tasks?: Array<Task<TState, any, any>>;
 	planner?: Planner<TState>;
-	sensors?: Array<Sensor<TState, Path>>;
-	opts?: DeepPartial<AgentOpts>;
+	sensors?: Array<Sensor<TState>>;
+	opts?: DeepPartial<AgentOpts<TState>>;
 }): Agent<TState> {
-	const opts: AgentOpts = {
+	const opts: AgentOpts<TState> = {
 		maxRetries: Infinity,
 		follow: false,
+		plannerMaxWaitMs: 60 * 1000,
 		maxWaitMs: 5 * 60 * 1000,
 		minWaitMs: 1 * 1000,
 		backoffMs: (failures) => 2 ** failures * opts.minWaitMs,
 		strictIgnore: [],
 		...userOpts,
-		logger: { ...NullLogger, ...userOpts.logger },
+		trace: userOpts.trace ?? (() => void 0),
 	};
 
 	assert(
@@ -226,10 +227,12 @@ function from<TState>({
 
 	// Subscribe to runtime changes to keep
 	// the local copy of state up-to-date
-	const subject: Subject<TState> = new Subject();
-	subject.subscribe((s) => {
-		state = s;
+	const subject: Subject<Operation<TState>> = new Subject<Operation<TState>>();
+	subject.subscribe((changes) => {
+		state = patch(state, changes);
 	});
+
+	const observable = Observable.from(subject).map(() => state);
 
 	let setupRuntime: Promise<Runtime<TState> | null> = Promise.resolve(null);
 
@@ -291,7 +294,7 @@ function from<TState>({
 				});
 			});
 		},
-		async wait(timeout: number = 0) {
+		async wait(timeout = 0) {
 			assert(timeout >= 0);
 			const runtime = await setupRuntime;
 			if (runtime == null) {
@@ -304,7 +307,7 @@ function from<TState>({
 			return state;
 		},
 		subscribe(next) {
-			return subject.subscribe(next);
+			return observable.subscribe(next);
 		},
 	};
 }

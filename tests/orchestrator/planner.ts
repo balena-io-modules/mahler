@@ -1,5 +1,5 @@
 import { Planner } from 'mahler/planner';
-import { logger } from '~/test-utils';
+import { log } from '~/test-utils';
 
 import type { Device } from './state';
 import {
@@ -32,5 +32,5 @@ export const planner = Planner.from<Device>({
 		removeRelease,
 		removeApp,
 	],
-	config: { trace: logger.trace },
+	config: { trace: log },
 });

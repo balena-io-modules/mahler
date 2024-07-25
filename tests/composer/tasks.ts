@@ -233,9 +233,7 @@ export const uninstallService = App.task({
 	op: '*',
 	lens: '/services/:serviceName',
 	condition: (service) =>
-		service != null &&
-		service.containerId != null &&
-		service.status !== 'running',
+		service?.containerId != null && service.status !== 'running',
 	effect: (service) => {
 		// We need to purposely delete the service here, as the task
 		// operation is '*'

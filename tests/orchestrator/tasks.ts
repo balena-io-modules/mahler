@@ -65,7 +65,9 @@ export const fetchImage = Task.of<Device>().from({
 						}),
 				} as Docker.ImageBuildOptions)
 				.then((stream) => {
-					stream.on('data', (b) => logger.debug(b.toString()));
+					stream.on('data', (b) => {
+						logger.debug(b.toString());
+					});
 					stream.on('error', reject);
 					stream.on('close', reject);
 					stream.on('end', resolve);
@@ -80,9 +82,9 @@ export const fetchImage = Task.of<Device>().from({
 		await docker
 			.getImage(target.name)
 			.remove()
-			.catch((e) =>
-				logger.warn(`could not remove image tag '${target.name}'`, e),
-			);
+			.catch((e) => {
+				logger.warn(`could not remove image tag '${target.name}'`, e);
+			});
 
 		image._ = {
 			name: target.name,
@@ -439,7 +441,9 @@ export const removeService = Task.of<Device>().from({
 	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	condition: (service) =>
 		service?.containerId != null && service?.status !== 'running',
-	effect: (service) => service.delete(),
+	effect: (service) => {
+		service.delete();
+	},
 	action: async (service) => {
 		const container = docker.getContainer(service._.containerId!);
 		await container.remove({ v: true });

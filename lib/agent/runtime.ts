@@ -1,16 +1,16 @@
 import { setTimeout as delay } from 'timers/promises';
 
 import type { Operation } from '../operation';
-import { diff } from '../distance';
+import type { ReadOnly } from '../readonly';
 import type { Observer, Subscription } from '../observable';
-import type { PlanAction, Planner, PlanNode } from '../planner';
-import { SearchFailed } from '../planner';
+import type { Plan, PlanAction, Planner, PlanNode } from '../planner';
 import { Ref } from '../ref';
 import type { Sensor } from '../sensor';
 import type { StrictTarget } from '../target';
 import { Target } from '../target';
 import type { Action } from '../task';
 import { observe } from './observe';
+import { applyPatch } from './patch';
 
 import type { AgentOpts, Result } from './types';
 import { Failure, NotStarted, Stopped, Timeout, UnknownError } from './types';
@@ -19,6 +19,7 @@ import * as DAG from '../dag';
 import { Path } from '../path';
 import { Lens } from '../lens';
 import { Pointer } from '../pointer';
+import { View } from '../view';
 
 class ActionError extends Error {
 	constructor(
@@ -76,6 +77,12 @@ class PlanNotFound extends Error {
 	}
 }
 
+class PlanningTimeout extends Error {
+	constructor(public timeout: number) {
+		super(`Planning aborted after ${timeout}(ms)`);
+	}
+}
+
 export class Runtime<TState> {
 	private promise: Promise<Result<TState>> = Promise.resolve({
 		success: false,
@@ -88,37 +95,25 @@ export class Runtime<TState> {
 	private stateRef: Ref<TState>;
 
 	constructor(
-		private readonly observer: Observer<TState>,
+		private readonly observer: Observer<Operation<TState>>,
 		state: TState,
 		private readonly target: Target<TState> | StrictTarget<TState>,
 		private readonly planner: Planner<TState>,
 		private readonly sensors: Array<Sensor<TState, Path>>,
-		private readonly opts: AgentOpts,
+		private readonly opts: AgentOpts<TState>,
 		private readonly strict: boolean,
 	) {
 		this.stateRef = Ref.of(state);
 		// Perform actions based on the new state
-		this.onStateChange(Path.from('/'));
+		this.updateSensors(Path.from('/'));
 	}
 
 	public get state() {
 		return this.stateRef._;
 	}
 
-	private findPlan() {
-		const { logger } = this.opts;
-
-		const toLog = (o: Operation<TState, any>) => {
-			if (o.op === 'create') {
-				return ['create', o.path, 'with value', o.target];
-			}
-
-			if (o.op === 'update') {
-				return ['update', o.path, 'from', o.source, 'to', o.target];
-			}
-
-			return ['delete', o.path];
-		};
+	private findPlan(): Promise<Plan<TState> & { success: true }> {
+		const { trace, plannerMaxWaitMs } = this.opts;
 
 		let target: Target<TState>;
 		if (this.strict) {
@@ -131,32 +126,38 @@ export class Runtime<TState> {
 			target = this.target;
 		}
 
-		const changes = diff(this.stateRef._, target);
-		logger.debug(
-			`looking for a plan, pending changes:${
-				changes.length > 0 ? '' : ' none'
-			}`,
-		);
-		changes.map(toLog).forEach((log) => logger.debug('-', ...log));
+		trace({
+			event: 'find-plan',
+			state: this.stateRef._ as ReadOnly<TState>,
+			target,
+		});
 
 		// Trigger a plan search
-		// console.log('FIND PLAN', { current: this.stateRef._, target: this.target });
-		const result = this.planner.findPlan(this.stateRef._, this.target);
-		logger.debug(
-			`search finished after ${
-				result.stats.iterations
-			} iterations in ${result.stats.time.toFixed(1)}ms`,
-		);
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				reject(new PlanningTimeout(plannerMaxWaitMs));
+			}, plannerMaxWaitMs);
 
-		if (!result.success) {
-			// Jump to the catch below
-			throw new PlanNotFound(result.error);
-		}
+			const result = this.planner.findPlan(this.stateRef._, this.target);
+			clearTimeout(timer);
 
-		return result;
+			if (!result.success) {
+				trace({
+					event: 'plan-not-found',
+					stats: result.stats,
+					cause: result.error,
+				});
+				reject(new PlanNotFound(result.error));
+				return;
+			}
+
+			// trace event: plan found
+			// data, iterations, time, plan
+			resolve(result);
+		});
 	}
 
-	private onStateChange(changedPath: Path) {
+	private updateSensors(changedPath: Path) {
 		// for every existing subscription, check if the path still
 		// exists, if it doesn't unsusbcribe
 		(Object.keys(this.subscriptions) as Path[])
@@ -185,26 +186,67 @@ export class Runtime<TState> {
 				if (p in this.subscriptions) {
 					continue;
 				}
-				this.subscriptions[p] = sensor(this.stateRef, p).subscribe((s) => {
-					// There is no need to update the state reference as the sensor already
-					// modifies the state. We don't handle concurrency as we assume sensors
+				this.subscriptions[p] = sensor(p).subscribe((change) => {
+					// Patch the state
+					// We don't handle concurrency as we assume sensors
 					// do not conflict with each other (should we check?)
+					applyPatch(this.stateRef, change);
+
+					// Notify the observer of changes in the state
+					this.observer.next(change);
+
 					if (this.opts.follow) {
 						// Trigger a re-plan to see if the state is still on target
 						this.start();
-					} else {
-						// Notify the observer of the new state
-						this.observer.next(s);
 					}
 				});
 			}
 		}
 	}
 
-	private async runPlan(root: PlanNode<TState> | null) {
-		const { logger } = this.opts;
+	private async runAction(id: string, action: Action<TState>) {
+		const { trace } = this.opts;
 
-		return await DAG.mapReduce(
+		// Make a copy of the path modified by the action before the change
+		const before = structuredClone(Pointer.from(this.stateRef._, action.path));
+		// TODO: if a sensor makes a change to the path pointed by this action between
+		// here and the rollback those changes will be lost. We might need to queue those
+		// changes to re-apply them.
+		const parent = Pointer.from(this.stateRef._, Path.source(action.path));
+		const existsBefore =
+			before !== undefined ||
+			// If the pointer returns undefined, we check if the child exists under the parent
+			// path, as it is possible the value exists and is set to `undefined`
+			(parent != null &&
+				typeof parent === 'object' &&
+				Object.hasOwn(parent, Path.basename(action.path)));
+		try {
+			trace({ event: 'action-start', action });
+
+			// The observe() wrapper allows to notify the observer of every
+			// change to some part of the state
+			await observe(action, this.observer)(this.stateRef);
+			trace({ event: 'action-success', action });
+		} catch (e) {
+			// If an error occured, we revert the change
+			const after = View.from(this.stateRef, action.path);
+			if (!existsBefore) {
+				after.delete();
+				this.observer.next({ op: 'delete', path: action.path });
+			} else {
+				after._ = before as any;
+				this.observer.next({ op: 'update', path: action.path, target: before });
+			}
+
+			trace({ event: 'action-failure', action, cause: e });
+			throw new ActionRunFailed(id, action, e);
+		}
+	}
+
+	private async runPlan(root: PlanNode<TState> | null) {
+		const { trace } = this.opts;
+
+		await DAG.mapReduce(
 			root,
 			Promise.resolve(),
 			async (node: PlanAction<TState>, prev) => {
@@ -218,25 +260,15 @@ export class Runtime<TState> {
 					throw new Cancelled();
 				}
 
+				trace({ event: 'action-next', action });
+
 				if (!action.condition(this.stateRef._)) {
-					logger.warn(`${action.description}: condition failed`);
+					trace({ event: 'action-condition-failed', action });
 					throw new ActionConditionFailed(id, action);
 				}
 
-				try {
-					// Running the action should perform the changes in the
-					// local state without the need of comparisons later.
-					// The observe() wrapper allows to notify the observer from every
-					// change to some part of the state, it also reverts any changes
-					// if an error occurs
-					logger.info(`${action.description}: running ...`);
-					await observe(action, this.observer)(this.stateRef);
-					this.onStateChange(action.path); // update the state of the runtime
-					logger.info(`${action.description}: success`);
-				} catch (e) {
-					logger.error(`${action.description}: failed`, e);
-					throw new ActionRunFailed(id, action, e);
-				}
+				await this.runAction(id, action);
+				this.updateSensors(action.path);
 			},
 			async (actions) => {
 				// Wait for all promises to be settled to prevent moving
@@ -273,7 +305,7 @@ export class Runtime<TState> {
 			return;
 		}
 
-		const { logger } = this.opts;
+		const { trace } = this.opts;
 
 		this.promise = (async () => {
 			this.running = true;
@@ -281,27 +313,22 @@ export class Runtime<TState> {
 			let tries = 0;
 			let found = false;
 
-			// Send the initial state to the observer
-			this.observer.next(structuredClone(this.stateRef._));
-			logger.info('applying new target state');
+			trace({ event: 'start', target: this.target });
 			while (!this.stopped) {
 				try {
-					const result = this.findPlan();
+					const result = await this.findPlan();
 					const { start } = result;
 
 					// The plan is empty, we have reached the goal
 					if (start == null) {
-						logger.info('nothing else to do: target state reached');
+						trace({ event: 'success' });
 						return {
 							success: true as const,
 							state: structuredClone(this.stateRef._),
 						};
 					}
 
-					logger.debug('plan found, will execute the following actions:');
-					DAG.toString(start, (a: PlanAction<TState>) => a.action.description)
-						.split('\n')
-						.map((action) => logger.debug(action));
+					trace({ event: 'plan-found', start, stats: result.stats });
 
 					// Execute the plan
 					await this.runPlan(start);
@@ -314,27 +341,23 @@ export class Runtime<TState> {
 					// we don't exit immediately since the goal may
 					// not have been reached yet. We will exit when there are no
 					// more steps in a next re-plan
-					logger.info('plan executed successfully');
+					trace({ event: 'plan-executed' });
 				} catch (e) {
 					found = false;
 					if (e instanceof PlanNotFound) {
-						if (e.cause !== SearchFailed) {
-							logger.error(
-								'no plan found, reason:',
-								(e.cause as Error).message ?? e.cause,
-							);
-						} else {
-							logger.warn('no plan found');
-						}
+						// nothing to do
+					} else if (e instanceof PlanningTimeout) {
+						// planning timed-out but we can keep searching as the
+						// state could be updated by a sensor
+						trace({ event: 'plan-timeout', timeout: e.timeout });
 					} else if (e instanceof ActionError || e instanceof PlanRunFailed) {
-						logger.warn('plan execution interrupted due to errors');
+						// nothing to do
 					} else if (e instanceof Cancelled) {
-						logger.warn('plan execution cancelled');
 						// exit the loop
 						break;
 					} else {
 						/* Something else happened, better exit immediately */
-						logger.error('unknown error while looking for plan:', e);
+						trace({ event: 'failure', cause: e });
 						return {
 							success: false as const,
 							error: new UnknownError(e),
@@ -344,6 +367,7 @@ export class Runtime<TState> {
 
 				if (!found) {
 					if (tries >= this.opts.maxRetries) {
+						trace({ event: 'failure', cause: new Failure(tries) });
 						return {
 							success: false as const,
 							error: new Failure(tries),
@@ -351,14 +375,15 @@ export class Runtime<TState> {
 					}
 				}
 				const wait = Math.min(this.opts.backoffMs(tries), this.opts.maxWaitMs);
-				logger.debug(`waiting ${wait / 1000}s before re - planning`);
+				trace({ event: 'backoff', tries, delayMs: wait });
 				await delay(wait);
 
-				// Only backof if we haven't been able to reach the target
+				// Only backoff if we haven't been able to reach the target
 				tries += +!found;
 			}
 
 			// The only way to get here is if the runtime was stopped
+			trace({ event: 'failure', cause: new Stopped() });
 			return { success: false as const, error: new Stopped() };
 		})()
 			// QUESTION: if we get here this is pretty bad, should we notify
@@ -377,7 +402,9 @@ export class Runtime<TState> {
 		await this.promise;
 
 		// Unsubscribe from sensors
-		Object.values(this.subscriptions).forEach((s) => s.unsubscribe());
+		Object.values(this.subscriptions).forEach((s) => {
+			s.unsubscribe();
+		});
 	}
 
 	async wait(timeout = 0): Promise<Result<TState>> {

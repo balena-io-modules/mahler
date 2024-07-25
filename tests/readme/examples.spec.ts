@@ -1,4 +1,4 @@
-import { expect, logger } from '~/test-utils';
+import { expect, trace as readableTrace, log } from '~/test-utils';
 
 import { Task, Agent, UNDEFINED } from 'mahler';
 import { Planner } from 'mahler/planner';
@@ -33,7 +33,7 @@ describe('README examples', () => {
 				initial: 0,
 				tasks: [plusOne],
 				opts: {
-					logger,
+					trace: readableTrace,
 					minWaitMs: 10,
 				},
 			});
@@ -53,7 +53,7 @@ describe('README examples', () => {
 			// Create a new planner
 			const planner = Planner.from({
 				tasks: [plusOne],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			// Find a plan from 0 to 3
@@ -78,7 +78,7 @@ describe('README examples', () => {
 				initial: 0,
 				tasks: [plusOne],
 				opts: {
-					logger,
+					trace: readableTrace,
 					minWaitMs: 10,
 				},
 			});
@@ -123,7 +123,7 @@ describe('README examples', () => {
 				initial: 0,
 				tasks: [plusOne],
 				opts: {
-					logger,
+					trace: readableTrace,
 					minWaitMs: 10,
 				},
 			});
@@ -215,10 +215,10 @@ describe('README examples', () => {
 			description: '+1',
 		});
 
-		it('with needsWrite as target', async () => {
+		it('with needsWrite as target', () => {
 			const planner = Planner.from({
 				tasks: [plusOne, read, store],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			// Find a plan from 0 to 3
@@ -231,10 +231,10 @@ describe('README examples', () => {
 			);
 		});
 
-		it('without needsWrite as target', async () => {
+		it('without needsWrite as target', () => {
 			const planner = Planner.from({
 				tasks: [plusOne, read, store],
-				config: { trace: logger.trace },
+				config: { trace: log },
 			});
 
 			// Find a plan from 0 to 3

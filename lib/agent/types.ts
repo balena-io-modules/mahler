@@ -1,14 +1,20 @@
-import type { Logger } from '../logger';
+import type { AgentRuntimeEvent } from './events';
 
 export type Result<T> =
 	| { success: true; state: T }
 	| { success: false; error: Error };
 
-export interface AgentOpts {
+export interface AgentOpts<TState> {
 	/**
 	 * Follow the system state and keep re-planning if the state goes off-target
 	 */
 	follow: boolean;
+
+	/**
+	 * Abort search if a planning solution has not been found in this time
+	 * Default is 60 seconds.
+	 */
+	plannerMaxWaitMs: number;
 
 	/**
 	 * The maximum number of attempts for reaching the target before giving up. Defaults to
@@ -35,7 +41,7 @@ export interface AgentOpts {
 	/**
 	 * A Logger instance to use for reporting
 	 */
-	logger: Logger;
+	trace: (e: AgentRuntimeEvent<TState>) => void;
 
 	/**
 	 * List of globs to ignore when converting a strict target to a relative target
@@ -69,7 +75,7 @@ export class Stopped extends Error {
  * the maximum configured number of tries
  */
 export class Failure extends Error {
-	constructor(tries: number) {
+	constructor(public tries: number) {
 		super('Agent failed to reach target after ' + tries + ' attempts');
 	}
 }
@@ -90,6 +96,6 @@ export class Timeout extends Error {
  */
 export class UnknownError extends Error {
 	constructor(cause: unknown) {
-		super('Agent stopped due to unknown error: ' + cause, { cause });
+		super('Agent panicked due to unknown error', { cause });
 	}
 }

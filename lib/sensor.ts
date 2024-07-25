@@ -1,9 +1,8 @@
 import { Lens } from './lens';
 import type { PathType } from './path';
 import { Path } from './path';
-import type { Ref } from './ref';
-import { View } from './view';
 import type { LensArgs } from './lens';
+import type { UpdateOperation } from './operation';
 
 import type { Subscribable } from './observable';
 import { Observable } from './observable';
@@ -12,26 +11,30 @@ import { Observable } from './observable';
  * A Sensor function for type T is a function that returns a generator
  * that yields values of type T
  */
-export type SensorFn<T, P extends PathType = '/'> = (
+type SensorFn<T, P extends PathType = PathType> = (
 	args: LensArgs<T, P>,
 ) =>
-	| AsyncGenerator<Lens<T, P>, never | void | Lens<T, P>, void>
-	| Generator<Lens<T, P>, never | void, void | undefined>
+	| AsyncGenerator<Lens<T, P>, void, void>
+	| Generator<Lens<T, P>, void, void>
 	| Subscribable<Lens<T, P>>;
+
+type SensorOutput<T, P extends PathType = PathType> = Subscribable<
+	UpdateOperation<T, P>
+>;
 
 /**
  * A sensor receives a reference to a global state and
  * returns a subscribable that allows to observe changes
  * to the state returned by the sensor operation.
  */
-export type Sensor<T, P extends PathType = '/'> =
+export type Sensor<T, P extends PathType = PathType> =
 	unknown extends Lens<T, P>
 		? // Default to the version with path if the lens cannot be resolved
-			{ (s: Ref<T>, path: PathType): Subscribable<T>; lens: Path<P> }
+			{ (path: PathType): SensorOutput<T, P>; lens: Path<P> }
 		: // Otherwise add a path if lens arguments are not empty
 			LensArgs<T, P> extends Record<string, never>
-			? { (s: Ref<T>): Subscribable<T>; lens: Path<P> }
-			: { (s: Ref<T>, path: PathType): Subscribable<T>; lens: Path<P> };
+			? { (): SensorOutput<T, P>; lens: Path<P> }
+			: { (path: PathType): SensorOutput<T, P>; lens: Path<P> };
 
 /**
  * The sensor constructor properties
@@ -70,25 +73,18 @@ function from<TState, TPath extends PathType = '/'>(
 	} = typeof input === 'function' ? { sensor: input } : input;
 	const lensPath = Path.from(lens);
 	return Object.assign(
-		function (s: Ref<TState>, path: PathType = lens) {
+		function (path: PathType = lens) {
 			const refPath = Path.from(path);
 			const args = Lens.args(lensPath, refPath) as LensArgs<TState, TPath>;
-			const view = View.from(s, refPath);
 
-			return Observable.from(sensor(args)).map((value) => {
-				// For each value emmited by the sensor
-				// we update the view and return the updated state
-				// to the subscriber
-				view._ = value;
-
-				// We need to return a copy of the state here, otherwise
-				// subscribers would be able to change the behavior of the
-				// agent or other subscribers
-				return structuredClone(s._);
-			});
+			return Observable.from(sensor(args)).map((target) => ({
+				op: 'update',
+				path,
+				target,
+			}));
 		},
 		{ lens: lensPath },
-	) as Sensor<TState, TPath>;
+	);
 }
 
 /**

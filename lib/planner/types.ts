@@ -68,7 +68,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The caller instruction
 			 */
-			parent: Method<TState, any, any> | undefined;
+			parent: Method<TState> | undefined;
 
 			/**
 			 * The previous node in the plan
@@ -78,7 +78,7 @@ export type PlanningEvent<TState> =
 			/**
 			 * The instruction chosen
 			 */
-			instruction: Instruction<TState, any, any>;
+			instruction: Instruction<TState>;
 
 			/**
 			 * What is the operation for which the instruction
@@ -148,12 +148,14 @@ export class Aborted extends PlanningError {
 	}
 }
 
+export type Trace<TState> = (e: PlanningEvent<TState> | PlanningError) => void;
+
 export interface PlannerConfig<TState> {
 	/**
 	 * A function used by the planner to debug the search
 	 * for a plan. It defaults to a noop.
 	 */
-	trace: (e: PlanningEvent<TState> | PlanningError) => void;
+	trace: Trace<TState>;
 
 	/**
 	 * Max search depth before giving up. Defaults to 1000.

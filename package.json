@@ -49,13 +49,13 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "@balena/lint": "^8.0.0",
+    "@balena/lint": "^8.2.6",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
     "@types/debug": "^4.1.7",
     "@types/dockerode": "^3.3.16",
     "@types/memoizee": "^0.4.11",
-    "@types/mocha": "^8.2.2",
+    "@types/mocha": "^10.0.7",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.9",
     "@types/tar-stream": "2.2.2",
@@ -68,14 +68,14 @@
     "husky": "^4.2.5",
     "lint-staged": "^11.0.0",
     "memoizee": "^0.4.15",
-    "mocha": "^8.4.0",
-    "rimraf": "^3.0.2",
-    "sinon": "^16.1.0",
+    "mocha": "^10.6.0",
+    "rimraf": "^6.0.1",
+    "sinon": "^18.0.0",
     "sinon-chai": "^3.7.0",
     "tar-stream": "3.0.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.1",
-    "typescript": "^5.0.4"
+    "typescript": "^5.5.2"
   },
   "dependencies": {
     "mahler-wasm": "^0.1.0"

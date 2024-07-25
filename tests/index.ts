@@ -2,9 +2,7 @@ import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 import * as sinonChai from 'sinon-chai';
 
-import cLogger from './console';
-
-export const logger = cLogger;
+export { log, logger, trace } from './console';
 
 chai.use(sinonChai);
 chai.use(chaiAsPromised);

@@ -1,10 +1,11 @@
 import { expect } from '~/test-utils';
+import type { Target } from './target';
 import { UNDEFINED } from './target';
-import { Distance } from './distance';
+import { Distance, diff } from './distance';
 
 describe('Distance', () => {
-	describe('patched', () => {
-		it('applies the target operations to the given object', () => {
+	describe('target', () => {
+		it('returns the result of updating and object with a Target', () => {
 			type S = { a?: number; b: string; c?: { [k: string]: string } };
 
 			expect(
@@ -64,7 +65,64 @@ describe('Distance', () => {
 		});
 	});
 
-	describe('diff function', () => {
+	describe('diff', () => {
+		it('returns leaf operations to turn the given object into the target', () => {
+			type S = { a?: number; b: string; c: { [k: string]: string } };
+			const target: Target<S> = { a: 2, c: { k: UNDEFINED } };
+
+			expect(
+				diff(
+					{
+						a: 1,
+						b: 'one',
+						c: { k: 'v' },
+					},
+					target,
+				),
+			).to.have.deep.members([
+				{ op: 'update', path: '/a', source: 1, target: 2 },
+				{ op: 'delete', path: '/c/k' },
+			]);
+
+			expect(
+				diff(
+					{
+						a: 1,
+						b: 'two',
+						c: { k: 'v' },
+					},
+					target,
+				),
+			).to.deep.equal([
+				{ op: 'update', path: '/a', source: 1, target: 2 },
+				{ op: 'delete', path: '/c/k' },
+			]);
+
+			expect(
+				diff(
+					{
+						a: 1,
+						b: 'one',
+						c: {},
+					},
+					target,
+				),
+			).to.deep.equal([{ op: 'update', path: '/a', source: 1, target: 2 }]);
+
+			expect(
+				diff(
+					{
+						a: 2,
+						b: 'one',
+						c: {},
+					},
+					target,
+				),
+			).to.deep.equal([]);
+		});
+	});
+
+	describe('distance', () => {
 		it('returns pending operations to turn the given object into the target', () => {
 			type S = { a?: number; b: string; c: { [k: string]: string } };
 			const src: S = {
@@ -73,9 +131,9 @@ describe('Distance', () => {
 				c: { k: 'v' },
 			};
 
-			const diff = Distance.from(src, { a: 2, c: { k: UNDEFINED } });
+			const distance = Distance.from(src, { a: 2, c: { k: UNDEFINED } });
 			expect(
-				diff({
+				distance({
 					a: 1,
 					b: 'one',
 					c: { k: 'v' },
@@ -84,20 +142,15 @@ describe('Distance', () => {
 				{
 					op: 'update',
 					path: '/',
-					source: {
-						a: 1,
-						b: 'one',
-						c: { k: 'v' },
-					},
 					target: { a: 2, b: 'one', c: {} },
 				},
-				{ op: 'update', path: '/a', source: 1, target: 2 },
-				{ op: 'update', path: '/c', source: { k: 'v' }, target: {} },
+				{ op: 'update', path: '/a', target: 2 },
+				{ op: 'update', path: '/c', target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
 			expect(
-				diff({
+				distance({
 					a: 1,
 					b: 'two',
 					c: { k: 'v' },
@@ -106,20 +159,15 @@ describe('Distance', () => {
 				{
 					op: 'update',
 					path: '/',
-					source: {
-						a: 1,
-						b: 'two',
-						c: { k: 'v' },
-					},
 					target: { a: 2, b: 'two', c: {} },
 				},
-				{ op: 'update', path: '/a', source: 1, target: 2 },
-				{ op: 'update', path: '/c', source: { k: 'v' }, target: {} },
+				{ op: 'update', path: '/a', target: 2 },
+				{ op: 'update', path: '/c', target: {} },
 				{ op: 'delete', path: '/c/k' },
 			]);
 
 			expect(
-				diff({
+				distance({
 					a: 1,
 					b: 'one',
 					c: {},
@@ -128,18 +176,13 @@ describe('Distance', () => {
 				{
 					op: 'update',
 					path: '/',
-					source: {
-						a: 1,
-						b: 'one',
-						c: {},
-					},
 					target: { a: 2, b: 'one', c: {} },
 				},
-				{ op: 'update', path: '/a', source: 1, target: 2 },
+				{ op: 'update', path: '/a', target: 2 },
 			]);
 
 			expect(
-				diff({
+				distance({
 					a: 2,
 					b: 'one',
 					c: {},
@@ -153,22 +196,20 @@ describe('Distance', () => {
 				a: {},
 			};
 
-			const diff = Distance.from(src, { a: { b: { c: 'd' } } });
+			const distance = Distance.from(src, { a: { b: { c: 'd' } } });
 			expect(
-				diff({
+				distance({
 					a: {},
 				}),
 			).to.have.deep.members([
 				{
 					op: 'update',
 					path: '/',
-					source: { a: {} },
 					target: { a: { b: { c: 'd' } } },
 				},
 				{
 					op: 'update',
 					path: '/a',
-					source: {},
 					target: { b: { c: 'd' } },
 				},
 				{ op: 'create', path: '/a/b', target: { c: 'd' } },
@@ -181,18 +222,16 @@ describe('Distance', () => {
 				a: {},
 			};
 
-			const diff = Distance.from(src, { a: { b: UNDEFINED } });
-			expect(diff({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
+			const distance = Distance.from(src, { a: { b: UNDEFINED } });
+			expect(distance({ a: { b: { c: { d: 'e' } } } })).to.have.deep.members([
 				{
 					op: 'update',
 					path: '/',
-					source: { a: { b: { c: { d: 'e' } } } },
 					target: { a: {} },
 				},
 				{
 					op: 'update',
 					path: '/a',
-					source: { b: { c: { d: 'e' } } },
 					target: {},
 				},
 				{ op: 'delete', path: '/a/b' },

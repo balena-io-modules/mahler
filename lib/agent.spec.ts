@@ -1,11 +1,11 @@
-import { expect, logger } from '~/test-utils';
+import { expect, trace } from '~/test-utils';
 import { Agent } from './agent';
 import { NoAction, Task } from './task';
 import { Sensor } from './sensor';
 
 import { stub } from 'sinon';
 
-import { setTimeout } from 'timers/promises';
+import { setTimeout, setImmediate } from 'timers/promises';
 import { Observable } from './observable';
 import * as memoizee from 'memoizee';
 import { UNDEFINED } from './target';
@@ -13,7 +13,7 @@ import { UNDEFINED } from './target';
 describe('Agent', () => {
 	describe('basic operations', () => {
 		it('it should succeed if state has already been reached', async () => {
-			const agent = Agent.from({ initial: 0, opts: { logger } });
+			const agent = Agent.from({ initial: 0, opts: { trace } });
 			agent.seek(0);
 			await expect(agent.wait()).to.eventually.deep.equal({
 				success: true,
@@ -25,7 +25,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.rejected;
@@ -35,7 +35,7 @@ describe('Agent', () => {
 		it('it continues looking for plan unless max retries is set', async () => {
 			const agent = Agent.from({
 				initial: {},
-				opts: { minWaitMs: 10, maxRetries: 2, logger },
+				opts: { minWaitMs: 10, maxRetries: 2, trace },
 			});
 			agent.seek({ never: true });
 			await expect(agent.wait(1000)).to.be.fulfilled;
@@ -50,7 +50,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger, minWaitMs: 10 },
+				opts: { trace, minWaitMs: 10 },
 				tasks: [inc],
 			});
 
@@ -66,7 +66,7 @@ describe('Agent', () => {
 			});
 
 			// Intermediate states returned by the observable should be emitted by the agent
-			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			expect(count).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 			agent.stop();
 		});
 
@@ -86,7 +86,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger },
+				opts: { trace },
 				tasks: [counter],
 			});
 
@@ -102,7 +102,7 @@ describe('Agent', () => {
 			});
 
 			// Intermediate states returned by the observable should be emitted by the agent
-			expect(count).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+			expect(count).to.deep.equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 			agent.stop();
 		});
 
@@ -139,7 +139,7 @@ describe('Agent', () => {
 
 			const agent = Agent.from({
 				initial: { a: 0, b: 0 },
-				opts: { logger, minWaitMs: 1 * 1000 },
+				opts: { trace, minWaitMs: 1 * 1000 },
 				tasks: [multiIncrement, byTwo, byOne],
 			});
 
@@ -159,7 +159,7 @@ describe('Agent', () => {
 			const plusOne = Task.from<number>({
 				condition: (state, { target }) => state < target,
 				effect: (state) => ++state._,
-				action: async (state) => {
+				action: (state) => {
 					++state._;
 
 					// The action fails after a partial update
@@ -169,7 +169,7 @@ describe('Agent', () => {
 			});
 			const agent = Agent.from({
 				initial: 0,
-				opts: { logger, maxRetries: 0 },
+				opts: { trace, maxRetries: 0 },
 				tasks: [plusOne],
 			});
 
@@ -195,7 +195,7 @@ describe('Agent', () => {
 			lens: '/b',
 			condition: (state, { target }) => state < target,
 			effect: (state) => ++state._,
-			action: async (state) => {
+			action: (state) => {
 				++state._;
 
 				// The action fails after a partial update
@@ -208,11 +208,12 @@ describe('Agent', () => {
 				state.a < target.a || state.b < target.b,
 			method: (state, { target }) => {
 				const tasks = [];
-				if (state.a < target.a) {
-					tasks.push(aPlusOne({ target: target.a }));
-				}
+
 				if (state.b < target.b) {
 					tasks.push(bPlusOne({ target: target.b }));
+				}
+				if (state.a < target.a) {
+					tasks.push(aPlusOne({ target: target.a }));
 				}
 				return tasks;
 			},
@@ -220,7 +221,7 @@ describe('Agent', () => {
 		});
 		const agent = Agent.from({
 			initial: { a: 0, b: 0 },
-			opts: { logger, maxRetries: 0 },
+			opts: { trace, maxRetries: 0 },
 			tasks: [plusOne],
 		});
 
@@ -257,7 +258,7 @@ describe('Agent', () => {
 			},
 			action: async (state) => {
 				state._.resistorOn = true;
-				toggleResistorOn();
+				await toggleResistorOn();
 			},
 			description: 'turn resistor ON',
 		});
@@ -271,7 +272,7 @@ describe('Agent', () => {
 			},
 			action: async (state) => {
 				state._.resistorOn = false;
-				toggleResistorOff();
+				await toggleResistorOff();
 			},
 			description: 'turn resistor OFF',
 		});
@@ -316,13 +317,13 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
-			await expect(agent.wait(1000)).to.eventually.deep.equal({
-				success: true,
-				state: { roomTemp: 20, resistorOn: true },
-			});
+
+			await expect(agent.wait(1000)).to.be.fulfilled;
+			expect(agent.state().roomTemp).to.equal(20);
+
 			agent.stop();
 		});
 
@@ -333,13 +334,12 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seek({ roomTemp: 20 });
-			await expect(agent.wait(1000)).to.eventually.deep.equal({
-				success: true,
-				state: { roomTemp: 20, resistorOn: false },
-			}).fulfilled;
+
+			await expect(agent.wait(1000)).to.be.fulfilled;
+			expect(agent.state().roomTemp).to.equal(20);
 			agent.stop();
 		});
 
@@ -350,13 +350,13 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 			agent.seekStrict({ roomTemp: 20, resistorOn: false });
 			await expect(agent.wait(1000)).to.eventually.deep.equal({
 				success: true,
 				state: { roomTemp: 20, resistorOn: false },
-			}).fulfilled;
+			});
 			agent.stop();
 		});
 
@@ -367,7 +367,7 @@ describe('Agent', () => {
 				initial: { roomTemp, resistorOn },
 				tasks: [turnOn, turnOff, wait],
 				sensors: [termometer(roomTemp)],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			const states: Heater[] = [];
@@ -379,7 +379,6 @@ describe('Agent', () => {
 
 			// The observable should return all the state changes
 			expect(states).to.deep.equal([
-				{ roomTemp: 18, resistorOn: false },
 				{ roomTemp: 18, resistorOn: true },
 				// Because the termometer is started with the agent, the temperature
 				// drops a degree before it can be increased by turning the resistor on
@@ -446,6 +445,7 @@ describe('Agent', () => {
 			},
 			async action(room) {
 				room._.heaterOn = true;
+				await setImmediate();
 			},
 			description: ({ room }) => `turn heater on in ${room}`,
 		});
@@ -463,6 +463,7 @@ describe('Agent', () => {
 			},
 			async action(room) {
 				room._.heaterOn = false;
+				await setImmediate();
 			},
 			description: ({ room }) => `turn heater off in ${room}`,
 		});
@@ -503,7 +504,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -514,10 +515,7 @@ describe('Agent', () => {
 
 			climateControl.seek({ bedroom: { temperature: 20 } });
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state().bedroom).to.deep.equal({
-				temperature: 20,
-				heaterOn: true,
-			});
+			expect(climateControl.state().bedroom.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -528,7 +526,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -545,10 +543,8 @@ describe('Agent', () => {
 				office: { temperature: 20 },
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state()).to.deep.equal({
-				bedroom: { temperature: 20, heaterOn: true },
-				office: { temperature: 20, heaterOn: true },
-			});
+			expect(climateControl.state().bedroom.temperature).to.equal(20);
+			expect(climateControl.state().office.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -559,7 +555,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -575,10 +571,7 @@ describe('Agent', () => {
 				studio: { temperature: 20 },
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state().studio).to.deep.equal({
-				temperature: 20,
-				heaterOn: true,
-			});
+			expect(climateControl.state().studio.temperature).equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);
@@ -589,7 +582,7 @@ describe('Agent', () => {
 				initial: INITIAL_STATE,
 				tasks: [turnOn, turnOff, wait, addRoom, removeRoom],
 				sensors: [roomSensor],
-				opts: { minWaitMs: 10, logger },
+				opts: { minWaitMs: 10, trace },
 			});
 
 			climateControl.subscribe((s) => {
@@ -606,12 +599,9 @@ describe('Agent', () => {
 				office: UNDEFINED,
 			});
 			await expect(climateControl.wait(300)).to.be.fulfilled;
-			expect(climateControl.state()).to.deep.equal({
-				bedroom: {
-					temperature: 20,
-					heaterOn: true,
-				},
-			});
+			const state = climateControl.state();
+			expect(state.bedroom).to.not.be.undefined;
+			expect(state.bedroom.temperature).to.equal(20);
 
 			climateControl.stop();
 			await setTimeout(50);

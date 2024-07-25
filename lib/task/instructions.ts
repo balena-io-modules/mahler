@@ -100,9 +100,7 @@ function isMethod<TState = any>(t: Instruction<TState>): t is Method<TState> {
 /**
  * Check if an instruction is an action
  */
-function isAction<TState = any>(
-	t: Instruction<TState>,
-): t is Action<TState, any, any> {
+function isAction<TState = any>(t: Instruction<TState>): t is Action<TState> {
 	return (
 		(t as any).condition != null &&
 		typeof (t as any).condition === 'function' &&

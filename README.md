@@ -8,7 +8,7 @@ A automated task composer and [HTN](https://en.wikipedia.org/wiki/Hierarchical_t
 
 - Simple API. Define primitive tasks by declaring the `effect` it has on the system state, a `condition` for the task to be chosen, and an `action`, which is the asynchronous operation that will be performed on the system if the task is chosen for the plan. Tasks can be used by other compound tasks (or _methods_) to guide the planner towards a desired behavior.
 - Highly configurable `Agent` interface allows to create autonomous agents to serve a wide variety of use cases. Create a single shot agent to just reach a specific target, or create a service agent that keeps monitoring the state of the world and making changes as needed to keep the system on target. Agents support re-planning if the state of the system changes during the plan execution or errors occur while executing actions. This runtime context can be used as feedback to the planning stage to chose different paths if needed.
-- Observable runtime. The agent runtime state and knowledge of the world can be monitored at all times with different levels of detail. Human readable metadata for tasks can be provided via the task `description` property. Plug in a logger to generate human readable logs.
+- Observable runtime. The agent runtime state and knowledge of the world can be monitored at all times with different levels of detail. Human readable metadata for tasks can be provided via the task `description` property. Plug in a trace function to generate human readable logs.
 - Parallel execution of tasks. The planner automatically detects when operations can be performed in parallel and creates branches in the plan to tell the agent to run concurrent operations.
 - Easy to debug. Agent observable state and known goals allow easy replicability when issues occur. The planning decision tree and resulting plans can be diagrammed to visually inspect where planning is failing.
 
@@ -1201,19 +1201,22 @@ In order to unsubscribe from agent updates, we can use the `unsubscribe` method 
 subscription.unsubscribe();
 ```
 
-### Logging Agent and Planner
+### Agent observability
 
-Mahler provides a [Logger interface](lib/logger.ts) to provide text feedback to the internal process during the planning and execution contexts.
+A Mahler agent can be given a `trace` function, which will be called on different [agent runtime events](lib/agent/events.ts). This function can be used for traceability/observability into the agent runtime. A [readableTrace](lib/utils/logger.ts) function is provided under `mahler/utils` for human readable logs.
 
 ```typescript
+import { readableTrace } from 'mahler/utils';
+
 const agent = Agent.from({
 	initial: 0,
-	tasks: [],
-	opts: { logger: { info: console.log, error: console.error } },
+	tasks: [
+		/* task list */
+	],
+	// console conforms to the Logger interface
+	opts: { trace: readableTrace(console) },
 });
 ```
-
-Passing a `trace` function to the agent will allow to get structured feedback of the planning progress. The rest of the functions (debug, info, warn,error) are called only by the agent runtime with textual information with different levels of detail.
 
 ## Troubleshooting
 

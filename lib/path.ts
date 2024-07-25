@@ -92,7 +92,7 @@ function source(p: Path) {
  */
 function basename(p: Path) {
 	const parts = split(p);
-	return parts.pop() || '';
+	return parts.pop() ?? '';
 }
 
 export const Path = {

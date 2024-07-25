@@ -4,9 +4,18 @@ import { isArrayIndex } from './is-array-index';
 
 export type Pointer<O, P extends PathType> = PointerWithSlash<O, P>;
 
+type IsLiteral<T> = T extends string
+	? string extends T
+		? false
+		: true
+	: false;
+
 type PointerWithSlash<O, P extends PathType> = P extends `/${infer R}`
 	? PointerWithoutSlash<O, R>
-	: unknown;
+	: IsLiteral<P> extends true
+		? never
+		: // If the string is not a literal we cannot know what the pointer type is
+			unknown;
 type PointerWithoutSlash<
 	O,
 	P extends PathType,
@@ -26,7 +35,9 @@ type PointerWithSinglePath<O, H extends string> = O extends any[]
 	? O[number]
 	: H extends keyof O
 		? O[H]
-		: never;
+		: H extends ''
+			? O
+			: undefined;
 
 export class InvalidPointer extends Error {
 	constructor(path: PathType, obj: unknown) {
@@ -39,8 +50,11 @@ export class InvalidPointer extends Error {
 function from<O = any, P extends PathType = Root>(
 	obj: O,
 	path: Path<P>,
-): Pointer<O, P> | undefined {
+): Pointer<O, P> {
 	const parts = Path.split(path);
+
+	// Save the last element of the path so we can delete it
+	const last = parts.pop();
 
 	let o = obj as any;
 	for (const p of parts) {
@@ -52,12 +66,22 @@ function from<O = any, P extends PathType = Root>(
 			throw new InvalidPointer(path, obj);
 		}
 
-		// Pointer is permissive, if the object does not exist in the type,
-		// it doesn't mean it cannot exist so we return undefined
 		if (!(p in o)) {
-			return undefined;
+			throw new InvalidPointer(path, obj);
 		}
 		o = o[p];
+	}
+
+	if (last != null) {
+		if (!Array.isArray(o) && typeof o !== 'object') {
+			throw new InvalidPointer(path, obj);
+		}
+
+		if (Array.isArray(o) && !isArrayIndex(last)) {
+			throw new InvalidPointer(path, obj);
+		}
+
+		return o[last];
 	}
 
 	return o;

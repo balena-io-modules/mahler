@@ -20,7 +20,7 @@ export interface PlanAction<TState> extends DAG.Value {
 	/**
 	 * The action to execute
 	 */
-	readonly action: Action<TState, any, any>;
+	readonly action: Action<TState>;
 }
 
 export type PlanNode<TState> = PlanAction<TState> | Fork | Join;
@@ -35,7 +35,7 @@ export const PlanAction = {
 	/**
 	 * Create a new Plan action node from a given action and a state
 	 */
-	from<TState>(s: TState, a: Action<TState, any, any>): PlanAction<TState> {
+	from<TState>(s: TState, a: Action<TState>): PlanAction<TState> {
 		// We don't use the full state to calculate the
 		// id as there may be changes in the state that have nothing
 		// to do with the action. We just use the part of the state

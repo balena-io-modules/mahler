@@ -74,7 +74,7 @@ function fromNode(
 
 		const forks = node.next.filter(DAG.isFork);
 		if (forks.length > 0) {
-			const ids = forks.map((f) => fromNode(f, adj)).map((n) => n!.id);
+			const ids = forks.map((f) => fromNode(f, adj)).map((n) => n.id);
 			return DiagramNode.fromId(hash(ids));
 		}
 
@@ -117,7 +117,7 @@ const DiagramNode = {
 		};
 	},
 
-	instruction<T>(s: T, i: Instruction<T, any, any>, parentId?: string) {
+	instruction<T>(s: T, i: Instruction<T>, parentId?: string) {
 		if (Action.is(i)) {
 			assert(parentId != null);
 			const n = PlanAction.from(s, i);
@@ -135,7 +135,7 @@ const DiagramNode = {
 };
 
 class DiagramAdjacency {
-	private map: Map<string, DiagramNode[]> = new Map();
+	private map = new Map<string, DiagramNode[]>();
 
 	set(child: DiagramNode, parent: DiagramNode) {
 		const p = this.map.get(child.id);
@@ -286,7 +286,7 @@ class Diagram {
 		// The parent of a next node is either the immediate join after
 		// joining branches upwards or is the diagram node for the previous
 		// action or is 'start'
-		const parentNode = this.drawJoins(currNode, e.prev) || DiagramNode.start();
+		const parentNode = this.drawJoins(currNode, e.prev) ?? DiagramNode.start();
 		this.graph.push(`	${parentNode} -.- ${currNode}{ }`);
 		this.adjacency.set(currNode, parentNode);
 		this.parent = currNode;
@@ -320,7 +320,7 @@ class Diagram {
 
 				if (e.prev != null) {
 					const prevNode =
-						DiagramNode.fromNode(e.prev, this.adjacency) || parent;
+						DiagramNode.fromNode(e.prev, this.adjacency) ?? parent;
 
 					// We go up the adjacency map to find the first action
 					// node that links to the compound task. If that node is the
@@ -341,7 +341,7 @@ class Diagram {
 					// If there are empty nodes before the current action
 					// on the plan we use those as the parent, otherwise we use
 					// the already defined parent
-					parent = this.drawJoins(DiagramNode.fromId(insId), e.prev) || parent;
+					parent = this.drawJoins(DiagramNode.fromId(insId), e.prev) ?? parent;
 				}
 			}
 		}
@@ -396,7 +396,7 @@ class Diagram {
 
 	onFound<T>(e: PlanningEvent<T> & { event: 'found' }) {
 		const node = DiagramNode.stop();
-		const parent = this.drawJoins(node, e.prev) || DiagramNode.start();
+		const parent = this.drawJoins(node, e.prev) ?? DiagramNode.start();
 		this.graph.push(`	${parent} -.- ${node}(( ))`);
 		this.graph.push(`	${node}:::finish`);
 		this.graph.push(`	classDef finish stroke:#000,fill:#000`);
@@ -462,8 +462,10 @@ export function mermaid({ meta = false }: Partial<MermaidOpts> = {}) {
 					node = diagram.onTryInstruction(e);
 
 					break;
-				case 'backtrack-method':
-					return diagram.onBacktracking(e);
+				case 'backtrack-method': {
+					diagram.onBacktracking(e);
+					return;
+				}
 
 				case 'found':
 					diagram.onFound(e);

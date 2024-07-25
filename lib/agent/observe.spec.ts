@@ -2,6 +2,8 @@ import { expect } from '~/test-utils';
 import type { Observer } from '../observable';
 import { Ref } from '../ref';
 import { observe } from './observe';
+import type { Operation } from '../operation';
+import { setImmediate } from 'timers/promises';
 
 import { stub } from 'sinon';
 
@@ -26,38 +28,29 @@ describe('observe', () => {
 		}, observerFrom(next))(n);
 
 		expect(next).to.have.been.calledThrice;
-		expect(next).to.have.been.calledWith(1);
-		expect(next).to.have.been.calledWith(2);
-		expect(next).to.have.been.calledWith(3);
+		expect(next).to.have.been.calledWith({
+			op: 'update',
+			path: '/',
+			target: 1,
+		});
+		expect(next).to.have.been.calledWith({
+			op: 'update',
+			path: '/',
+			target: 2,
+		});
+		expect(next).to.have.been.calledWith({
+			op: 'update',
+			path: '/',
+			target: 3,
+		});
 		expect(n._).to.equal(3);
-	});
-
-	it('reverts changes if an error happens', () => {
-		const n = Ref.of(0);
-
-		const next = stub();
-
-		try {
-			observe((r: Ref<number>) => {
-				for (let i = 0; i < 3; i++) {
-					r._++;
-				}
-				throw new Error('something happened');
-			}, observerFrom(next))(n);
-		} catch {
-			/* noop */
-		}
-
-		expect(next).to.have.been.calledWith(1);
-		expect(next).to.have.been.calledWith(2);
-		expect(next).to.have.been.calledWith(3);
-		expect(n._).to.equal(0);
 	});
 
 	it('observes changes to strings', () => {
 		const s = Ref.of('hello');
 
-		const next = stub();
+		const values: Array<Operation<string>> = [];
+		const next = (o: Operation<string>) => values.push(o);
 
 		observe((r: Ref<string>) => {
 			r._ += ' world';
@@ -65,59 +58,77 @@ describe('observe', () => {
 			r._ += ', and Alice';
 		}, observerFrom(next))(s);
 
-		expect(next).to.have.been.calledThrice;
-		expect(next).to.have.been.calledWith('hello world');
-		expect(next).to.have.been.calledWith('hello world Bob');
-		expect(next).to.have.been.calledWith('hello world Bob, and Alice');
+		expect(values.length).to.equal(3);
+		expect(values).to.deep.equal([
+			{
+				op: 'update',
+				path: '/',
+				target: 'hello world',
+			},
+			{
+				op: 'update',
+				path: '/',
+				target: 'hello world Bob',
+			},
+			{
+				op: 'update',
+				path: '/',
+				target: 'hello world Bob, and Alice',
+			},
+		]);
 		expect(s._).to.equal('hello world Bob, and Alice');
 	});
 
 	it('observes changes to objects', () => {
-		type O = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
-		const o = Ref.of<O>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
+		type S = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
+		const s = Ref.of<S>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
 
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
+		const values: Array<Operation<S>> = [];
+		const next = (o: Operation<S>) => values.push(o);
 
-		observe((r: Ref<O>) => {
+		observe((r: Ref<S>) => {
 			r._.a++;
 			r._.b.c += ' world';
 			r._.b.d.e = false;
 			r._.b.d.f.push(1);
-		}, observerFrom(next))(o);
+		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
 			{
-				a: 2,
-				b: { c: 'hello', d: { e: true, f: [0] } },
+				op: 'update',
+				path: '/a',
+				target: 2,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: true, f: [0] } },
+				op: 'update',
+				path: '/b/c',
+				target: 'hello world',
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0] } },
+				op: 'update',
+				path: '/b/d/e',
+				target: false,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 1] } },
+				op: 'create',
+				path: '/b/d/f/1',
+				target: 1,
 			},
 		]);
-		expect(o._).to.deep.equal({
+		expect(s._).to.deep.equal({
 			a: 2,
 			b: { c: 'hello world', d: { e: false, f: [0, 1] } },
 		});
 	});
 
 	it('observes changes to nested re-assignments', () => {
-		type O = { foo?: string; bar?: O };
-		const o = Ref.of<O>({ foo: 'hello', bar: { foo: 'world' } });
+		type S = { foo?: string; bar?: S };
+		const s = Ref.of<S>({ foo: 'hello', bar: { foo: 'world' } });
 
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
+		const values: Array<Operation<S>> = [];
+		const next = (o: Operation<S>) => values.push(structuredClone(o));
 
-		observe((r: Ref<O>) => {
+		observe((r: Ref<S>) => {
 			r._.foo = 'hello world';
 			r._.bar!.foo = 'world hello';
 			r._.bar!.bar = { foo: 'goodbye' };
@@ -125,304 +136,218 @@ describe('observe', () => {
 			r._.bar!.bar = { foo: 'goodbye' };
 			r._.bar!.bar.foo = 'goodbye world';
 			r._.bar = { foo: 'hello again' };
-			r._.bar!.foo = 'goodbye again';
-		}, observerFrom(next))(o);
+			r._.bar.foo = 'goodbye again';
+		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
 			{
-				foo: 'hello world',
-				bar: { foo: 'world' },
+				op: 'update',
+				path: '/foo',
+				target: 'hello world',
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'world hello' },
+				op: 'update',
+				path: '/bar/foo',
+				target: 'world hello',
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
+				op: 'create',
+				path: '/bar/bar',
+				target: { foo: 'goodbye' },
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'world hello' },
+				op: 'delete',
+				path: '/bar/bar',
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
+				op: 'create',
+				path: '/bar/bar',
+				target: { foo: 'goodbye' },
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'world hello', bar: { foo: 'goodbye world' } },
+				op: 'update',
+				path: '/bar/bar/foo',
+				target: 'goodbye world',
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'hello again' },
+				op: 'update',
+				path: '/bar',
+				target: { foo: 'hello again' },
 			},
 			{
-				foo: 'hello world',
-				bar: { foo: 'goodbye again' },
+				op: 'update',
+				path: '/bar/foo',
+				target: 'goodbye again',
 			},
 		]);
-	});
-
-	it('reverts changes to nested re-assignments', () => {
-		type O = { foo?: string; bar?: O };
-		const o = Ref.of<O>({ foo: 'hello', bar: { foo: 'world' } });
-
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
-
-		expect(() =>
-			observe((r: Ref<O>) => {
-				r._.foo = 'hello world';
-				r._.bar!.foo = 'world hello';
-				r._.bar!.bar = { foo: 'goodbye' };
-				r._.bar!.bar.foo = 'goodbye world';
-				r._.bar = { foo: 'hello again' };
-				r._.bar!.foo = 'goodbye again';
-				throw new Error('something happened!');
-			}, observerFrom(next))(o),
-		).to.throw('something happened!');
-
-		expect(values).to.have.deep.members([
-			{
-				foo: 'hello world',
-				bar: { foo: 'world' },
-			},
-			{
-				foo: 'hello world',
-				bar: { foo: 'world hello' },
-			},
-			{
-				foo: 'hello world',
-				bar: { foo: 'world hello', bar: { foo: 'goodbye' } },
-			},
-			{
-				foo: 'hello world',
-				bar: { foo: 'world hello', bar: { foo: 'goodbye world' } },
-			},
-			{
-				foo: 'hello world',
-				bar: { foo: 'hello again' },
-			},
-			{
-				foo: 'hello world',
-				bar: { foo: 'goodbye again' },
-			},
-			{ foo: 'hello', bar: { foo: 'world' } },
-		]);
-
-		expect(o._).to.deep.equal({ foo: 'hello', bar: { foo: 'world' } });
 	});
 
 	it('observes changes to nested re-assignments in arrays', () => {
-		type O = { foo?: string; bar?: O[] };
-		const o = Ref.of<O>({ foo: 'hello', bar: [{ foo: 'world' }] });
+		type S = { foo?: string; bar?: S[] };
+		const s = Ref.of<S>({ foo: 'hello', bar: [{ foo: 'world' }] });
 
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
+		const values: Array<Operation<S>> = [];
+		const next = (o: Operation<S>) => values.push(structuredClone(o));
 
-		observe((r: Ref<O>) => {
+		observe((r: Ref<S>) => {
 			r._.foo = 'hello world';
 			r._.bar![0].foo = 'world hello';
 			r._.bar![0].bar = [{ foo: 'goodbye' }];
 			r._.bar![0].bar[0].foo = 'goodbye world';
 			r._.bar![0] = { foo: 'hello again' };
 			r._.bar![0].foo = 'goodbye again';
-		}, observerFrom(next))(o);
+		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world' }],
+				op: 'update',
+				path: '/foo',
+				target: 'hello world',
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello' }],
+				op: 'update',
+				path: '/bar/0/foo',
+				target: 'world hello',
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye' }] }],
+				op: 'create',
+				path: '/bar/0/bar',
+				target: [{ foo: 'goodbye' }],
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye world' }] }],
+				op: 'update',
+				path: '/bar/0/bar/0/foo',
+				target: 'goodbye world',
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'hello again' }],
+				op: 'update',
+				path: '/bar/0',
+				target: { foo: 'hello again' },
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'goodbye again' }],
+				op: 'update',
+				path: '/bar/0/foo',
+				target: 'goodbye again',
 			},
 		]);
 	});
 
-	it('reverts changes to nested re-assignments in arrays', () => {
-		type O = { foo?: string; bar?: O[] };
-		const o = Ref.of<O>({ foo: 'hello', bar: [{ foo: 'world' }] });
+	it('observes changes to complex objects', () => {
+		type S = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
+		const s = Ref.of<S>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
 
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
+		const values: Array<Operation<S>> = [];
+		const next = (o: Operation<S>) => values.push(structuredClone(o));
 
-		expect(() =>
-			observe((r: Ref<O>) => {
-				r._.foo = 'hello world';
-				r._.bar![0].foo = 'world hello';
-				r._.bar![0].bar = [{ foo: 'goodbye' }];
-				r._.bar![0].bar[0].foo = 'goodbye world';
-				r._.bar![0] = { foo: 'hello again' };
-				r._.bar![0].foo = 'goodbye again';
-
-				throw new Error('something happened!');
-			}, observerFrom(next))(o),
-		).to.throw('something happened!');
+		observe((r: Ref<S>) => {
+			r._.a++;
+			r._.b.c += ' world';
+			r._.b.d.e = false;
+			r._.b.d.f.push(1);
+			r._.b.d.f[1] = 2;
+			r._.b.d.f[2] = 2;
+			r._.b.d.f.pop();
+		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world' }],
+				op: 'update',
+				path: '/a',
+				target: 2,
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello' }],
+				op: 'update',
+				path: '/b/c',
+				target: 'hello world',
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye' }] }],
+				op: 'update',
+				path: '/b/d/e',
+				target: false,
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'world hello', bar: [{ foo: 'goodbye world' }] }],
+				op: 'create',
+				path: '/b/d/f/1',
+				target: 1,
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'hello again' }],
+				op: 'update',
+				path: '/b/d/f/1',
+				target: 2,
 			},
 			{
-				foo: 'hello world',
-				bar: [{ foo: 'goodbye again' }],
+				op: 'create',
+				path: '/b/d/f/2',
+				target: 2,
 			},
-			{ foo: 'hello', bar: [{ foo: 'world' }] },
+			{
+				op: 'delete',
+				path: '/b/d/f/2',
+			},
 		]);
-
-		expect(o._).to.deep.equal({ foo: 'hello', bar: [{ foo: 'world' }] });
-	});
-
-	it('reverts changes if an error occurs while modifying an object', () => {
-		type O = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
-		const o = Ref.of<O>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
-
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
-
-		expect(() =>
-			observe((r: Ref<O>) => {
-				r._.a++;
-				r._.b.c += ' world';
-				r._.b.d.e = false;
-				r._.b.d.f.push(1);
-				r._.b.d.f[1] = 2;
-				r._.b.d.f[2] = 2;
-				r._.b.d.f.pop();
-
-				throw new Error('something happened!');
-			}, observerFrom(next))(o),
-		).to.throw('something happened!');
-
-		expect(values).to.have.deep.members([
-			{
-				a: 2,
-				b: { c: 'hello', d: { e: true, f: [0] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: true, f: [0] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 1] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2, 2] } },
-			},
-			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2] } },
-			},
-			{ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } },
-		]);
-		expect(o._).to.deep.equal({
-			a: 1,
-			b: { c: 'hello', d: { e: true, f: [0] } },
+		expect(s._).to.deep.equal({
+			a: 2,
+			b: { c: 'hello world', d: { e: false, f: [0, 2] } },
 		});
 	});
 
-	it('reverts changes if an error occurs while modifying an object in an async call', async () => {
-		type O = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
-		const o = Ref.of<O>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
+	it('observes changes to complex objects in an async call', async () => {
+		type S = { a: number; b: { c: string; d: { e: boolean; f: number[] } } };
+		const s = Ref.of<S>({ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } });
 
-		const values: O[] = [];
-		const next = (v: O) => values.push(v);
+		const values: Array<Operation<S>> = [];
+		const next = (o: Operation<S>) => values.push(structuredClone(o));
 
-		await expect(
-			observe(async (r: Ref<O>) => {
-				r._.a++;
-				r._.b.c += ' world';
-				r._.b.d.e = false;
-				r._.b.d.f.push(1);
-				r._.b.d.f[1] = 2;
-				r._.b.d.f[2] = 2;
-				r._.b.d.f.pop();
-
-				throw new Error('something happened!');
-			}, observerFrom(next))(o),
-		).to.be.rejectedWith('something happened!');
+		await observe(async (r: Ref<S>) => {
+			await setImmediate();
+			r._.a++;
+			r._.b.c += ' world';
+			r._.b.d.e = false;
+			r._.b.d.f.push(1);
+			r._.b.d.f[1] = 2;
+			r._.b.d.f[2] = 2;
+			r._.b.d.f.pop();
+		}, observerFrom(next))(s);
 
 		expect(values).to.have.deep.members([
 			{
-				a: 2,
-				b: { c: 'hello', d: { e: true, f: [0] } },
+				op: 'update',
+				path: '/a',
+				target: 2,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: true, f: [0] } },
+				op: 'update',
+				path: '/b/c',
+				target: 'hello world',
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0] } },
+				op: 'update',
+				path: '/b/d/e',
+				target: false,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 1] } },
+				op: 'create',
+				path: '/b/d/f/1',
+				target: 1,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2] } },
+				op: 'update',
+				path: '/b/d/f/1',
+				target: 2,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2, 2] } },
+				op: 'create',
+				path: '/b/d/f/2',
+				target: 2,
 			},
 			{
-				a: 2,
-				b: { c: 'hello world', d: { e: false, f: [0, 2] } },
+				op: 'delete',
+				path: '/b/d/f/2',
 			},
-			// After failure the state gets reset to the original value
-			{ a: 1, b: { c: 'hello', d: { e: true, f: [0] } } },
 		]);
-		expect(o._).to.deep.equal({
-			a: 1,
-			b: { c: 'hello', d: { e: true, f: [0] } },
+		expect(s._).to.deep.equal({
+			a: 2,
+			b: { c: 'hello world', d: { e: false, f: [0, 2] } },
 		});
 	});
 });

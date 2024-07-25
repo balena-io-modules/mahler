@@ -22,9 +22,9 @@ describe('composer/tasks', () => {
 				services: {},
 			});
 			expect(s.images).to.have.property('alpine:latest');
-			expect(s.images['alpine:latest']!.imageId!).to.not.be.undefined;
+			expect(s.images['alpine:latest'].imageId!).to.not.be.undefined;
 			expect(
-				await docker.getImage(s.images['alpine:latest']!.imageId!).inspect(),
+				await docker.getImage(s.images['alpine:latest'].imageId!).inspect(),
 			)
 				.to.have.property('RepoTags')
 				.that.contains('alpine:latest');
