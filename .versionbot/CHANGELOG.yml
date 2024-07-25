@@ -1,4 +1,101 @@
 - commits:
+    - subject: Add agent option to abort planning with timeout
+      hash: b22c7b6c45d4a5139dd87feba9dfc82da21412e0
+      body: |
+        This prevents a large task database from searching forever without
+        finding a suitable plan and without making progress. If that happens
+        that means the knowledge database should be optimized using some
+        additional methods
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve Pointer type to be more precise
+      hash: 696993cd2a7c655850d190195648a4f526a4c00b
+      body: |
+        The Pointer type has been updated to reflect the result of Pointer.from,
+        returning never if the type does not exist, or undefined if the parent
+        exists.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Remove `logger` property of AgentOpts
+      hash: cadaada21b6e2764ba20f39b9d7104258d6988bc
+      body: >
+        The property has been replaced by a `trace` property, receiving
+
+        an `AgentRuntimeEvent`. The property can be used to implement any type
+        of
+
+        logging behaviour based on the agent runtime state machine.
+
+
+        The previous `Logger` interface has been moved to `mahler/utils` and a
+
+        basic human readable tracer has been provided under the same path with
+
+        the name `readableTrace`.
+
+
+        This also exports a diff function in utils to be potentially used for
+
+        state comparison in traces.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Move state rollback to Agent runtime
+      hash: a60e568a5382c4360f14329a1488d238f8f60d0a
+      body: |
+        The `observe` module would observe changes on a state and revert to the
+        previous state if an error occurred, however this had a flaw as the
+        rollback would revert the whole state object, causing problems if
+        concurrent changes were performed in parallel branches of the plan. This
+        moves the reversal to the Agent runtime, where the path information can
+        be used to revert, limiting the reverted changes only to the path that
+        the action modifies.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Modify runtime to report changes
+      hash: 543942f38a3a1f437c6119222b15a5efa81f6135
+      body: |
+        This updates the agent runtime and observer to report on changes
+        rather than the full state. Changes are now aggregated in the Agent
+        to communicate to subscribers.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Simplify Sensor interface.
+      hash: 1861702dd32fcb801d6abea4a6a2d3ff7422833d
+      body: |
+        This updates the sensor interface to no longer require a state reference
+        as input, but simply return a subscribable for changes on a specific
+        path. This makes the interface simpler and moves the responsibility of
+        updating the state to sensor subscribers.
+
+        This is however a breaking change, even though the contructor interface
+        does not changes.
+      footer:
+        Change-type: major
+        change-type: major
+      author: Felipe Lalanne
+    - subject: Refactor operation types
+      hash: f99ba5fe1f6ed11b2ac89d21db4616dc29eb634e
+      body: |
+        Simplifies the default operation type, removing the unnecessary source
+        property for the general case.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 4.0.0
+  title: ""
+  date: 2024-07-25T16:01:17.150Z
+- commits:
     - subject: Fix import paths using `lib/*`
       hash: 29e6263223b1008d37b0745441184969b425ec19
       body: |
