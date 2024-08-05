@@ -404,7 +404,10 @@ describe('orchestrator/planning', () => {
 			plan()
 				.action("initialize release 'r1' for app 'a0'")
 				.action("pull image 'alpine:latest' with tag 'a0_main:r1'")
-				.action("migrate unchanged service 'main' of app 'a0 to release 'r1' '")
+				.action("migrate unchanged service 'main' of app 'a0 to release 'r1'")
+				.action(
+					"remove metadata for service 'main' from release 'r0' of app 'a0'",
+				)
 				.action("remove release 'r0'")
 				.action("pull image 'alpine:latest' with tag 'a0_other:r1'")
 				.action(

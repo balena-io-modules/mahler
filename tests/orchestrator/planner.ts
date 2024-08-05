@@ -10,7 +10,7 @@ import {
 	migrateService,
 	startService,
 	stopService,
-	removeService,
+	uninstallService,
 	removeRelease,
 	removeApp,
 } from './tasks';
@@ -20,15 +20,11 @@ export const planner = Planner.from<Device>({
 		fetch,
 		createApp,
 		createRelease,
-		// NOTE: right now we need to make sure to put `migrateService` before
-		// `installService` in the task list, otherwise the planner will always chose to
-		// recreate services even if a migration suffices. This is because the planner
-		// just returns the first path it finds instead of the shortest
 		migrateService,
 		installService,
 		startService,
 		stopService,
-		removeService,
+		uninstallService,
 		removeRelease,
 		removeApp,
 	],
