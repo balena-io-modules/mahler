@@ -312,14 +312,29 @@ export const startService = Task.of<Device>().from({
 });
 
 /**
- * Rename a service between releases if the image and service configuration has not changed
+ * Delete service data from a release
  *
- * Condition: the service exists (it has a container id), the container is not running, the container configuration
- *            matches the target configuration, and source and target images are the same
- * Effect: move the service from the source release to the target release
+ * This is used to migrate a service between releases. It is only to be used within a method
+ */
+const deleteService = Task.of<Device>().from({
+	op: 'delete',
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	effect: () => {
+		/* the operation already tells the framework to delete afterwards */
+	},
+	description: ({ serviceName, appUuid, releaseUuid }) =>
+		`remove metadata for service '${serviceName}' from release '${releaseUuid}' of app '${appUuid}'`,
+});
+
+/**
+ * Rename a service container between releases if the image and service configuration has not changed
+ *
+ * This is called only as part of the migrateService method so we skip the condition.
+ *
+ * Effect: copy the service from the source release to the target release
  * Action: rename the container using the docker API
  */
-export const migrateService = Task.of<Device>().from({
+const renameServiceContainer = Task.of<Device>().from({
 	op: 'create',
 	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	condition: (
@@ -342,9 +357,6 @@ export const migrateService = Task.of<Device>().from({
 		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
 		const currService = releases[currRelease]?.services[serviceName];
 
-		// Remove the release from the current release
-		delete releases[currRelease].services[serviceName];
-
 		// Move the service to the new release
 		service._ = currService;
 	},
@@ -356,18 +368,59 @@ export const migrateService = Task.of<Device>().from({
 		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
 
 		const currService = releases[currRelease]?.services[serviceName];
-		delete releases[currRelease].services[serviceName];
 
 		// Rename the container
 		await docker.getContainer(currService.containerId!).rename({
 			name: getContainerName({ releaseUuid, serviceName }),
 		});
 
-		// Move the container to the new release
+		// Copy the container to the new release
 		service._ = currService;
 	},
 	description: (ctx) =>
-		`migrate unchanged service '${ctx.serviceName}' of app '${ctx.appUuid} to release '${ctx.releaseUuid}' '`,
+		`migrate unchanged service '${ctx.serviceName}' of app '${ctx.appUuid} to release '${ctx.releaseUuid}'`,
+});
+
+/**
+ * Rename a service container between releases if the image and service configuration has not changed
+ *
+ * This is a method as changes on two different releases need to be performed.
+ * The method will first rename the container and link the service on the target release. It then will
+ * remove the service metadata from the current release
+ *
+ * Condition: the service exists (it has a container id), the container configuration
+ *            matches the target configuration, and source and target images are the same
+ */
+export const migrateService = Task.of<Device>().from({
+	op: 'create',
+	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
+	expansion: 'sequential',
+	condition: (
+		_,
+		{ appUuid, releaseUuid, serviceName, system: device, target },
+	) => {
+		const { releases } = device.apps[appUuid];
+		const [currentRelease] = Object.keys(releases).filter(
+			(u) => u !== releaseUuid,
+		);
+		const currService = releases[currentRelease]?.services[serviceName];
+		return (
+			currService != null &&
+			isEqualConfig(currService, target) &&
+			target.image === currService.image
+		);
+	},
+	method: (
+		_,
+		{ system: device, appUuid, serviceName, releaseUuid, target },
+	) => {
+		const { releases } = device.apps[appUuid];
+		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
+		return [
+			renameServiceContainer({ target, appUuid, serviceName, releaseUuid }),
+			deleteService({ appUuid, releaseUuid: currRelease, serviceName }),
+		];
+	},
 });
 
 /**
@@ -436,7 +489,7 @@ export const stopService = Task.of<Device>().from({
  * Effect: remove the service from the device state
  * Action: remove the container using the docker API
  */
-export const removeService = Task.of<Device>().from({
+export const uninstallService = Task.of<Device>().from({
 	op: '*',
 	lens: '/apps/:appUuid/releases/:releaseUuid/services/:serviceName',
 	condition: (service) =>

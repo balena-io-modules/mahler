@@ -12,6 +12,12 @@ export type ContextWithSystem<
 	TOp extends AnyOp = Update,
 > = Context<TState, TPath, TOp> & { system: TState };
 
+type ReadOnlyContextWithSystem<
+	TState = unknown,
+	TPath extends PathType = Root,
+	TOp extends AnyOp = Update,
+> = ReadOnly<Context<TState, TPath, TOp> & { system: TState }>;
+
 /**
  * A descriptor for this task. The descriptor can be either a string or a Context
  * instance. The description does not receive the current state to allow actions to
@@ -29,7 +35,7 @@ type ConditionFn<
 	TOp extends AnyOp = Update,
 > = (
 	s: TOp extends Create ? never : ReadOnly<Lens<TState, TPath>>,
-	c: ReadOnly<ContextWithSystem<TState, TPath, TOp>>,
+	c: ReadOnlyContextWithSystem<TState, TPath, TOp>,
 ) => boolean;
 
 type EffectFn<
@@ -38,7 +44,7 @@ type EffectFn<
 	TOp extends AnyOp = Update,
 > = (
 	view: View<TState, TPath, TOp>,
-	ctx: ContextWithSystem<TState, TPath, TOp>,
+	ctx: ReadOnlyContextWithSystem<TState, TPath, TOp>,
 ) => void;
 
 type ActionFn<
@@ -47,7 +53,7 @@ type ActionFn<
 	TOp extends AnyOp = Update,
 > = (
 	view: View<TState, TPath, TOp>,
-	ctx: ContextWithSystem<TState, TPath, TOp>,
+	ctx: ReadOnlyContextWithSystem<TState, TPath, TOp>,
 ) => Promise<void>;
 
 type MethodFn<
@@ -56,7 +62,7 @@ type MethodFn<
 	TOp extends AnyOp = Update,
 > = (
 	s: TOp extends Create ? never : ReadOnly<Lens<TState, TPath>>,
-	c: ReadOnly<ContextWithSystem<TState, TPath, TOp>>,
+	ctx: ReadOnlyContextWithSystem<TState, TPath, TOp>,
 ) => Instruction<TState> | Array<Instruction<TState>>;
 
 /**

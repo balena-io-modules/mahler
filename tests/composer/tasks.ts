@@ -36,15 +36,12 @@ export const fetchImage = App.task({
 	},
 	action: async (image, { imageName }) => {
 		await new Promise((resolve, reject) =>
-			docker
-				.pull(imageName)
-				.catch(reject)
-				.then((stream) => {
-					stream.on('data', () => void 0);
-					stream.on('error', reject);
-					stream.on('close', resolve);
-					stream.on('finish', resolve);
-				}),
+			docker.pull(imageName).then((stream) => {
+				stream.on('data', () => void 0);
+				stream.on('error', reject);
+				stream.on('close', resolve);
+				stream.on('finish', resolve);
+			}),
 		);
 
 		// Get the image using the name
