@@ -1,4 +1,26 @@
 - commits:
+    - subject: Improve Task contructor typings
+      hash: 3d63b817c90011ba8b7e846aa85d40b65d03f03b
+      body: |
+        This enforces that the context in the functions defined when
+        constructing a task are treated as Read-Only objects. This prevents a
+        task from modifying part of the state outside what is referenced by its
+        defined lens path.
+      footer:
+        Change-type: minor
+        change-type: minor
+      author: Felipe Lalanne
+    - subject: Improve README
+      hash: 3e9157489c9da790b774f6280f3e3b58dd194dbe
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 4.1.0
+  title: ""
+  date: 2024-08-05T22:41:18.687Z
+- commits:
     - subject: Add agent option to abort planning with timeout
       hash: b22c7b6c45d4a5139dd87feba9dfc82da21412e0
       body: |
