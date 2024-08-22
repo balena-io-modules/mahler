@@ -167,7 +167,7 @@ export class Runtime<TState> {
 				// If the parent does not exist or the key does not exist
 				// then delete the sensor
 				if (parent == null || !Object.hasOwn(parent, Path.basename(p))) {
-					this.subscriptions[p].unsubscribe();
+					this.subscriptions[p]!.unsubscribe();
 					delete this.subscriptions[p];
 				}
 			});

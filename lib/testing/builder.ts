@@ -68,7 +68,7 @@ function fromFork(branches: Branch[]): [Node | null, Node | null] {
 
 	// If there is only a branch, call the branch method
 	if (branches.length === 1) {
-		return fromBranch(branches[0]);
+		return fromBranch(branches[0]!);
 	}
 
 	// For multiple branches, create a fork and

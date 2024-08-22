@@ -1,3 +1,5 @@
+import { assert } from '../assert';
+
 function isObject(value: unknown): value is object {
 	return typeof value === 'object' && value !== null;
 }
@@ -33,6 +35,11 @@ export function deepEqual<T>(value: T, other: T): boolean {
 		const [vProps, oProps] = [value, other].map(
 			(a) => Object.getOwnPropertyNames(a) as Array<keyof T>,
 		);
+
+		// This will never fail but it prevents the compiler from
+		// complaining
+		assert(vProps != null && oProps != null);
+
 		if (vProps.length !== oProps.length) {
 			// If the property lists are different lengths we don't need
 			// to check any further

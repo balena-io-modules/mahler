@@ -273,7 +273,7 @@ export const startService = Task.of<Device>().from({
 		service,
 		{ releaseUuid, appUuid, serviceName, system: device, target },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 
 		// The task can be applied if the following conditions are met:
 		return (
@@ -287,7 +287,7 @@ export const startService = Task.of<Device>().from({
 			// service cannot be running
 			Object.keys(releases)
 				.filter((u) => u !== releaseUuid)
-				.every((u) => releases[u].services[serviceName]?.status !== 'running')
+				.every((u) => releases[u]!.services[serviceName]?.status !== 'running')
 		);
 	},
 	effect: (service) => {
@@ -341,10 +341,13 @@ const renameServiceContainer = Task.of<Device>().from({
 		_,
 		{ appUuid, releaseUuid, serviceName, system: device, target },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		const [currentRelease] = Object.keys(releases).filter(
 			(u) => u !== releaseUuid,
 		);
+		if (currentRelease == null) {
+			return false;
+		}
 		const currService = releases[currentRelease]?.services[serviceName];
 		return (
 			currService != null &&
@@ -353,7 +356,7 @@ const renameServiceContainer = Task.of<Device>().from({
 		);
 	},
 	effect: (service, { system: device, appUuid, serviceName, releaseUuid }) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
 		const currService = releases[currRelease]?.services[serviceName];
 
@@ -364,10 +367,9 @@ const renameServiceContainer = Task.of<Device>().from({
 		service,
 		{ system: device, appUuid, serviceName, releaseUuid },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
-
-		const currService = releases[currRelease]?.services[serviceName];
+		const currService = releases[currRelease]!.services[serviceName]!;
 
 		// Rename the container
 		await docker.getContainer(currService.containerId!).rename({
@@ -399,10 +401,14 @@ export const migrateService = Task.of<Device>().from({
 		_,
 		{ appUuid, releaseUuid, serviceName, system: device, target },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		const [currentRelease] = Object.keys(releases).filter(
 			(u) => u !== releaseUuid,
 		);
+		if (!currentRelease) {
+			return false;
+		}
+
 		const currService = releases[currentRelease]?.services[serviceName];
 		return (
 			currService != null &&
@@ -414,7 +420,7 @@ export const migrateService = Task.of<Device>().from({
 		_,
 		{ system: device, appUuid, serviceName, releaseUuid, target },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		const currRelease = Object.keys(releases).find((u) => u !== releaseUuid)!;
 		return [
 			renameServiceContainer({ target, appUuid, serviceName, releaseUuid }),
@@ -443,7 +449,7 @@ export const stopService = Task.of<Device>().from({
 		service,
 		{ system: device, appUuid, releaseUuid, serviceName },
 	) => {
-		const { releases } = device.apps[appUuid];
+		const { releases } = device.apps[appUuid]!;
 		return (
 			service?.containerId != null &&
 			service?.status === 'running' &&
@@ -451,7 +457,7 @@ export const stopService = Task.of<Device>().from({
 				.filter((u) => u !== releaseUuid)
 				.every(
 					// If there are equivalent services from other releases they should at least have a container
-					(u) => releases[u].services[serviceName]?.containerId != null,
+					(u) => releases[u]!.services[serviceName]?.containerId != null,
 				)
 		);
 	},

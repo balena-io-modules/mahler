@@ -208,6 +208,7 @@ function traverseCombine<V extends Value, T>(
 
 		assert(ends.length > 0, 'Malformed DAG found, empty Fork node');
 		const [res] = ends;
+		assert(res != null); // Typescript is not smart enough to figure out that res cannot be undefined
 		assert(!res.done, 'Malformed DAG found, disconnected fork branch');
 
 		// Combine the results from the branches passing the

@@ -58,7 +58,7 @@ describe('orchestrator/tasks', () => {
 			s = await doFetch(s);
 			expect(s.apps['a0']).to.not.be.undefined;
 			expect(s.images).to.have.property('a0_my-service:r0');
-			const { dockerId: imageId } = s.images['a0_my-service:r0'];
+			const { dockerId: imageId } = s.images['a0_my-service:r0']!;
 			expect(imageId).to.not.be.undefined;
 			expect(await docker.getImage(imageId!).inspect())
 				.to.have.property('RepoTags')
@@ -138,12 +138,12 @@ describe('orchestrator/tasks', () => {
 
 		it('should create a container', async () => {
 			let s = await doInstall(s0);
-			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
-			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
+			expect(s.apps['a0']!.releases['r0']).to.not.be.undefined;
+			expect(s.apps['a0']!.releases['r0']!.services['my-service']).to.not.be
 				.undefined;
 
 			const { containerId } =
-				s.apps['a0'].releases['r0'].services['my-service'];
+				s.apps['a0']!.releases['r0']!.services['my-service']!;
 
 			expect(containerId).to.not.be.undefined;
 			const container = await docker.getContainer(containerId!).inspect();
@@ -153,8 +153,8 @@ describe('orchestrator/tasks', () => {
 			// Installing again with an outated state should
 			// not create a new container
 			s = await doInstall(s0);
-			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
-			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
+			expect(s.apps['a0']!.releases['r0']).to.not.be.undefined;
+			expect(s.apps['a0']!.releases['r0']!.services['my-service']).to.not.be
 				.undefined;
 
 			expect(await docker.getContainer(containerId!).inspect())
@@ -223,15 +223,15 @@ describe('orchestrator/tasks', () => {
 
 		it('should start a container', async () => {
 			let s = await doStart(s0);
-			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
-			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
+			expect(s.apps['a0']!.releases['r0']).to.not.be.undefined;
+			expect(s.apps['a0']!.releases['r0']!.services['my-service']).to.not.be
 				.undefined;
 			expect(
-				s.apps['a0'].releases['r0'].services['my-service'].status,
+				s.apps['a0']!.releases['r0']!.services['my-service']!.status,
 			).to.equal('running');
 
 			const { containerId } =
-				s.apps['a0'].releases['r0'].services['my-service'];
+				s.apps['a0']!.releases['r0']!.services['my-service']!;
 
 			expect(containerId).to.not.be.undefined;
 			const container = await docker.getContainer(containerId!).inspect();
@@ -242,8 +242,8 @@ describe('orchestrator/tasks', () => {
 			// Starting again with an outated state should
 			// not start the container again
 			s = await doStart(s0);
-			expect(s.apps['a0'].releases['r0']).to.not.be.undefined;
-			expect(s.apps['a0'].releases['r0'].services['my-service']).to.not.be
+			expect(s.apps['a0']!.releases['r0']).to.not.be.undefined;
+			expect(s.apps['a0']!.releases['r0']!.services['my-service']).to.not.be
 				.undefined;
 
 			expect(await docker.getContainer(containerId!).inspect())
