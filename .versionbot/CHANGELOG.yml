@@ -1,4 +1,17 @@
 - commits:
+    - subject: Use noUncheckedIndexedAccess as TS configuration
+      hash: 49e25e582970ca39f66b92b0f8b5533e1c6a7f5a
+      body: |
+        This makes the code more strict even if it requires some redundant
+        validations.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 4.1.1
+  title: ""
+  date: 2024-09-19T17:19:11.456Z
+- commits:
     - subject: Improve Task contructor typings
       hash: 3d63b817c90011ba8b7e846aa85d40b65d03f03b
       body: |
