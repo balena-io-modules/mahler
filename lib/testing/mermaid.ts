@@ -66,10 +66,11 @@ function fromNode(
 	if (DAG.isFork(node)) {
 		const actions = node.next.filter(PlanAction.is);
 		if (actions.length > 0) {
+			const [first] = actions;
 			// In this case we just use id of the first action in the
 			// fork as we really should not have multiple fork nodes in the
 			// diagram pointing to the same actions
-			return DiagramNode.fromId(`j${actions[0].id.substring(0, 7)}`);
+			return DiagramNode.fromId(`j${first!.id.substring(0, 7)}`);
 		}
 
 		const forks = node.next.filter(DAG.isFork);
@@ -156,7 +157,7 @@ class DiagramAdjacency {
 
 		// The official parent of a node is the last parent
 		// in the list
-		return p[p.length - 1];
+		return p[p.length - 1]!;
 	}
 
 	getAll(node: DiagramNode): DiagramNode[] {
@@ -260,7 +261,10 @@ class Diagram {
 			ends.forEach(([_, p]) => this.graph.push(`	${p} --> ${join}`));
 			this.graph.push(`	${join}:::selected`);
 
-			const [first] = ends[0];
+			const [end] = ends;
+			assert(end != null);
+
+			const [first] = end;
 
 			return this.drawPlan(first.next, join);
 		}

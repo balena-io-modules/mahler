@@ -12,6 +12,7 @@
 		"target": "es2022",
 		"declaration": true,
 		"skipLibCheck": true,
+		"noUncheckedIndexedAccess": true,
 		"paths": {
 			"mahler": [
 				"lib/index.ts"

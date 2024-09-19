@@ -116,7 +116,7 @@ export const installService = App.task({
 			})();
 			const s: Service = {
 				image:
-					(await docker.getImage(existing.Image).inspect()).RepoTags[0] ||
+					(await docker.getImage(existing.Image).inspect()).RepoTags[0] ??
 					existing.Image,
 				startedAt: new Date(existing.State.StartedAt),
 				createdAt: new Date(existing.Created),
