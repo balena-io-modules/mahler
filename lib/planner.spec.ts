@@ -13,7 +13,6 @@ describe('Planner', () => {
 			type Location = Block | Table | Hand;
 			type State = {
 				blocks: { [block in Block]: Location };
-				hand?: Block | null;
 			};
 
 			const isBlock = (x: Location): x is Block =>
@@ -28,14 +27,18 @@ describe('Planner', () => {
 				return true;
 			};
 
+			const isHolding = (blocks: State['blocks']) => {
+				// There is some block on the hand
+				return !isClear(blocks, 'hand');
+			};
+
 			const take = Task.of<State>().from({
 				lens: '/blocks/:block',
 				condition: (_, { system, block }) =>
-					isClear(system.blocks, block) && system.hand == null,
-				effect: (location, { system, block }) => {
+					isClear(system.blocks, block) && !isHolding(system.blocks),
+				effect: (location) => {
 					// Update the block
 					location._ = 'hand';
-					system.hand = block;
 				},
 				description: ({ block }) => `take block ${block}`,
 			});
@@ -46,10 +49,9 @@ describe('Planner', () => {
 					location === 'hand' &&
 					target !== block &&
 					isClear(system.blocks, target),
-				effect: (location, { system, target }) => {
+				effect: (location, { target }) => {
 					// Update the block
 					location._ = target;
-					system.hand = null;
 				},
 				description: ({ target, block }) => `put ${block} on ${target}`,
 			});
@@ -137,7 +139,6 @@ describe('Planner', () => {
 			type Location = Block | Table | Hand;
 			type State = {
 				blocks: { [block in Block]: Location };
-				hand?: Block | null;
 			};
 
 			const isBlock = (x: Location): x is Block =>
@@ -152,16 +153,20 @@ describe('Planner', () => {
 				return true;
 			};
 
+			const isHolding = (blocks: State['blocks']) => {
+				// There is some block on the hand
+				return !isClear(blocks, 'hand');
+			};
+
 			const pickup = Task.of<State>().from({
 				lens: '/blocks/:block',
 				condition: (location, { system, block }) =>
 					isClear(system.blocks, block) &&
 					location === 'table' &&
-					system.hand == null,
-				effect: (location, { system, block }) => {
+					!isHolding(system.blocks),
+				effect: (location) => {
 					// Update the block
 					location._ = 'hand';
-					system.hand = block;
 				},
 				description: ({ block }) => `pickup block ${block}`,
 			});
@@ -174,11 +179,10 @@ describe('Planner', () => {
 					// The block is on top of other block (not in the hand or the table)
 					!['table', 'hand'].includes(location) &&
 					// The hand is not holding any other block
-					system.hand == null,
-				effect: (location, { system, block }) => {
+					!isHolding(system.blocks),
+				effect: (location) => {
 					// Update the block
 					location._ = 'hand';
-					system.hand = block;
 				},
 				description: ({ block }) => `unstack block ${block}`,
 			});
@@ -186,11 +190,10 @@ describe('Planner', () => {
 			const putdown = Task.of<State>().from({
 				lens: '/blocks/:block',
 				condition: (location) => location === 'hand',
-				effect: (location, { system }) => {
+				effect: (location) => {
 					// Update the block
 					location._ = 'table';
 					// Mark the hand as free
-					system.hand = null;
 				},
 				description: ({ block }) => `put down block ${block}`,
 			});
@@ -202,10 +205,9 @@ describe('Planner', () => {
 					isClear(system.blocks, target) &&
 					// The hand is holding the block
 					location === 'hand',
-				effect: (location, { system, target }) => {
+				effect: (location, { target }) => {
 					// Update the block
 					location._ = target;
-					system.hand = null;
 				},
 				description: ({ block, target }) =>
 					`stack block ${block} on top of block ${target}`,
