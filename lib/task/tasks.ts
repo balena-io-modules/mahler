@@ -366,6 +366,17 @@ function isActionProps<
 	);
 }
 
+function serialize<T extends object>(props: T): string {
+	// Serialize the task specification converting all elements to strings
+	// including the function bodys where it applies
+	const serialized = (Object.keys(props) as Array<keyof T>).reduce(
+		(o, k) => ({ ...o, [k]: String(props[k]) }),
+		{},
+	);
+
+	return createHash('sha256').update(JSON.stringify(serialized)).digest('hex');
+}
+
 /**
  * A task is base unit of knowledge of an autonomous agent.
  */
@@ -401,6 +412,10 @@ function from<
 
 	// Check that the path is valid
 	const lens = Path.from(taskProps.lens ?? ('/' as TPath));
+
+	// Generate a deterministic id for
+	// the task. This is useful for diagramming
+	const id = serialize(taskProps);
 
 	const opLabel = op === '*' ? 'modify' : op;
 
@@ -473,19 +488,6 @@ function from<
 			};
 		}
 	})();
-
-	// Serialize the task specification converting all elements to strings
-	// including the function bodys where it applies
-	const serialized = (Object.keys(tProps) as Array<keyof typeof tProps>).reduce(
-		(o, k) => ({ ...o, [k]: String(tProps[k]) }),
-		{},
-	);
-
-	// Thid allows us to generate a deterministic id for
-	// the task. This is useful for diagramming
-	const id = createHash('sha256')
-		.update(JSON.stringify(serialized))
-		.digest('hex');
 
 	// The final task spec. Typescript doesn't seem to
 	// correctly infer the type here unfortunately

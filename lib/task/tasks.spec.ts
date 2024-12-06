@@ -11,7 +11,7 @@ describe('Tasks', () => {
 			description: '+1',
 		});
 		expect(inc.id).to.equal(
-			'79fae6f74c3f2816281e0a7e3f6f4a33376aee1428ffd036e9a91aece14da1ef',
+			'68635e74289a6533db2ac4389c4a0190c8ffc5ea2177f06001972fd778167504',
 		);
 
 		const inc2 = Task.from<number>({
@@ -41,7 +41,7 @@ describe('Tasks', () => {
 			description: '+2',
 		});
 		expect(byTwo.id).to.equal(
-			'7e3d92c6d21f4f0e63d3b3f2b571fdb5e7424a670d14718a23e2dd2d0588eddd',
+			'244a7aa41b5dfea349fb2736551f434f9c5e4158487f0e99d9e38b00eb56bb37',
 		);
 		expect(dec.id).to.not.equal(byTwo.id);
 
@@ -51,6 +51,24 @@ describe('Tasks', () => {
 			description: '+2',
 		});
 		expect(byTwo.id).to.equal(byTwo2.id);
+
+		type Numbers = { [k: string]: number };
+		const remove1 = Task.of<Numbers>().from({
+			op: 'delete',
+			effect: () => {
+				console.log('nothing to do');
+			},
+			description: 'remove',
+		});
+		const remove2 = Task.of<Numbers>().from({
+			op: 'delete',
+			effect: () => {
+				console.log('also nothing to do');
+			},
+			description: 'remove',
+		});
+
+		expect(remove1.id).to.not.equal(remove2.id);
 	});
 
 	it('create tasks should automatically check that the property does not exist beforehand', function () {
