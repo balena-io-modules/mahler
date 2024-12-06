@@ -277,7 +277,7 @@ function ground<
 		const effect = (s: Ref<TState>) => {
 			taskEffect(View.from(s, path), { ...context, system: s._ });
 		};
-		const action = async (s: Ref<TState>) =>
+		const action = (s: Ref<TState>) =>
 			taskAction(View.from(s, path), { ...context, system: s._ });
 		return Object.assign(action, {
 			id,
@@ -430,6 +430,10 @@ function from<
 				effect: taskEffect = () => void 0,
 				action: taskAction = (v, c) => {
 					taskEffect(v, c);
+
+					// The action function needs to return a promise
+					// but taskEffect returns `void`
+					return Promise.resolve();
 				},
 			} = taskProps;
 
@@ -443,8 +447,8 @@ function from<
 					v.delete();
 				};
 
-				action = (v, c) => {
-					taskAction(v, c);
+				action = async (v, c) => {
+					await taskAction(v, c);
 					v.delete();
 				};
 			}
