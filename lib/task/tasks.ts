@@ -277,7 +277,7 @@ function ground<
 		const effect = (s: Ref<TState>) => {
 			taskEffect(View.from(s, path), { ...context, system: s._ });
 		};
-		const action = async (s: Ref<TState>) =>
+		const action = (s: Ref<TState>) =>
 			taskAction(View.from(s, path), { ...context, system: s._ });
 		return Object.assign(action, {
 			id,
@@ -366,6 +366,17 @@ function isActionProps<
 	);
 }
 
+function serialize<T extends object>(props: T): string {
+	// Serialize the task specification converting all elements to strings
+	// including the function bodys where it applies
+	const serialized = (Object.keys(props) as Array<keyof T>).reduce(
+		(o, k) => ({ ...o, [k]: String(props[k]) }),
+		{},
+	);
+
+	return createHash('sha256').update(JSON.stringify(serialized)).digest('hex');
+}
+
 /**
  * A task is base unit of knowledge of an autonomous agent.
  */
@@ -402,6 +413,10 @@ function from<
 	// Check that the path is valid
 	const lens = Path.from(taskProps.lens ?? ('/' as TPath));
 
+	// Generate a deterministic id for
+	// the task. This is useful for diagramming
+	const id = serialize(taskProps);
+
 	const opLabel = op === '*' ? 'modify' : op;
 
 	// The default description is
@@ -430,6 +445,10 @@ function from<
 				effect: taskEffect = () => void 0,
 				action: taskAction = (v, c) => {
 					taskEffect(v, c);
+
+					// The action function needs to return a promise
+					// but taskEffect returns `void`
+					return Promise.resolve();
 				},
 			} = taskProps;
 
@@ -443,8 +462,8 @@ function from<
 					v.delete();
 				};
 
-				action = (v, c) => {
-					taskAction(v, c);
+				action = async (v, c) => {
+					await taskAction(v, c);
 					v.delete();
 				};
 			}
@@ -469,19 +488,6 @@ function from<
 			};
 		}
 	})();
-
-	// Serialize the task specification converting all elements to strings
-	// including the function bodys where it applies
-	const serialized = (Object.keys(tProps) as Array<keyof typeof tProps>).reduce(
-		(o, k) => ({ ...o, [k]: String(tProps[k]) }),
-		{},
-	);
-
-	// Thid allows us to generate a deterministic id for
-	// the task. This is useful for diagramming
-	const id = createHash('sha256')
-		.update(JSON.stringify(serialized))
-		.digest('hex');
 
 	// The final task spec. Typescript doesn't seem to
 	// correctly infer the type here unfortunately

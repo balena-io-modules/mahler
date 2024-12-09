@@ -61,14 +61,14 @@ describe('Mermaid', () => {
 			graph TD
 				start(( ))
 				start -.- d0{ }
-				d0 -.- 96fe396("+1")
-				96fe396 -.- stop(( ))
+				d0 -.- 1461420("+1")
+				1461420 -.- stop(( ))
 				stop:::finish
 				classDef finish stroke:#000,fill:#000
 				start:::selected
-				start --> 96fe396
-				96fe396:::selected
-				96fe396 --> stop
+				start --> 1461420
+				1461420:::selected
+				1461420 --> stop
 				classDef error stroke:#f00
 				classDef selected stroke:#0f0
 			`.trim(),
@@ -95,9 +95,9 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- d7d90ed("-1")
-					d7d90ed -.- d7d90ed-err[ ]
-					d7d90ed-err:::error
+					d0 -.- 0ad51d7("-1")
+					0ad51d7 -.- 0ad51d7-err[ ]
+					0ad51d7-err:::error
 					start:::error
 					classDef error stroke:#f00
 			`.trim(),
@@ -138,10 +138,10 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- d7d90ed("-1")
-					d7d90ed -.- d1{ }
-					d1 -.- 4d35804("-1")
-					4d35804 -.- d2{ }
+					d0 -.- 9254d0f("-1")
+					9254d0f -.- d1{ }
+					d1 -.- 9759627("-1")
+					9759627 -.- d2{ }
 					d2 -.- d2-err[ ]
 					d2-err:::error
 					start:::error
@@ -176,19 +176,20 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- d7d90ed("-1")
-					d7d90ed -.- d7d90ed-err[ ]
-					d7d90ed-err:::error
-					d0 -.- 96fe396("+1")
-					96fe396 -.- stop(( ))
+					d0 -.- 0ad51d7("-1")
+					0ad51d7 -.- 0ad51d7-err[ ]
+					0ad51d7-err:::error
+					d0 -.- 1461420("+1")
+					1461420 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 96fe396
-					96fe396:::selected
-					96fe396 --> stop
+					start --> 1461420
+					1461420:::selected
+					1461420 --> stop
 					classDef error stroke:#f00
-					classDef selected stroke:#0f0				`.trim(),
+					classDef selected stroke:#0f0
+				`.trim(),
 		);
 	});
 
@@ -209,18 +210,18 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 72cc560("+1")
-					72cc560 -.- d1{ }
-					d1 -.- d09013f("+1")
-					d09013f -.- stop(( ))
+					d0 -.- d6dbb7a("+1")
+					d6dbb7a -.- d1{ }
+					d1 -.- 2aa2ee2("+1")
+					2aa2ee2 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 72cc560
-					72cc560:::selected
-					72cc560 --> d09013f
-					d09013f:::selected
-					d09013f --> stop
+					start --> d6dbb7a
+					d6dbb7a:::selected
+					d6dbb7a --> 2aa2ee2
+					2aa2ee2:::selected
+					2aa2ee2 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`.trim(),
@@ -253,24 +254,24 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 8696c55("-1")
-					8696c55 -.- 8696c55-err[ ]
-					8696c55-err:::error
-					d0 -.- 72cc560("+1")
-					72cc560 -.- d1{ }
-					d1 -.- 01a1b19("-1")
-					01a1b19 -.- 01a1b19-err[ ]
-					01a1b19-err:::error
-					d1 -.- d09013f("+1")
-					d09013f -.- stop(( ))
+					d0 -.- c4bb219("-1")
+					c4bb219 -.- c4bb219-err[ ]
+					c4bb219-err:::error
+					d0 -.- d6dbb7a("+1")
+					d6dbb7a -.- d1{ }
+					d1 -.- b52246f("-1")
+					b52246f -.- b52246f-err[ ]
+					b52246f-err:::error
+					d1 -.- 2aa2ee2("+1")
+					2aa2ee2 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 72cc560
-					72cc560:::selected
-					72cc560 --> d09013f
-					d09013f:::selected
-					d09013f --> stop
+					start --> d6dbb7a
+					d6dbb7a:::selected
+					d6dbb7a --> 2aa2ee2
+					2aa2ee2:::selected
+					2aa2ee2 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 			`.trim(),
@@ -303,17 +304,17 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- cef8b47[["+2"]]
-					cef8b47 -.- cef8b47-err[ ]
-					cef8b47-err:::error
-					d0 -.- 96fe396("+1")
-					96fe396 -.- stop(( ))
+					d0 -.- 33297a1[["+2"]]
+					33297a1 -.- 33297a1-err[ ]
+					33297a1-err:::error
+					d0 -.- 1461420("+1")
+					1461420 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 96fe396
-					96fe396:::selected
-					96fe396 --> stop
+					start --> 1461420
+					1461420:::selected
+					1461420 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`.trim(),
@@ -346,25 +347,25 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 7ade865[["+2"]]
-					7ade865 -.- a2dfb3e("+1")
-					a2dfb3e -.- f63ee47("+1")
-					f63ee47 -.- d1{ }
-					d1 -.- 9272fd8[["+2"]]
-					9272fd8 -.- 9272fd8-err[ ]
-					9272fd8-err:::error
-					d1 -.- d7b857d("+1")
-					d7b857d -.- stop(( ))
+					d0 -.- 12daded[["+2"]]
+					12daded -.- 7d7e586("+1")
+					7d7e586 -.- 8d6733c("+1")
+					8d6733c -.- d1{ }
+					d1 -.- 8ac273c[["+2"]]
+					8ac273c -.- 8ac273c-err[ ]
+					8ac273c-err:::error
+					d1 -.- dfbf9a6("+1")
+					dfbf9a6 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> a2dfb3e
-					a2dfb3e:::selected
-					a2dfb3e --> f63ee47
-					f63ee47:::selected
-					f63ee47 --> d7b857d
-					d7b857d:::selected
-					d7b857d --> stop
+					start --> 7d7e586
+					7d7e586:::selected
+					7d7e586 --> 8d6733c
+					8d6733c:::selected
+					8d6733c --> dfbf9a6
+					dfbf9a6:::selected
+					dfbf9a6 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`.trim(),
@@ -407,44 +408,44 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 8ddddab[["+3"]]
-					8ddddab -.- 60ade34[["+2"]]
-					60ade34 -.- 617d313("+1")
-					617d313 -.- 10f66dc("+1")
-					10f66dc -.- dcb9f55("+1")
-					dcb9f55 -.- d1{ }
-					d1 -.- 64101c2[["+3"]]
-					64101c2 -.- e8f3079[["+2"]]
-					e8f3079 -.- 6c33b74("+1")
-					6c33b74 -.- 2ef2aa4("+1")
-					2ef2aa4 -.- 8c79fab("+1")
-					8c79fab -.- d2{ }
-					d2 -.- 92c1c3f[["+3"]]
-					92c1c3f -.- 92c1c3f-err[ ]
-					92c1c3f-err:::error
-					d2 -.- db08bc1[["+2"]]
-					db08bc1 -.- db08bc1-err[ ]
-					db08bc1-err:::error
-					d2 -.- 210b6cb("+1")
-					210b6cb -.- stop(( ))
+					d0 -.- 51d88d0[["+3"]]
+					51d88d0 -.- 823d4a1[["+2"]]
+					823d4a1 -.- b07be91("+1")
+					b07be91 -.- 9597dc2("+1")
+					9597dc2 -.- 8c9363e("+1")
+					8c9363e -.- d1{ }
+					d1 -.- 51020ab[["+3"]]
+					51020ab -.- 3a801c4[["+2"]]
+					3a801c4 -.- 72e151d("+1")
+					72e151d -.- 880b8b7("+1")
+					880b8b7 -.- b50ba52("+1")
+					b50ba52 -.- d2{ }
+					d2 -.- 2d3729d[["+3"]]
+					2d3729d -.- 2d3729d-err[ ]
+					2d3729d-err:::error
+					d2 -.- 5be51f2[["+2"]]
+					5be51f2 -.- 5be51f2-err[ ]
+					5be51f2-err:::error
+					d2 -.- 3496872("+1")
+					3496872 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 617d313
-					617d313:::selected
-					617d313 --> 10f66dc
-					10f66dc:::selected
-					10f66dc --> dcb9f55
-					dcb9f55:::selected
-					dcb9f55 --> 6c33b74
-					6c33b74:::selected
-					6c33b74 --> 2ef2aa4
-					2ef2aa4:::selected
-					2ef2aa4 --> 8c79fab
-					8c79fab:::selected
-					8c79fab --> 210b6cb
-					210b6cb:::selected
-					210b6cb --> stop
+					start --> b07be91
+					b07be91:::selected
+					b07be91 --> 9597dc2
+					9597dc2:::selected
+					9597dc2 --> 8c9363e
+					8c9363e:::selected
+					8c9363e --> 72e151d
+					72e151d:::selected
+					72e151d --> 880b8b7
+					880b8b7:::selected
+					880b8b7 --> b50ba52
+					b50ba52:::selected
+					b50ba52 --> 3496872
+					3496872:::selected
+					3496872 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 			`.trim(),
@@ -484,51 +485,51 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- f1e6082[["increment counters"]]
-					f1e6082 -.- 980309c("a + 1")
-					f1e6082 -.- af4d0f2("b + 1")
-					980309c -.- jef7679a
-					af4d0f2 -.- jef7679a
-					jef7679a(( ))
-					jef7679a -.- d1{ }
-					d1 -.- 724e914[["increment counters"]]
-					724e914 -.- cfa5434("a + 1")
-					724e914 -.- d0f3d83("b + 1")
-					cfa5434 -.- jb406312
-					d0f3d83 -.- jb406312
-					jb406312(( ))
-					jb406312 -.- d2{ }
-					d2 -.- 638942b[["increment counters"]]
-					638942b -.- 638942b-err[ ]
-					638942b-err:::error
-					d2 -.- 66ba0da("a + 1")
-					66ba0da -.- stop(( ))
+					d0 -.- 5c2cd27[["increment counters"]]
+					5c2cd27 -.- 3b2bc73("a + 1")
+					5c2cd27 -.- 03920e6("b + 1")
+					3b2bc73 -.- j02f523f
+					03920e6 -.- j02f523f
+					j02f523f(( ))
+					j02f523f -.- d1{ }
+					d1 -.- 8cdbef4[["increment counters"]]
+					8cdbef4 -.- 012a8ae("a + 1")
+					8cdbef4 -.- ad25ac3("b + 1")
+					012a8ae -.- ja235917
+					ad25ac3 -.- ja235917
+					ja235917(( ))
+					ja235917 -.- d2{ }
+					d2 -.- e32f884[["increment counters"]]
+					e32f884 -.- e32f884-err[ ]
+					e32f884-err:::error
+					d2 -.- 6df61b7("a + 1")
+					6df61b7 -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> fjef7679a(( ))
-					fjef7679a:::selected
-					fjef7679a --> 980309c
-					980309c:::selected
-					fjef7679a --> af4d0f2
-					af4d0f2:::selected
-					jef7679a(( ))
-					980309c --> jef7679a
-					af4d0f2 --> jef7679a
-					jef7679a:::selected
-					jef7679a --> fjb406312(( ))
-					fjb406312:::selected
-					fjb406312 --> cfa5434
-					cfa5434:::selected
-					fjb406312 --> d0f3d83
-					d0f3d83:::selected
-					jb406312(( ))
-					cfa5434 --> jb406312
-					d0f3d83 --> jb406312
-					jb406312:::selected
-					jb406312 --> 66ba0da
-					66ba0da:::selected
-					66ba0da --> stop
+					start --> fj02f523f(( ))
+					fj02f523f:::selected
+					fj02f523f --> 3b2bc73
+					3b2bc73:::selected
+					fj02f523f --> 03920e6
+					03920e6:::selected
+					j02f523f(( ))
+					3b2bc73 --> j02f523f
+					03920e6 --> j02f523f
+					j02f523f:::selected
+					j02f523f --> fja235917(( ))
+					fja235917:::selected
+					fja235917 --> 012a8ae
+					012a8ae:::selected
+					fja235917 --> ad25ac3
+					ad25ac3:::selected
+					ja235917(( ))
+					012a8ae --> ja235917
+					ad25ac3 --> ja235917
+					ja235917:::selected
+					ja235917 --> 6df61b7
+					6df61b7:::selected
+					6df61b7 --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 			`.trim(),
@@ -573,45 +574,45 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 473c818[["increment counters"]]
-					473c818 -.- 4da4b47[["increase 'a'"]]
-					4da4b47 -.- bc17831("a + 1")
-					bc17831 -.- e3b6153("a + 1")
-					473c818 -.- fb667a2[["increase 'b'"]]
-					fb667a2 -.- db97a94("b + 1")
-					db97a94 -.- 0cfd06e("b + 1")
-					e3b6153 -.- jb406312
-					0cfd06e -.- jb406312
-					jb406312(( ))
-					jb406312 -.- d1{ }
-					d1 -.- b0d92d4[["increment counters"]]
-					b0d92d4 -.- b0d92d4-err[ ]
-					b0d92d4-err:::error
-					d1 -.- 03f7700[["increase 'a'"]]
-					03f7700 -.- 03f7700-err[ ]
-					03f7700-err:::error
-					d1 -.- 5ac8491("a + 1")
-					5ac8491 -.- stop(( ))
+					d0 -.- 9a30756[["increment counters"]]
+					9a30756 -.- d8d3d0a[["increase 'a'"]]
+					d8d3d0a -.- 6bcdf54("a + 1")
+					6bcdf54 -.- 25cd4c8("a + 1")
+					9a30756 -.- 9a8cff4[["increase 'b'"]]
+					9a8cff4 -.- aa3d7ce("b + 1")
+					aa3d7ce -.- c522839("b + 1")
+					25cd4c8 -.- ja235917
+					c522839 -.- ja235917
+					ja235917(( ))
+					ja235917 -.- d1{ }
+					d1 -.- d31d74f[["increment counters"]]
+					d31d74f -.- d31d74f-err[ ]
+					d31d74f-err:::error
+					d1 -.- 8ef3900[["increase 'a'"]]
+					8ef3900 -.- 8ef3900-err[ ]
+					8ef3900-err:::error
+					d1 -.- ef2fdcd("a + 1")
+					ef2fdcd -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> fjef7679a(( ))
-					fjef7679a:::selected
-					fjef7679a --> bc17831
-					bc17831:::selected
-					bc17831 --> e3b6153
-					e3b6153:::selected
-					fjef7679a --> db97a94
-					db97a94:::selected
-					db97a94 --> 0cfd06e
-					0cfd06e:::selected
-					jef7679a(( ))
-					e3b6153 --> jef7679a
-					0cfd06e --> jef7679a
-					jef7679a:::selected
-					jef7679a --> 5ac8491
-					5ac8491:::selected
-					5ac8491 --> stop
+					start --> fj02f523f(( ))
+					fj02f523f:::selected
+					fj02f523f --> 6bcdf54
+					6bcdf54:::selected
+					6bcdf54 --> 25cd4c8
+					25cd4c8:::selected
+					fj02f523f --> aa3d7ce
+					aa3d7ce:::selected
+					aa3d7ce --> c522839
+					c522839:::selected
+					j02f523f(( ))
+					25cd4c8 --> j02f523f
+					c522839 --> j02f523f
+					j02f523f:::selected
+					j02f523f --> ef2fdcd
+					ef2fdcd:::selected
+					ef2fdcd --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`,
@@ -686,80 +687,80 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- 95a2b94[["chunk"]]
-					95a2b94 -.- 7d0d5d2[["increment multiple"]]
-					7d0d5d2 -.- fb6e56f[["a + 2"]]
-					fb6e56f -.- 7854521("a++")
-					7854521 -.- ecbd5d3("a++")
-					7d0d5d2 -.- 0998b72[["b + 2"]]
-					0998b72 -.- 70ee190("b++")
-					70ee190 -.- 8f2b8e8("b++")
-					95a2b94 -.- 853d3ae[["increment multiple"]]
-					853d3ae -.- 11839b9[["c + 2"]]
-					11839b9 -.- ec0223b("c++")
-					ec0223b -.- 08f6308("c++")
-					853d3ae -.- f4a70f2[["d + 2"]]
-					f4a70f2 -.- d1fe065("d++")
-					d1fe065 -.- 05b84b6("d++")
-					ecbd5d3 -.- j02896e9
-					8f2b8e8 -.- j02896e9
-					j02896e9(( )) -.- 383a848
-					08f6308 -.- j89ab737
-					05b84b6 -.- j89ab737
-					j89ab737(( )) -.- 383a848
-					383a848(( ))
-					383a848 -.- d1{ }
-					d1 -.- c978cdc[["chunk"]]
-					c978cdc -.- c978cdc-err[ ]
-					c978cdc-err:::error
-					d1 -.- 9266c34[["increment multiple"]]
-					9266c34 -.- 9266c34-err[ ]
-					9266c34-err:::error
-					d1 -.- 1f7243e[["a + 2"]]
-					1f7243e -.- 1f7243e-err[ ]
-					1f7243e-err:::error
-					d1 -.- c30c1b7("a++")
-					c30c1b7 -.- stop(( ))
+					d0 -.- 7926520[["chunk"]]
+					7926520 -.- dbc8ff2[["increment multiple"]]
+					dbc8ff2 -.- c9898fb[["a + 2"]]
+					c9898fb -.- 3bd5a46("a++")
+					3bd5a46 -.- 1ec8e6c("a++")
+					dbc8ff2 -.- 266bb3c[["b + 2"]]
+					266bb3c -.- abe8e26("b++")
+					abe8e26 -.- 031f2b8("b++")
+					7926520 -.- 5431fbe[["increment multiple"]]
+					5431fbe -.- ed67158[["c + 2"]]
+					ed67158 -.- 8156fc6("c++")
+					8156fc6 -.- 84e00c4("c++")
+					5431fbe -.- 3ae6ed4[["d + 2"]]
+					3ae6ed4 -.- d53b7a7("d++")
+					d53b7a7 -.- 1e76a89("d++")
+					1ec8e6c -.- jb93956d
+					031f2b8 -.- jb93956d
+					jb93956d(( )) -.- c654704
+					84e00c4 -.- j22f7476
+					1e76a89 -.- j22f7476
+					j22f7476(( )) -.- c654704
+					c654704(( ))
+					c654704 -.- d1{ }
+					d1 -.- 42a0d35[["chunk"]]
+					42a0d35 -.- 42a0d35-err[ ]
+					42a0d35-err:::error
+					d1 -.- c550763[["increment multiple"]]
+					c550763 -.- c550763-err[ ]
+					c550763-err:::error
+					d1 -.- 7d44565[["a + 2"]]
+					7d44565 -.- 7d44565-err[ ]
+					7d44565-err:::error
+					d1 -.- 9f6272c("a++")
+					9f6272c -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> f346e421(( ))
-					f346e421:::selected
-					f346e421 --> fj90ec815(( ))
-					fj90ec815:::selected
-					fj90ec815 --> 7854521
-					7854521:::selected
-					7854521 --> ecbd5d3
-					ecbd5d3:::selected
-					fj90ec815 --> 70ee190
-					70ee190:::selected
-					70ee190 --> 8f2b8e8
-					8f2b8e8:::selected
-					j90ec815(( ))
-					ecbd5d3 --> j90ec815
-					8f2b8e8 --> j90ec815
-					j90ec815:::selected
-					f346e421 --> fj312509d(( ))
-					fj312509d:::selected
-					fj312509d --> ec0223b
-					ec0223b:::selected
-					ec0223b --> 08f6308
-					08f6308:::selected
-					fj312509d --> d1fe065
-					d1fe065:::selected
-					d1fe065 --> 05b84b6
-					05b84b6:::selected
-					j312509d(( ))
-					08f6308 --> j312509d
-					05b84b6 --> j312509d
-					j312509d:::selected
-					346e421(( ))
-					j90ec815 --> 346e421
-					j312509d --> 346e421
-					346e421:::selected
-					346e421 --> c30c1b7
-					c30c1b7:::selected
-					c30c1b7 --> stop
+					start --> f9258371(( ))
+					f9258371:::selected
+					f9258371 --> fj6750364(( ))
+					fj6750364:::selected
+					fj6750364 --> 3bd5a46
+					3bd5a46:::selected
+					3bd5a46 --> 1ec8e6c
+					1ec8e6c:::selected
+					fj6750364 --> abe8e26
+					abe8e26:::selected
+					abe8e26 --> 031f2b8
+					031f2b8:::selected
+					j6750364(( ))
+					1ec8e6c --> j6750364
+					031f2b8 --> j6750364
+					j6750364:::selected
+					f9258371 --> fj2640430(( ))
+					fj2640430:::selected
+					fj2640430 --> 8156fc6
+					8156fc6:::selected
+					8156fc6 --> 84e00c4
+					84e00c4:::selected
+					fj2640430 --> d53b7a7
+					d53b7a7:::selected
+					d53b7a7 --> 1e76a89
+					1e76a89:::selected
+					j2640430(( ))
+					84e00c4 --> j2640430
+					1e76a89 --> j2640430
+					j2640430:::selected
+					9258371(( ))
+					j6750364 --> 9258371
+					j2640430 --> 9258371
+					9258371:::selected
+					9258371 --> 9f6272c
+					9f6272c:::selected
+					9f6272c --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`,
@@ -804,31 +805,31 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- b447e67[["increment counters"]]
-					b447e67 -.- e3bebaf("a + 1")
-					e3bebaf -.- e3b6153("a + 1")
-					e3b6153 -.- b3803f8("b + 1")
-					b3803f8 -.- 0cfd06e("b + 1")
-					0cfd06e -.- d1{ }
-					d1 -.- 96a5cb1[["increment counters"]]
-					96a5cb1 -.- 96a5cb1-err[ ]
-					96a5cb1-err:::error
-					d1 -.- 5ac8491("a + 1")
-					5ac8491 -.- stop(( ))
+					d0 -.- ae76317[["increment counters"]]
+					ae76317 -.- 1bda1fb("a + 1")
+					1bda1fb -.- 25cd4c8("a + 1")
+					25cd4c8 -.- 910b67c("b + 1")
+					910b67c -.- c522839("b + 1")
+					c522839 -.- d1{ }
+					d1 -.- 2899232[["increment counters"]]
+					2899232 -.- 2899232-err[ ]
+					2899232-err:::error
+					d1 -.- ef2fdcd("a + 1")
+					ef2fdcd -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> e3bebaf
-					e3bebaf:::selected
-					e3bebaf --> e3b6153
-					e3b6153:::selected
-					e3b6153 --> b3803f8
-					b3803f8:::selected
-					b3803f8 --> 0cfd06e
-					0cfd06e:::selected
-					0cfd06e --> 5ac8491
-					5ac8491:::selected
-					5ac8491 --> stop
+					start --> 1bda1fb
+					1bda1fb:::selected
+					1bda1fb --> 25cd4c8
+					25cd4c8:::selected
+					25cd4c8 --> 910b67c
+					910b67c:::selected
+					910b67c --> c522839
+					c522839:::selected
+					c522839 --> ef2fdcd
+					ef2fdcd:::selected
+					ef2fdcd --> stop
 					classDef error stroke:#f00
 					classDef selected stroke:#0f0
 				`,
