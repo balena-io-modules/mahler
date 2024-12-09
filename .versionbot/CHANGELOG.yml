@@ -1,4 +1,30 @@
 - commits:
+    - subject: Calculate task id base on user definition
+      hash: 3dd97f466f3099fc73ea9c4d06e65f97e4686038
+      body: |
+        The calculation would before also consider library defaults, but either
+        the defaults would not contribute to differentiating the id or in some
+        cases, where the functions are overriden, it would erroneously generate
+        the same id for two tasks that are different.
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Fix bug with generated delete actions
+      hash: 65c160ef149f65a010c8b6016354af8198bfcfbf
+      body: |
+        Tasks for delete operations can skip the deletion of the property being
+        referenced because Mahler performs the delete operation after the
+        successful execution of the given action. This fixes a bug where the
+        deletion was happening too early before the inner function returned
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 4.1.2
+  title: ""
+  date: 2024-12-09T17:33:45.475Z
+- commits:
     - subject: Use noUncheckedIndexedAccess as TS configuration
       hash: 49e25e582970ca39f66b92b0f8b5533e1c6a7f5a
       body: |
@@ -1756,10 +1782,8 @@
       author: Felipe Lalanne
     - subject: Remove extractPath utility function from planner
       hash: 61ddf5da9ad4d743b40c4ef125789f831552d9c8
-      body: >
-        The function was leftover from before improving the [diff
-        calculation](https://github.com/balena-io-modules/mahler/commit/3682d3c6e39f4c9b97fd287565ca609803af12fb).
-        The function is no longer needed.
+      body: |
+        The function was leftover from before improving the [diff calculation](https://github.com/balena-io-modules/mahler/commit/3682d3c6e39f4c9b97fd287565ca609803af12fb). The function is no longer needed.
       footer:
         Change-type: patch
         change-type: patch
