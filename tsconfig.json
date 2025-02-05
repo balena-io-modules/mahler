@@ -5,7 +5,6 @@
 		"outDir": "build",
 		"noUnusedParameters": true,
 		"noUnusedLocals": true,
-		"removeComments": true,
 		"strictNullChecks": true,
 		"sourceMap": true,
 		"strict": true,
