@@ -1,4 +1,24 @@
 - commits:
+    - subject: Move noUncheckedIndexAccess to release tsconfig
+      hash: 8ec95a4689f84a5a7c6d7ea69384e681b5e59283
+      body: |
+        This prevents the compiler from reporting issues with unchecked access
+        on unit and integration tests on the library
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+    - subject: Keep comments on TS builds
+      hash: f4833439bffbdab4ee49258add8b4e9bdef00f97
+      body: ""
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: Felipe Lalanne
+  version: 4.1.3
+  title: ""
+  date: 2025-02-10T22:52:22.255Z
+- commits:
     - subject: Calculate task id base on user definition
       hash: 3dd97f466f3099fc73ea9c4d06e65f97e4686038
       body: |
