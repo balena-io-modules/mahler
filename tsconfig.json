@@ -5,14 +5,12 @@
 		"outDir": "build",
 		"noUnusedParameters": true,
 		"noUnusedLocals": true,
-		"removeComments": true,
 		"strictNullChecks": true,
 		"sourceMap": true,
 		"strict": true,
 		"target": "es2022",
 		"declaration": true,
 		"skipLibCheck": true,
-		"noUncheckedIndexedAccess": true,
 		"paths": {
 			"mahler": [
 				"lib/index.ts"

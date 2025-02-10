@@ -805,23 +805,23 @@ describe('Mermaid', () => {
 				graph TD
 					start(( ))
 					start -.- d0{ }
-					d0 -.- ae76317[["increment counters"]]
-					ae76317 -.- 1bda1fb("a + 1")
-					1bda1fb -.- 25cd4c8("a + 1")
+					d0 -.- d9a1c45[["increment counters"]]
+					d9a1c45 -.- 5175d85("a + 1")
+					5175d85 -.- 25cd4c8("a + 1")
 					25cd4c8 -.- 910b67c("b + 1")
 					910b67c -.- c522839("b + 1")
 					c522839 -.- d1{ }
-					d1 -.- 2899232[["increment counters"]]
-					2899232 -.- 2899232-err[ ]
-					2899232-err:::error
+					d1 -.- 3e36602[["increment counters"]]
+					3e36602 -.- 3e36602-err[ ]
+					3e36602-err:::error
 					d1 -.- ef2fdcd("a + 1")
 					ef2fdcd -.- stop(( ))
 					stop:::finish
 					classDef finish stroke:#000,fill:#000
 					start:::selected
-					start --> 1bda1fb
-					1bda1fb:::selected
-					1bda1fb --> 25cd4c8
+					start --> 5175d85
+					5175d85:::selected
+					5175d85 --> 25cd4c8
 					25cd4c8:::selected
 					25cd4c8 --> 910b67c
 					910b67c:::selected

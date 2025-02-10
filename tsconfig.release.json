@@ -1,5 +1,12 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["lib/**/*.ts"],
-	"exclude": ["lib/**/*.spec.ts"]
+	"compilerOptions": {
+		"noUncheckedIndexedAccess": true
+	},
+	"include": [
+		"lib/**/*.ts"
+	],
+	"exclude": [
+		"lib/**/*.spec.ts"
+	]
 }
