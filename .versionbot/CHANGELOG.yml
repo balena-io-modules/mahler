@@ -1,4 +1,16 @@
 - commits:
+    - subject: Update dependency @types/tar-stream to v2.2.3
+      hash: 0f88700876f5acb4c1d1b14ff17a984f9974a785
+      body: |
+        Update @types/tar-stream from 2.2.2 to 2.2.3
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+  version: 4.1.4
+  title: ""
+  date: 2025-03-19T16:02:33.356Z
+- commits:
     - subject: Move noUncheckedIndexAccess to release tsconfig
       hash: 8ec95a4689f84a5a7c6d7ea69384e681b5e59283
       body: |
