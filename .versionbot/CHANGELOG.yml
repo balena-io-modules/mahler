@@ -1,4 +1,16 @@
 - commits:
+    - subject: Update dependency tar-stream to v3.1.7
+      hash: bc440326c7c0af7dd979ff65b4462804c17072d8
+      body: |
+        Update tar-stream from 3.0.0 to 3.1.7
+      footer:
+        Change-type: patch
+        change-type: patch
+      author: balena-renovate[bot]
+  version: 4.1.5
+  title: ""
+  date: 2025-03-19T16:59:46.478Z
+- commits:
     - subject: Update dependency @types/tar-stream to v2.2.3
       hash: 0f88700876f5acb4c1d1b14ff17a984f9974a785
       body: |
