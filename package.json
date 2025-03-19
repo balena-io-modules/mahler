@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@balena/lint": "^8.2.6",
-    "@types/chai": "^4.2.18",
+    "@types/chai": "^5.0.0",
     "@types/chai-as-promised": "^7.1.4",
     "@types/debug": "^4.1.7",
     "@types/dockerode": "^3.3.16",
@@ -59,7 +59,7 @@
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.9",
     "@types/tar-stream": "2.2.3",
-    "chai": "^4.3.4",
+    "chai": "^5.0.0",
     "chai-as-promised": "^7.1.1",
     "debug": "^4.3.4",
     "dedent": "^1.5.1",
